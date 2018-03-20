@@ -51,6 +51,9 @@ module Web.Api.WebDriver.Monad (
   -- * Helpers
   , theRemoteUrl
   , theRemoteUrlWithSession
+
+  -- * Shell
+  , wdshInit
   ) where
 
 import Control.Lens hiding ((.=))
@@ -59,6 +62,7 @@ import qualified Data.Map.Strict as M
 import Data.Aeson
 import Data.Aeson.Lens
 import Data.Aeson.Encode.Pretty (encodePretty)
+import Data.IORef
 import Data.Text (pack, unpack, Text)
 import qualified Data.ByteString.Lazy as LB (ByteString, unpack)
 import qualified Data.ByteString.Lazy.Char8 as LC (unpack, pack)
@@ -285,3 +289,18 @@ theRemoteUrlWithSession = do
     Just session_id -> do
       baseUrl <- theRemoteUrl
       return $ concat [ baseUrl, "/session/", session_id ]
+
+
+
+-- | Initialize state for a WebDriver shell session.
+wdshInit
+  :: WebDriverConfig
+  -> IO (IORef
+       ( St WebDriverState
+       , Log WebDriverError Void
+       , Env WebDriverError Void WebDriverEnv
+       ))
+wdshInit config = initShell
+  (__initial_state config)
+  (Log [] [])
+  (__environment config)

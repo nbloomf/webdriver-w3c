@@ -24,6 +24,10 @@ module Web.Api.WebDriver.Helpers (
   -- * Actions
   , press
   , typeString
+
+  -- * Shell
+  , openSession
+  , closeSession
   ) where
 
 import qualified Data.Aeson as Aeson (encode)
@@ -169,3 +173,24 @@ typeString x = emptyAction
   , _input_source_id = Just "kbd"
   , _action_items = map keypress x
   }
+
+
+
+-- | Open a new browser instance; for use with `httpShell`
+openSession
+  :: (Effectful m)
+  => Capabilities
+  -> WebDriver m ()
+openSession caps = do
+  session_id <- newSession caps
+  getState >>= (putState . updateClientState (setSessionId (Just session_id)))
+  return ()
+
+-- | Close the current browser instance; for use with `httpShell`.
+closeSession
+  :: (Effectful m)
+  => WebDriver m ()
+closeSession = do
+  deleteSession
+  getState >>= (putState . updateClientState (setSessionId Nothing))
+  return ()
