@@ -40,6 +40,8 @@ module Web.Api.WebDriver.Monad (
   , setSecretsPath
   , theApiVersion
   , setApiVersion
+  , theVars
+  , setVars
   , theResponseFormat
   , setResponseFormat
   , readResponseFormat
@@ -124,7 +126,7 @@ data WebDriverEnv = WebDriverEnv
   , __remote_port :: Int -- ^ Port of the remote WebDriver server
   , __remote_path :: String -- ^ Extra path for the remote WebDriver server
   , __secrets_path :: FilePath -- ^ Path where secret data is stored
-  , __hosts :: M.Map String String -- ^ Named constants; this makes it possible to e.g. run the same WebDriver session against both a test and production environment on different hosts.
+  , __vars :: M.Map String String -- ^ Named constants; this makes it possible to e.g. run the same WebDriver session against both a test and production environment on different hosts.
   , __response_format :: ResponseFormat -- ^ Flag for the format of HTTP responses from the remote end. E.g., chromedriver reponses are not spec-compliant.
   , __api_version :: ApiVersion -- ^ Version of the WebDriver specification.
   } deriving Show
@@ -136,7 +138,7 @@ defaultWebDriverEnv = WebDriverEnv
   , __remote_port = 4444
   , __remote_path = ""
   , __secrets_path = ""
-  , __hosts = M.empty
+  , __vars = M.empty
   , __response_format = SpecFormat
   , __api_version = CR_2018_03_04
   }
@@ -192,6 +194,14 @@ theApiVersion = return . __api_version
 -- | Set the API version of a `WebDriverEnv`.
 setApiVersion :: ApiVersion -> WebDriverEnv -> WebDriverEnv
 setApiVersion version env = env { __api_version = version }
+
+-- | Retrieve the vars map.
+theVars :: (Monad m) => WebDriverEnv -> m (M.Map String String)
+theVars = return . __vars
+
+-- | Set the vars map of a `WebDriverEnv`.
+setVars :: M.Map String String -> WebDriverEnv -> WebDriverEnv
+setVars vars env = env { __vars = vars }
 
 -- | Retrieve the response format in a monadic context.
 theResponseFormat :: (Monad m) => WebDriverEnv -> m ResponseFormat
