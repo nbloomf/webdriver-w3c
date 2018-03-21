@@ -77,8 +77,6 @@ import Data.Text
 import Data.Aeson.Types
   ( ToJSON(..), FromJSON(..), Value(..), KeyValue
   , Pair, (.:?), (.:), (.=), object, typeMismatch )
-import Control.Monad
-  ( mzero )
 import Test.QuickCheck
   ( Arbitrary(..), arbitraryBoundedEnum )
 import Test.QuickCheck.Gen
@@ -366,6 +364,7 @@ instance FromJSON BrowserName where
     "chrome" -> return Chrome
     "safari" -> return Safari
     _ -> fail $ "Unrecognized browser name " ++ show x
+  parseJSON invalid = typeMismatch "BrowserName" invalid
 
 instance ToJSON BrowserName where
   toJSON Firefox = String "firefox"
@@ -386,7 +385,7 @@ instance FromJSON PlatformName where
   parseJSON (String x) = case (map toLower $ unpack x) of
     "mac" -> return Mac
     _ -> fail $ "Unrecognized PlaformName " ++ show x
-  parseJSON invalid = mzero
+  parseJSON invalid = typeMismatch "PlatformName" invalid
 
 instance ToJSON PlatformName where
   toJSON Mac = String "mac"
@@ -406,7 +405,7 @@ instance FromJSON ChromeOptions where
   parseJSON (Object v) = ChromeOptions
     <$> v .:? "binary"
     <*> v .:? "args"
-  parseJSON _ = mzero
+  parseJSON invalid = typeMismatch "ChromeOptions" invalid
 
 instance ToJSON ChromeOptions where
   toJSON ChromeOptions{..} = object_
@@ -602,7 +601,7 @@ instance FromJSON TimeoutConfig where
     <$> v .:? "script"
     <*> v .:? "pageLoad"
     <*> v .:? "implicit"
-  parseJSON _ = mzero
+  parseJSON invalid = typeMismatch "TimeoutConfig" invalid
 
 instance ToJSON TimeoutConfig where
   toJSON TimeoutConfig{..} = object_
@@ -698,7 +697,7 @@ instance FromJSON PointerSubtype where
     "pen" -> return PointerPen
     "touch" -> return PointerTouch
     _ -> fail $ "Unrecognized PointerSubtype " ++ show x
-  parseJSON invalid = mempty
+  parseJSON invalid = typeMismatch "PointerSubtype" invalid
 
 instance ToJSON PointerSubtype where
   toJSON x = case x of 
@@ -725,7 +724,7 @@ instance FromJSON Action where
     <*> v .:? "id"
     <*> v .:? "parameters"
     <*> v .:  "actions"
-  parseJSON _ = mzero
+  parseJSON invalid = typeMismatch "Action" invalid
 
 instance ToJSON Action where
   toJSON Action{..} = object_
@@ -773,7 +772,7 @@ instance FromJSON ActionType where
     "pointerMove" -> return PointerMoveAction
     "pointerCancel" -> return PointerCancelAction
     _ -> fail $ "Unrecognized ActionType: " ++ unpack x
-  parseJSON invalid = mempty
+  parseJSON invalid = typeMismatch "ActionType" invalid
 
 instance ToJSON ActionType where
   toJSON x = case x of
@@ -798,7 +797,7 @@ data InputSourceParameter = InputSourceParameter
 instance FromJSON InputSourceParameter where
   parseJSON (Object v) = InputSourceParameter
     <$> v .:? "subtype"
-  parseJSON _ = mzero
+  parseJSON invalid = typeMismatch "InputSourceParameter" invalid
 
 instance ToJSON InputSourceParameter where
   toJSON InputSourceParameter{..} = object_
@@ -831,7 +830,7 @@ instance FromJSON ActionItem where
     <*> v .:? "button"
     <*> v .:? "x"
     <*> v .:? "y"
-  parseJSON _ = mzero
+  parseJSON invalid = typeMismatch "ActionItem" invalid
 
 instance ToJSON ActionItem where
   toJSON ActionItem{..} = object_
@@ -890,7 +889,7 @@ instance FromJSON Rect where
     <*> v .: "y"
     <*> v .: "width"
     <*> v .: "height"
-  parseJSON _ = mzero
+  parseJSON invalid = typeMismatch "Rect" invalid
 
 instance Arbitrary Rect where
   arbitrary = Rect
@@ -927,7 +926,7 @@ instance FromJSON PromptHandler where
     "accept and notify" -> return AcceptPromptsAndNotify
     "ignore" -> return IgnorePrompts
     _ -> fail $ "Unrecognized PromptHandler " ++ show x
-  parseJSON invalid = mempty
+  parseJSON invalid = typeMismatch "PromptHandler" invalid
 
 instance ToJSON PromptHandler where
   toJSON x = case x of
@@ -973,7 +972,7 @@ instance FromJSON Cookie where
     <*> v .:? "secure"
     <*> v .:? "httpOnly"
     <*> v .:? "expiryTime"
-  parseJSON _ = mzero
+  parseJSON invalid = typeMismatch "Cookie" invalid
 
 instance Arbitrary Cookie where
   arbitrary = Cookie
