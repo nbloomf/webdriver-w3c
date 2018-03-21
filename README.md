@@ -3,6 +3,8 @@ Haskell bindings for the W3C WebDriver API
 
 Disclaimer: It's very early days for this code. You're welcome to play with it and find bugs. :)
 
+If you're determined to try it out, the [tutorial](https://github.com/nbloomf/webdriver-w3c/blob/master/doc/Main.md) is a good place to start.
+
 Stack tips:
 
 * `stack ghci webdriver-w3c`: load the library in a ghci session

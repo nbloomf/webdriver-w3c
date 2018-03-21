@@ -94,6 +94,15 @@ Right now the best place to learn about these is the generated Haddock documenta
 
 
 
+Behind the Scenes
+-----------------
+
+WebDriver is an HTTP API for controlling web browsers like a human user would. In principle a browser could implement this API directly. In practice the major browsers have their own internally maintained APIs for automation and use a *proxy server* to translate between WebDriver and their internal API.
+
+This is the role geckodriver is playing in our examples so far: deep down, our code is making HTTP requests to geckodriver, and geckodriver is passing these requests on to Firefox itself.
+
+
+
 Making Assertions
 -----------------
 
