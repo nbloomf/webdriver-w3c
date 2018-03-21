@@ -1,2 +1,2 @@
 docs:
-	cp app/Main.lhs doc/Main.md
+	pandoc app/Main.lhs -f markdown+lhs -t markdown -o doc/Main.md
