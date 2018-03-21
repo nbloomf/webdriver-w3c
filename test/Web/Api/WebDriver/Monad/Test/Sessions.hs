@@ -63,4 +63,22 @@ _exit_success_cases =
         !rect <- fullscreenWindow
         return ()
     )
+
+  , ( "getTimeouts"
+    , do
+        !timeouts <- getTimeouts
+        return ()
+    )
+
+  , ( "getWindowRect"
+    , do
+        !rect <- getWindowRect
+        return ()
+    )
+
+  , ( "deleteAllCookies"
+    , do
+        () <- deleteAllCookies
+        return ()
+    )
   ]

@@ -26,6 +26,12 @@ defaultWebDriverServer = MockServer
       [_,"session",session_id,"title"] ->
         get_session_id_title st session_id
 
+      [_,"session",session_id,"timeouts"] ->
+        get_session_id_timeouts st session_id
+
+      [_,"session",session_id,"window","rect"] ->
+        get_session_id_window_rect st session_id
+
       _ -> error $ "defaultWebDriverServer: get url: " ++ url
 
   , __http_post = \st !url !payload -> case splitUrl $ stripScheme url of
@@ -58,6 +64,9 @@ defaultWebDriverServer = MockServer
   , __http_delete = \st url -> case splitUrl $ stripScheme url of
        [_,"session",session_id] ->
          (_success_with_empty_object, st)
+
+       [_,"session",session_id,"cookie"] ->
+         delete_session_id_cookie st session_id
 
        _ -> error $ "defaultWebDriverServer: delete url: " ++ url
   }
@@ -99,6 +108,31 @@ get_session_id_title st session_id =
   if not $ _is_active_session session_id st
     then (_err_invalid_session_id, st)
     else (_success_with_value $ String $ pack "fake title", st)
+
+get_session_id_timeouts
+  :: WebDriverServerState
+  -> String
+  -> (HttpResponse, WebDriverServerState)
+get_session_id_timeouts st session_id =
+  if not $ _is_active_session session_id st
+    then (_err_invalid_session_id, st)
+    else (_success_with_value $ object [("script", Number 0),("pageLoad", Number 0),("implicit", Number 0)], st)
+
+get_session_id_window_rect
+  :: WebDriverServerState
+  -> String
+  -> (HttpResponse, WebDriverServerState)
+get_session_id_window_rect st session_id =
+  let
+    response = if _is_active_session session_id st
+      then _success_with_value $ object
+        [ ("x", Number 0)
+        , ("y", Number 0)
+        , ("height", Number 480)
+        , ("width", Number 640)
+        ]
+      else _err_invalid_session_id
+  in (response, st)
 
 post_session
   :: WebDriverServerState
@@ -211,6 +245,15 @@ post_session_id_window_fullscreen !st !session_id =
         ]
       else _err_invalid_session_id
   in (response, st)
+
+delete_session_id_cookie
+  :: WebDriverServerState
+  -> String
+  -> (HttpResponse, WebDriverServerState)
+delete_session_id_cookie st session_id =
+  if not $ _is_active_session session_id st
+    then (_err_invalid_session_id, st)
+    else (_success_with_empty_object, st)
 
 
 

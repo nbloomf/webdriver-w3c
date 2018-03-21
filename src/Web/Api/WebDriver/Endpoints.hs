@@ -792,6 +792,10 @@ deleteAllCookies
 deleteAllCookies = do
   baseUrl <- theRemoteUrlWithSession
   httpDelete (baseUrl ++ "/cookie")
+    >>= (return . __response_body)
+    >>= mParseJson
+    >>= lookupKey "value"
+    >>= expect (object [])
   return ()
 
 
