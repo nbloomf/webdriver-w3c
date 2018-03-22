@@ -570,9 +570,9 @@ findElementsFromElement strategy selector root_id = do
     >>= (return . __response_body)
     >>= mParseJson
     >>= lookupKey "value"
-    >>= lookupKey _WEB_ELEMENT_ID
     >>= constructFromJSON
-    >>= (sequence . map constructFromJSON)
+    >>= mapM (lookupKey _WEB_ELEMENT_ID)
+    >>= mapM constructFromJSON
     >>= (return . map unpack)
 
 
@@ -823,7 +823,12 @@ _performActions
 _performActions stealth action = do
   baseUrl <- theRemoteUrlWithSession
   let !payload = encode $ object [ "actions" .= toJSON action ]
-  (if stealth then httpSilentPost else httpPost) (baseUrl ++ "/actions") payload
+  let httpMethod = if stealth then httpSilentPost else httpPost
+  httpMethod (baseUrl ++ "/actions") payload
+    >>= (return . __response_body)
+    >>= mParseJson
+    >>= lookupKey "value"
+    >>= expect (object [])
   return ()
 
 

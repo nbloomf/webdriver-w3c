@@ -32,6 +32,9 @@ defaultWebDriverServer = MockServer
       [_,"session",session_id,"window","rect"] ->
         get_session_id_window_rect st session_id
 
+      [_,"session",session_id,"window"] ->
+        get_session_id_window st session_id
+
       _ -> error $ "defaultWebDriverServer: get url: " ++ url
 
   , __http_post = \st !url !payload -> case splitUrl $ stripScheme url of
@@ -68,16 +71,25 @@ defaultWebDriverServer = MockServer
       [_,"session",session_id,"element",element_id,"element"] ->
         post_session_id_element_id_element st session_id element_id payload
 
+      [_,"session",session_id,"element",element_id,"elements"] ->
+        post_session_id_element_id_elements st session_id element_id payload
+
+      [_,"session",session_id,"actions"] ->
+        post_session_id_actions st session_id payload
+
       _ -> error $ "defaultWebDriverServer: post url: " ++ stripScheme url
 
-  , __http_delete = \st url -> case splitUrl $ stripScheme url of
-       [_,"session",session_id] ->
-         (_success_with_empty_object, st)
+  , __http_delete = \st !url -> case splitUrl $ stripScheme url of
+      [_,"session",session_id] ->
+        (_success_with_empty_object, st)
 
-       [_,"session",session_id,"cookie"] ->
-         delete_session_id_cookie st session_id
+      [_,"session",session_id,"cookie"] ->
+        delete_session_id_cookie st session_id
 
-       _ -> error $ "defaultWebDriverServer: delete url: " ++ url
+      [_,"session",session_id,"window"] ->
+        delete_session_id_window st session_id
+
+      _ -> error $ "defaultWebDriverServer: delete url: " ++ url
   }
 
 stripScheme :: String -> String
@@ -292,6 +304,42 @@ post_session_id_element_id_element st session_id element_id payload =
       [ ("element-6066-11e4-a52e-4f735466cecf", String "element-id")
       ], st)
 
+post_session_id_element_id_elements
+  :: WebDriverServerState
+  -> String
+  -> String
+  -> LB.ByteString
+  -> (HttpResponse, WebDriverServerState)
+post_session_id_element_id_elements st session_id element_id payload =
+  if not $ _is_active_session session_id st
+    then (_err_invalid_session_id, st)
+    else (_success_with_value $ toJSONList [object
+      [ ("element-6066-11e4-a52e-4f735466cecf", String "element-id")
+      ]], st)
+
+post_session_id_actions
+  :: WebDriverServerState
+  -> String
+  -> LB.ByteString
+  -> (HttpResponse, WebDriverServerState)
+post_session_id_actions !st !session_id payload =
+  let
+    response = if _is_active_session session_id st
+      then _success_with_empty_object
+      else _err_invalid_session_id
+  in (response, st)
+
+get_session_id_window
+  :: WebDriverServerState
+  -> String
+  -> (HttpResponse, WebDriverServerState)
+get_session_id_window st session_id =
+  let
+    response = if _is_active_session session_id st
+      then _success_with_value $ String "window-1"
+      else _err_invalid_session_id
+  in (response, st)
+
 delete_session_id_cookie
   :: WebDriverServerState
   -> String
@@ -300,6 +348,17 @@ delete_session_id_cookie st session_id =
   if not $ _is_active_session session_id st
     then (_err_invalid_session_id, st)
     else (_success_with_empty_object, st)
+
+delete_session_id_window
+  :: WebDriverServerState
+  -> String
+  -> (HttpResponse, WebDriverServerState)
+delete_session_id_window st session_id =
+  let
+    response = if _is_active_session session_id st
+      then _success_with_value $ toJSONList [String "window-1"]
+      else _err_invalid_session_id
+  in (response, st)
 
 
 

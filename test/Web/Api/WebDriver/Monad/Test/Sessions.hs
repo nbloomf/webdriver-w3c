@@ -207,4 +207,116 @@ _exit_success_cases =
         !element <- findElementFromElement XPathSelector "*" root
         return ()
     )
+
+  , ( "findElementsFromElement (CSS Selector)"
+    , do
+        navigateTo "https://www.w3.org"
+        root <- findElement CssSelector "body"
+        !elements <- findElementsFromElement CssSelector "p" root
+        case elements of
+          [] -> return ()
+          (!x):xs -> return ()
+    )
+
+  , ( "findElementsFromElement (Link Text)"
+    , do
+        navigateTo "https://www.w3.org"
+        root <- findElement CssSelector "body"
+        !elements <- findElementsFromElement LinkTextSelector "Standards" root
+        case elements of
+          [] -> return ()
+          (!x):xs -> return ()
+    )
+
+  , ( "findElementsFromElement (Partial Link Text)"
+    , do
+        navigateTo "https://www.w3.org"
+        root <- findElement CssSelector "body"
+        !elements <- findElementsFromElement PartialLinkTextSelector "Standards" root
+        case elements of
+          [] -> return ()
+          (!x):xs -> return ()
+    )
+
+  , ( "findElementsFromElement (Tag Name)"
+    , do
+        navigateTo "https://www.w3.org"
+        root <- findElement CssSelector "body"
+        !elements <- findElementsFromElement TagName "p" root
+        case elements of
+          [] -> return ()
+          (!x):xs -> return ()
+    )
+
+  , ( "findElementsFromElement (XPath)"
+    , do
+        navigateTo "https://www.w3.org"
+        root <- findElement CssSelector "body"
+        !elements <- findElementsFromElement XPathSelector "*" root
+        case elements of
+          [] -> return ()
+          (!x):xs -> return ()
+    )
+
+  , ( "performActions (keyboard)"
+    , do
+        () <- performActions [ press UnidentifiedKey ]
+        () <- performActions [ press CancelKey ]
+        () <- performActions [ press HelpKey ]
+        () <- performActions [ press BackspaceKey ]
+        () <- performActions [ press TabKey ]
+        () <- performActions [ press ClearKey ]
+        () <- performActions [ press ReturnKey ]
+        () <- performActions [ press EnterKey ]
+        () <- performActions [ press ShiftKey ]
+        () <- performActions [ press ControlKey ]
+        () <- performActions [ press AltKey ]
+        () <- performActions [ press PauseKey ]
+        () <- performActions [ press EscapeKey ]
+        () <- performActions [ press PageUpKey ]
+        () <- performActions [ press PageDownKey ]
+        () <- performActions [ press EndKey ]
+        () <- performActions [ press HomeKey ]
+        () <- performActions [ press ArrowLeftKey ]
+        () <- performActions [ press ArrowUpKey ]
+        () <- performActions [ press ArrowRightKey ]
+        () <- performActions [ press ArrowDownKey ]
+        () <- performActions [ press InsertKey ]
+        () <- performActions [ press DeleteKey ]
+        () <- performActions [ press F1Key ]
+        () <- performActions [ press F2Key ]
+        () <- performActions [ press F3Key ]
+        () <- performActions [ press F4Key ]
+        () <- performActions [ press F5Key ]
+        () <- performActions [ press F6Key ]
+        () <- performActions [ press F7Key ]
+        () <- performActions [ press F8Key ]
+        () <- performActions [ press F9Key ]
+        () <- performActions [ press F10Key ]
+        () <- performActions [ press F11Key ]
+        () <- performActions [ press F12Key ]
+        () <- performActions [ press MetaKey ]
+        () <- performActions [ press ZenkakuHankakuKey ]
+        return ()
+    )
+
+  , ( "performStealthActions (keyboard)"
+    , do
+        () <- performStealthActions [ press EnterKey ]
+        return ()
+    )
+
+  , ( "getWindowHandle"
+    , do
+        !handle <- getWindowHandle
+        return ()
+    )
+
+  , ( "closeWindow"
+    , do
+        !handles <- getWindowHandle
+        case handles of
+          [] -> return ()
+          (!x:xs) -> return ()
+    )
   ]
