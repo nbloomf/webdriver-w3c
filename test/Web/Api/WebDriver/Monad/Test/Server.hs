@@ -65,6 +65,9 @@ defaultWebDriverServer = MockServer
       [_,"session",session_id,"elements"] ->
         post_session_id_elements st session_id payload
 
+      [_,"session",session_id,"element",element_id,"element"] ->
+        post_session_id_element_id_element st session_id element_id payload
+
       _ -> error $ "defaultWebDriverServer: post url: " ++ stripScheme url
 
   , __http_delete = \st url -> case splitUrl $ stripScheme url of
@@ -275,6 +278,19 @@ post_session_id_elements st session_id payload =
     else (_success_with_value $ toJSONList [object
       [ ("element-6066-11e4-a52e-4f735466cecf", String "element-id")
       ]], st)
+
+post_session_id_element_id_element
+  :: WebDriverServerState
+  -> String
+  -> String
+  -> LB.ByteString
+  -> (HttpResponse, WebDriverServerState)
+post_session_id_element_id_element st session_id element_id payload =
+  if not $ _is_active_session session_id st
+    then (_err_invalid_session_id, st)
+    else (_success_with_value $ object
+      [ ("element-6066-11e4-a52e-4f735466cecf", String "element-id")
+      ], st)
 
 delete_session_id_cookie
   :: WebDriverServerState

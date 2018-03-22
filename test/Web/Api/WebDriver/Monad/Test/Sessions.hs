@@ -167,4 +167,44 @@ _exit_success_cases =
           [] -> return ()
           (!x):xs -> return ()
     )
+
+  , ( "findElementFromElement (CSS Selector)"
+    , do
+        navigateTo "https://www.w3.org"
+        root <- findElement CssSelector "body"
+        !element <- findElementFromElement CssSelector "p" root
+        return ()
+    )
+
+  , ( "findElementFromElement (Link Text)"
+    , do
+        navigateTo "https://www.w3.org"
+        root <- findElement CssSelector "body"
+        !element <- findElementFromElement LinkTextSelector "Standards" root
+        return ()
+    )
+
+  , ( "findElementFromElement (Partial Link Text)"
+    , do
+        navigateTo "https://www.w3.org"
+        root <- findElement CssSelector "body"
+        !element <- findElementFromElement PartialLinkTextSelector "Standards" root
+        return ()
+    )
+
+  , ( "findElementFromElement (Tag Name)"
+    , do
+        navigateTo "https://www.w3.org"
+        root <- findElement CssSelector "body"
+        !element <- findElementFromElement TagName "p" root
+        return ()
+    )
+
+  , ( "findElementFromElement (XPath)"
+    , do
+        navigateTo "https://www.w3.org"
+        root <- findElement CssSelector "body"
+        !element <- findElementFromElement XPathSelector "*" root
+        return ()
+    )
   ]
