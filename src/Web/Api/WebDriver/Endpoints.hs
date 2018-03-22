@@ -531,9 +531,9 @@ findElements strategy selector = do
     >>= (return . __response_body)
     >>= mParseJson
     >>= lookupKey "value"
-    >>= lookupKey _WEB_ELEMENT_ID
     >>= constructFromJSON
-    >>= (sequence . map constructFromJSON)
+    >>= mapM (lookupKey _WEB_ELEMENT_ID)
+    >>= mapM constructFromJSON
     >>= (return . map unpack)
 
 

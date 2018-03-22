@@ -34,6 +34,12 @@ _exit_success_cases =
         return ()
     )
 
+  , ( "navigateToStealth"
+    , do
+        () <- navigateToStealth "https://www.w3.org"
+        return ()
+    )
+
   , ( "getCurrentUrl"
     , do
         !url <- getCurrentUrl
@@ -80,5 +86,85 @@ _exit_success_cases =
     , do
         () <- deleteAllCookies
         return ()
+    )
+
+  , ( "findElement (CSS Selector)"
+    , do
+        navigateTo "https://www.w3.org"
+        !element <- findElement CssSelector "body"
+        return ()
+    )
+
+  , ( "findElement (Link Text)"
+    , do
+        navigateTo "https://www.w3.org"
+        !element <- findElement LinkTextSelector "Standards"
+        return ()
+    )
+
+  , ( "findElement (Partial Link Text)"
+    , do
+        navigateTo "https://www.w3.org"
+        !element <- findElement PartialLinkTextSelector "Standards"
+        return ()
+    )
+
+  , ( "findElement (Tag Name)"
+    , do
+        navigateTo "https://www.w3.org"
+        !element <- findElement TagName "body"
+        return ()
+    )
+
+  , ( "findElement (XPath)"
+    , do
+        navigateTo "https://www.w3.org"
+        !element <- findElement XPathSelector "*"
+        return ()
+    )
+
+  , ( "findElements (CSS Selector)"
+    , do
+        navigateTo "https://www.w3.org"
+        !elements <- findElements CssSelector "body"
+        case elements of
+          [] -> return ()
+          (!x):xs -> return ()
+    )
+
+  , ( "findElements (Link Text)"
+    , do
+        navigateTo "https://www.w3.org"
+        !elements <- findElements LinkTextSelector "Standards"
+        case elements of
+          [] -> return ()
+          (!x):xs -> return ()
+    )
+
+  , ( "findElements (Partial Link Text)"
+    , do
+        navigateTo "https://www.w3.org"
+        !elements <- findElements PartialLinkTextSelector "Standards"
+        case elements of
+          [] -> return ()
+          (!x):xs -> return ()
+    )
+
+  , ( "findElements (Tag Name)"
+    , do
+        navigateTo "https://www.w3.org"
+        !elements <- findElements TagName "body"
+        case elements of
+          [] -> return ()
+          (!x):xs -> return ()
+    )
+
+  , ( "findElements (XPath)"
+    , do
+        navigateTo "https://www.w3.org"
+        !elements <- findElements XPathSelector "*"
+        case elements of
+          [] -> return ()
+          (!x):xs -> return ()
     )
   ]
