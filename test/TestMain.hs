@@ -4,6 +4,7 @@ import System.Environment
 
 import Test.Tasty
 
+import Web.Api.Http.Assert.Test
 import Web.Api.Http.Effects.Test
 import Web.Api.WebDriver.Monad.Test
 import Web.Api.WebDriver.Types.Test
@@ -19,7 +20,8 @@ main = do
 
   setEnv "TASTY_NUM_THREADS" "1" -- needed for live tests
   defaultMain $ testGroup "All Tests"
-    [ Web.Api.Http.Effects.Test.tests
-    , Web.Api.WebDriver.Monad.Test.tests
+    [ Web.Api.Http.Assert.Test.tests
     , Web.Api.WebDriver.Types.Test.tests
+    , Web.Api.Http.Effects.Test.tests
+    , Web.Api.WebDriver.Monad.Test.tests
     ]

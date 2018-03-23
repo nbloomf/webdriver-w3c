@@ -104,6 +104,7 @@ test-suite webdriver-w3c-test
     , wreq                  >=0.5.2      && <0.6
 
   other-modules:
+    Web.Api.Http.Assert.Test
     Web.Api.Http.Effects.Test
     Web.Api.Http.Effects.Test.Mock
     Web.Api.Http.Effects.Test.Server

@@ -63,7 +63,7 @@ data Assertion = Assertion
   , __assertion_comment :: String
   , __assertion_context :: String
   , __assertion_result :: AssertionResult
-  } deriving Show
+  } deriving (Eq, Show)
 
 -- | Type representing the result (success or failure) of an evaluated assertion.
 data AssertionResult
