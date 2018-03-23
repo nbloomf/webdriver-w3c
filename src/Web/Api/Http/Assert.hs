@@ -248,7 +248,7 @@ data AssertionSummary = AssertionSummary
   { __num_successes :: Integer
   , __num_failures :: Integer
   , __failures :: [Assertion]
-  } deriving Show
+  } deriving (Eq, Show)
 
 instance Monoid AssertionSummary where
   mempty = AssertionSummary 0 0 []
