@@ -34,6 +34,7 @@ module Web.Api.Http.Helpers (
 import Data.ByteString.Lazy (ByteString)
 import qualified Network.Wreq as Wreq (defaults, Options)
 import qualified Network.Wreq.Session as WreqS (Session)
+import Network.HTTP.Client (HttpException)
 
 import Web.Api.Http.Types
 import Web.Api.Http.Effects
@@ -138,7 +139,7 @@ processRequest
   :: (Effectful m)
   => RequestOptions
   -> Entry err log
-  -> (Maybe WreqS.Session -> m HttpResponse)
+  -> (Maybe WreqS.Session -> m (Either HttpException HttpResponse))
   -> HttpSession m err st log env HttpResponse
 
 processRequest opt entry request = do
@@ -152,7 +153,7 @@ processRequest opt entry request = do
   -- Run one of two requests, depending on
   -- whether we have an active session.
   session <- getState >>= theTcpSession
-  result <- liftSession $ mTry $ request session
+  result <- liftSession $ request session
 
   case result of
     -- If the result was ok:

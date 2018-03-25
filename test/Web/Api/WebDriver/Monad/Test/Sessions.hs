@@ -1,6 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 module Web.Api.WebDriver.Monad.Test.Sessions (
     _exit_success_cases
+  , _unknown_error_cases
   ) where
 
 import Web.Api.Http
@@ -28,15 +29,15 @@ _exit_success_cases =
         return ()
     )
 
-  , ( "navigateTo"
+  , ( "navigateTo (existing site)"
     , do
-        () <- navigateTo "https://www.w3.org"
+        () <- navigateTo "https://www.example.org"
         return ()
     )
 
   , ( "navigateToStealth"
     , do
-        () <- navigateToStealth "https://www.w3.org"
+        () <- navigateToStealth "https://www.example.org"
         return ()
     )
 
@@ -318,5 +319,16 @@ _exit_success_cases =
         case handles of
           [] -> return ()
           (!x:xs) -> return ()
+    )
+  ]
+
+_unknown_error_cases
+  :: (Effectful m)
+  => [(String, WebDriver m ())]
+_unknown_error_cases =
+  [ ( "navigateTo (nonexistent site)"
+    , do
+        () <- navigateTo "https://fake.example"
+        return ()
     )
   ]

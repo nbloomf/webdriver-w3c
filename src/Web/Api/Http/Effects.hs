@@ -80,7 +80,7 @@ import System.Directory
 import System.Random
 import Network.HTTP.Client
   ( Response, CookieJar, responseCookieJar, responseBody
-  , responseHeaders, responseVersion, responseStatus )
+  , responseHeaders, responseVersion, responseStatus, HttpException )
 import Network.HTTP.Types (Status, ResponseHeaders, HttpVersion)
 
 
@@ -245,13 +245,13 @@ mRandomAlphanumericString k =
 -- | Monads that can perform HTTP requests.
 class (Monad m) => EffectHttp m where
   -- | Acts like `getWith` (no session) or `S.getWith` (session) from @wreq@.
-  mGetWith :: Options -> Maybe S.Session -> Url -> m HttpResponse
+  mGetWith :: Options -> Maybe S.Session -> Url -> m (Either HttpException HttpResponse)
 
   -- | Acts like `postWith` (no session) or `S.postWith` (session) from @wreq@.
-  mPostWith :: Options -> Maybe S.Session -> Url -> ByteString -> m HttpResponse
+  mPostWith :: Options -> Maybe S.Session -> Url -> ByteString -> m (Either HttpException HttpResponse)
 
   -- | Acts like `deleteWith` (no session) or `S.deleteWith` (session) from @wreq@.
-  mDeleteWith :: Options -> Maybe S.Session -> Url -> m HttpResponse
+  mDeleteWith :: Options -> Maybe S.Session -> Url -> m (Either HttpException HttpResponse)
 
   -- | Acts like `S.newSession` from @wreq@.
   mNewSessionState :: m S.Session
@@ -261,16 +261,16 @@ type Url = String
 
 instance EffectHttp IO where
   mGetWith opts session url = case session of
-    Nothing -> fmap readHttpResponse $ getWith opts url
-    Just sn -> fmap readHttpResponse $ S.getWith opts sn url
+    Nothing -> mTry $ fmap readHttpResponse $ getWith opts url
+    Just sn -> mTry $ fmap readHttpResponse $ S.getWith opts sn url
 
   mPostWith opts session url payload = case session of
-    Nothing -> fmap readHttpResponse $ postWith opts url payload
-    Just sn -> fmap readHttpResponse $ S.postWith opts sn url payload
+    Nothing -> mTry $ fmap readHttpResponse $ postWith opts url payload
+    Just sn -> mTry $ fmap readHttpResponse $ S.postWith opts sn url payload
 
   mDeleteWith opts session url = case session of
-    Nothing -> fmap readHttpResponse $ deleteWith opts url
-    Just sn -> fmap readHttpResponse $ S.deleteWith opts sn url
+    Nothing -> mTry $ fmap readHttpResponse $ deleteWith opts url
+    Just sn -> mTry $ fmap readHttpResponse $ S.deleteWith opts sn url
 
   mNewSessionState = S.newSession
 

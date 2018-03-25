@@ -20,6 +20,7 @@ import System.IO.Error
 import System.Random
 import qualified Network.Wreq as Wreq
 import qualified Network.Wreq.Session as WreqS
+import Network.HTTP.Client (HttpException)
 
 import Web.Api.Http.Effects
 
@@ -72,18 +73,18 @@ data MockServer st = MockServer
   { __http_get
       :: st
       -> String
-      -> (HttpResponse, st)
+      -> (Either HttpException HttpResponse, st)
 
   , __http_post
       :: st
       -> String
       -> ByteString
-      -> (HttpResponse, st)
+      -> (Either HttpException HttpResponse, st)
 
   , __http_delete
       :: st
       -> String
-      -> (HttpResponse, st)
+      -> (Either HttpException HttpResponse, st)
   }
 
 instance Show (MockServer st) where
