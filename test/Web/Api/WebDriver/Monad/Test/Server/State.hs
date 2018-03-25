@@ -13,6 +13,7 @@ data WebDriverServerState = WebDriverServerState
 
   , _readiness_state :: Bool
   , _active_sessions :: [String]
+  , _max_active_sessions :: Int
 
   , _current_url :: String
   } deriving Show
@@ -23,6 +24,7 @@ defaultWebDriverServerState = WebDriverServerState
 
   , _readiness_state = True
   , _active_sessions = []
+  , _max_active_sessions = 1
 
   , _current_url = ""
   }
@@ -39,6 +41,7 @@ _create_session
   -> Maybe (String, WebDriverServerState)
 _create_session st =
   if True == _readiness_state st
+       && length (_active_sessions st) < _max_active_sessions st
     then
       let
         _id = show $ _next_session_id st

@@ -141,35 +141,35 @@ get_session_id_timeouts
 get_session_id_timeouts st session_id =
   if not $ _is_active_session session_id st
     then (Left _err_invalid_session_id, st)
-    else (Right $ _success_with_value $ object [("script", Number 0),("pageLoad", Number 0),("implicit", Number 0)], st)
+    else (Right $ _success_with_value $ object
+      [ ("script", Number 0)
+      , ("pageLoad", Number 0)
+      , ("implicit", Number 0)
+      ], st)
 
 get_session_id_window_rect
   :: WebDriverServerState
   -> String
   -> (Either HttpException HttpResponse, WebDriverServerState)
 get_session_id_window_rect st session_id =
-  if _is_active_session session_id st
-      then (Right $ _success_with_value $ object
-        [ ("x", Number 0)
-        , ("y", Number 0)
-        , ("height", Number 480)
-        , ("width", Number 640)
-        ], st)
-      else (Left _err_invalid_session_id, st)
+  if not $ _is_active_session session_id st
+    then (Left _err_invalid_session_id, st)
+    else (Right $ _success_with_value $ object
+      [ ("x", Number 0)
+      , ("y", Number 0)
+      , ("height", Number 480)
+      , ("width", Number 640)
+      ], st)
 
 post_session
   :: WebDriverServerState
   -> (Either HttpException HttpResponse, WebDriverServerState)
 post_session st =
-  let
-    result = _create_session st
-  in
-    case result of
-      Nothing -> (Left _err_session_not_created, st)
-      Just (_id, _st) ->
-        let
-          response = _success_with_value $ object [ ("sessionId", String $ pack _id) ]
-        in (Right response, _st)
+  case _create_session st of
+    Nothing -> (Left _err_session_not_created, st)
+    Just (_id, _st) -> (Right $ _success_with_value $ object
+      [ ("sessionId", String $ pack _id)
+      ], _st)
 
 post_session_id_url
   :: WebDriverServerState
@@ -195,69 +195,69 @@ post_session_id_back
   -> String
   -> (Either HttpException HttpResponse, WebDriverServerState)
 post_session_id_back !st !session_id =
-  if _is_active_session session_id st
-      then (Right _success_with_empty_object, st)
-      else (Left _err_invalid_session_id, st)
+  if not $ _is_active_session session_id st
+    then (Left _err_invalid_session_id, st)
+    else (Right _success_with_empty_object, st)
 
 post_session_id_forward
   :: WebDriverServerState
   -> String
   -> (Either HttpException HttpResponse, WebDriverServerState)
 post_session_id_forward !st !session_id =
-  if _is_active_session session_id st
-      then (Right _success_with_empty_object, st)
-      else (Left _err_invalid_session_id, st)
+  if not $ _is_active_session session_id st
+    then (Left _err_invalid_session_id, st)
+    else (Right _success_with_empty_object, st)
 
 post_session_id_refresh
   :: WebDriverServerState
   -> String
   -> (Either HttpException HttpResponse, WebDriverServerState)
 post_session_id_refresh !st !session_id =
-  if _is_active_session session_id st
-      then (Right _success_with_empty_object, st)
-      else (Left _err_invalid_session_id, st)
+  if not $ _is_active_session session_id st
+    then (Left _err_invalid_session_id, st)
+    else (Right _success_with_empty_object, st)
 
 post_session_id_window_maximize
   :: WebDriverServerState
   -> String
   -> (Either HttpException HttpResponse, WebDriverServerState)
 post_session_id_window_maximize !st !session_id =
-  if _is_active_session session_id st
-      then (Right $ _success_with_value $ object
-        [ ("x", Number 0)
-        , ("y", Number 0)
-        , ("height", Number 480)
-        , ("width", Number 640)
-        ], st)
-      else (Left _err_invalid_session_id, st)
+  if not $ _is_active_session session_id st
+    then (Left _err_invalid_session_id, st)
+    else (Right $ _success_with_value $ object
+      [ ("x", Number 0)
+      , ("y", Number 0)
+      , ("height", Number 480)
+      , ("width", Number 640)
+      ], st)
 
 post_session_id_window_minimize
   :: WebDriverServerState
   -> String
   -> (Either HttpException HttpResponse, WebDriverServerState)
 post_session_id_window_minimize !st !session_id =
-  if _is_active_session session_id st
-      then (Right $ _success_with_value $ object
-        [ ("x", Number 0)
-        , ("y", Number 0)
-        , ("height", Number 0)
-        , ("width", Number 0)
-        ], st)
-      else (Left _err_invalid_session_id, st)
+  if not $ _is_active_session session_id st
+    then (Left _err_invalid_session_id, st)
+    else (Right $ _success_with_value $ object
+      [ ("x", Number 0)
+      , ("y", Number 0)
+      , ("height", Number 0)
+      , ("width", Number 0)
+      ], st)
 
 post_session_id_window_fullscreen
   :: WebDriverServerState
   -> String
   -> (Either HttpException HttpResponse, WebDriverServerState)
 post_session_id_window_fullscreen !st !session_id =
-  if _is_active_session session_id st
-      then (Right $ _success_with_value $ object
-        [ ("x", Number 0)
-        , ("y", Number 0)
-        , ("height", Number 480)
-        , ("width", Number 640)
-        ], st)
-      else (Left _err_invalid_session_id, st)
+  if not $ _is_active_session session_id st
+    then (Left _err_invalid_session_id, st)
+    else (Right $ _success_with_value $ object
+      [ ("x", Number 0)
+      , ("y", Number 0)
+      , ("height", Number 480)
+      , ("width", Number 640)
+      ], st)
 
 post_session_id_element
   :: WebDriverServerState
@@ -315,18 +315,18 @@ post_session_id_actions
   -> LB.ByteString
   -> (Either HttpException HttpResponse, WebDriverServerState)
 post_session_id_actions !st !session_id payload =
-  if _is_active_session session_id st
-    then (Right _success_with_empty_object, st)
-    else (Left _err_invalid_session_id, st)
+  if not $ _is_active_session session_id st
+    then (Left _err_invalid_session_id, st)
+    else (Right _success_with_empty_object, st)
 
 get_session_id_window
   :: WebDriverServerState
   -> String
   -> (Either HttpException HttpResponse, WebDriverServerState)
 get_session_id_window st session_id =
-  if _is_active_session session_id st
-    then (Right $ _success_with_value $ String "window-1", st)
-    else (Left _err_invalid_session_id, st)
+  if not $ _is_active_session session_id st
+    then (Left _err_invalid_session_id, st)
+    else (Right $ _success_with_value $ String "window-1", st)
 
 delete_session_id_cookie
   :: WebDriverServerState
@@ -342,9 +342,9 @@ delete_session_id_window
   -> String
   -> (Either HttpException HttpResponse, WebDriverServerState)
 delete_session_id_window st session_id =
-  if _is_active_session session_id st
-    then (Right $ _success_with_value $ toJSONList [String "window-1"], st)
-    else (Left _err_invalid_session_id, st)
+  if not $ _is_active_session session_id st
+    then (Left _err_invalid_session_id, st)
+    else (Right $ _success_with_value $ toJSONList [String "window-1"], st)
 
 
 
