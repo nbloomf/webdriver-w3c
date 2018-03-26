@@ -662,6 +662,10 @@ elementClick element_id = do
   baseUrl <- theRemoteUrlWithSession
   let !payload = encode $ object []
   httpPost (baseUrl ++ "/element/" ++ element_id ++ "/click") payload
+    >>= (return . __response_body)
+    >>= mParseJson
+    >>= lookupKey "value"
+    >>= expect (object [])
   return ()
 
 

@@ -87,6 +87,9 @@ defaultWebDriverServer = MockServer
       [_,"session",session_id,"actions"] ->
         post_session_id_actions st session_id payload
 
+      [_,"session",session_id,"element",element_id,"click"] ->
+        post_session_id_element_id_click st session_id element_id
+
       _ -> error $ "defaultWebDriverServer: post url: " ++ stripScheme url
 
   , __http_delete = \st !url -> case splitUrl $ stripScheme url of
@@ -390,7 +393,15 @@ get_session_id_element_active st session_id =
 
 {- TODO: get_session_id_element_id_enabled -}
 
-{- TODO: get_session_id_element_id_click -}
+post_session_id_element_id_click
+  :: WebDriverServerState
+  -> String
+  -> String
+  -> (Either HttpException HttpResponse, WebDriverServerState)
+post_session_id_element_id_click st session_id element_id =
+  if not $ _is_active_session session_id st
+    then (Left _err_invalid_session_id, st)
+    else (Right _success_with_empty_object, st)
 
 {- TODO: get_session_id_element_id_clear -}
 

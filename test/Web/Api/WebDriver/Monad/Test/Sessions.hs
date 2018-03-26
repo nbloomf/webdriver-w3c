@@ -236,6 +236,14 @@ _exit_success_cases =
         !element <- getActiveElement
         return ()
     )
+
+  , ( "elementClick"
+    , do
+        navigateTo "https://www.w3.org"
+        !root <- findElement CssSelector "body"
+        () <- elementClick root
+        return ()
+    )
   ]
 
 _unknown_error_cases
