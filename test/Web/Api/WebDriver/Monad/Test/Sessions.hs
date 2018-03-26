@@ -224,6 +224,12 @@ _exit_success_cases =
           [] -> return ()
           (!x:xs) -> return ()
     )
+
+  , ( "sessionStatus"
+    , do
+        (!r,!m) <- sessionStatus
+        return ()
+    )
   ]
 
 _unknown_error_cases

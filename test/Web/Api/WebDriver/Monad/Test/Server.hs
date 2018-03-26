@@ -24,6 +24,9 @@ import Web.Api.WebDriver.Monad.Test.Server.State
 defaultWebDriverServer :: MockServer WebDriverServerState
 defaultWebDriverServer = MockServer
   { __http_get = \st !url -> case splitUrl $ stripScheme url of
+      [_,"status"] ->
+        get_session_id_status st
+
       [_,"session",session_id,"url"] ->
         get_session_id_url st session_id
 
@@ -135,7 +138,14 @@ delete_session_id st session_id =
     then (Left _err_invalid_session_id, st)
     else (Right _success_with_empty_object, _delete_session session_id st)
 
-{-- TODO: get_session_id_status --}
+get_session_id_status
+  :: WebDriverServerState
+  -> (Either HttpException HttpResponse, WebDriverServerState)
+get_session_id_status st =
+  (Right $ _success_with_value $ object
+    [ ("ready", Bool True)
+    , ("message", String "ready")
+    ], st)
 
 get_session_id_timeouts
   :: WebDriverServerState
