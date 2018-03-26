@@ -42,6 +42,9 @@ defaultWebDriverServer = MockServer
       [_,"session",session_id,"window"] ->
         get_session_id_window st session_id
 
+      [_,"session",session_id,"element","active"] ->
+        get_session_id_element_active st session_id
+
       _ -> error $ "defaultWebDriverServer: get url: " ++ url
 
   , __http_post = \st !url !payload -> case splitUrl $ stripScheme url of
@@ -360,7 +363,16 @@ post_session_id_element_id_elements st session_id element_id payload =
       [ ("element-6066-11e4-a52e-4f735466cecf", String "element-id")
       ]], st)
 
-{- TODO: get_session_id_element_active -}
+get_session_id_element_active
+  :: WebDriverServerState
+  -> String
+  -> (Either HttpException HttpResponse, WebDriverServerState)
+get_session_id_element_active st session_id =
+  if not $ _is_active_session session_id st
+    then (Left _err_invalid_session_id, st)
+    else (Right $ _success_with_value $ object
+      [ ("element-6066-11e4-a52e-4f735466cecf", String "element-id")
+      ], st)
 
 {- TODO: get_session_id_element_id_selected -}
 

@@ -230,6 +230,12 @@ _exit_success_cases =
         (!r,!m) <- sessionStatus
         return ()
     )
+
+  , ( "getActiveElement"
+    , do
+        !element <- getActiveElement
+        return ()
+    )
   ]
 
 _unknown_error_cases
