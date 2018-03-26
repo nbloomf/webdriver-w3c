@@ -108,6 +108,9 @@ defaultWebDriverServer = MockServer
       [_,"session",session_id,"timeouts"] ->
         post_session_id_timeouts st session_id payload
 
+      [_,"session",session_id,"frame"] ->
+        post_session_id_frame st session_id payload
+
       _ -> error $ "defaultWebDriverServer: post url: " ++ stripScheme url
 
   , __http_delete = \st !url -> case splitUrl $ stripScheme url of
@@ -284,6 +287,16 @@ delete_session_id_window st session_id =
 {- TODO: get_session_id_window_handles -}
 
 {- TODO: post_session_id_frame -}
+
+post_session_id_frame
+  :: WebDriverServerState
+  -> String
+  -> LB.ByteString
+  -> (Either HttpException HttpResponse, WebDriverServerState)
+post_session_id_frame st session_id !payload =
+  if not $ _is_active_session session_id st
+    then (Left _err_invalid_session_id, st)
+    else (Right _success_with_empty_object, st)
 
 {- TODO: post_session_id_frame_parent -}
 

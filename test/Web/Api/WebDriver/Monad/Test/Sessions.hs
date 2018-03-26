@@ -290,6 +290,13 @@ _exit_success_cases =
         !rect <- getElementRect element
         return ()
     )
+
+  , ( "switchToFrame"
+    , do
+        navigateTo "https://www.w3.org"
+        () <- switchToFrame TopLevelFrame
+        return ()
+    )
   ]
 
 _unknown_error_cases
