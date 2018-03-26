@@ -24,6 +24,8 @@ module Web.Api.WebDriver.Types (
   , Script
   , CookieName
 
+  , FrameReference(..)
+
   -- * Capabilities
   , Capabilities(..)
   , BrowserName(..)
@@ -121,6 +123,12 @@ type Script = String
 
 -- | Used with `getNamedCookie`.
 type CookieName = String
+
+-- | Possible frame references; see <https://w3c.github.io/webdriver/webdriver-spec.html#switch-to-frame>.
+data FrameReference
+  = TopLevelFrame
+  | FrameNumber Int
+  | FrameContainingElement ElementRef
 
 
 

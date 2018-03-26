@@ -54,8 +54,10 @@ module Web.Api.WebDriver.Endpoints (
   , switchToWindow
   -- ** Get Window Handles
   , getWindowHandles
-  -- , switchToFrame
-  -- , switchToParentFrame
+  -- ** Switch To Frame
+  , switchToFrame
+  -- ** Switch To Parent Frame
+  , switchToParentFrame
   -- ** Get Window Rect
   , getWindowRect
   -- ** Set Window Rect
@@ -150,7 +152,7 @@ module Web.Api.WebDriver.Endpoints (
   ) where
 
 import Data.Aeson
-import Data.Text (Text, unpack)
+import Data.Text (Text, unpack, pack)
 import Data.Text.Encoding (encodeUtf8)
 import qualified Data.ByteString as SB
 import qualified Data.ByteString.Base64 as B64
@@ -421,10 +423,43 @@ getWindowHandles = do
     >>= (return . map unpack)
 
 
--- TODO: switchToFrame
+-- | See <https://w3c.github.io/webdriver/webdriver-spec.html#switch-to-frame>.
+switchToFrame
+  :: (Effectful m)
+  => FrameReference
+  -> WebDriver m ()
+switchToFrame ref = do
+  baseUrl <- theRemoteUrlWithSession
+  let
+    !frame = case ref of
+      TopLevelFrame -> Null
+      FrameNumber k -> Number $ fromIntegral k
+      FrameContainingElement element_id -> String $ pack element_id
+
+    !payload = encode $ object
+      [ "id" .= toJSON frame ]
+
+  httpPost (baseUrl ++ "/frame") payload
+    >>= (return . __response_body)
+    >>= mParseJson
+    >>= lookupKey "value"
+    >>= expect (object [])
+  return ()
 
 
--- TODO: switchToParentFrame
+-- | See <https://w3c.github.io/webdriver/webdriver-spec.html#switch-to-parent-frame>.
+switchToParentFrame
+  :: (Effectful m)
+  => WebDriver m ()
+switchToParentFrame = do
+  baseUrl <- theRemoteUrlWithSession
+  let !payload = encode $ object []
+  httpPost (baseUrl ++ "/frame/parent") payload
+    >>= (return . __response_body)
+    >>= mParseJson
+    >>= lookupKey "value"
+    >>= expect (object [])
+  return ()
 
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-window-rect>.
