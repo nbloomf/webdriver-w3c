@@ -23,6 +23,7 @@ module Web.Api.WebDriver.Types (
   , PropertyName
   , Script
   , CookieName
+  , CssPropertyName
 
   , FrameReference(..)
 
@@ -123,6 +124,9 @@ type Script = String
 
 -- | Used with `getNamedCookie`.
 type CookieName = String
+
+-- | Used with `getElementCssValue`.
+type CssPropertyName = String
 
 -- | Possible frame references; see <https://w3c.github.io/webdriver/webdriver-spec.html#switch-to-frame>.
 data FrameReference

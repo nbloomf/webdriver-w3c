@@ -45,6 +45,18 @@ defaultWebDriverServer = MockServer
       [_,"session",session_id,"element","active"] ->
         get_session_id_element_active st session_id
 
+      [_,"session",session_id,"element",element_id,"selected"] ->
+        get_session_id_element_id_selected st session_id element_id
+
+      [_,"session",session_id,"element",element_id,"text"] ->
+        get_session_id_element_id_text st session_id element_id
+
+      [_,"session",session_id,"element",element_id,"attribute",name] ->
+        get_session_id_element_id_attribute_name st session_id element_id name
+
+      [_,"session",session_id,"element",element_id,"enabled"] ->
+        get_session_id_element_id_enabled st session_id element_id
+
       _ -> error $ "defaultWebDriverServer: get url: " ++ url
 
   , __http_post = \st !url !payload -> case splitUrl $ stripScheme url of
@@ -377,21 +389,54 @@ get_session_id_element_active st session_id =
       [ ("element-6066-11e4-a52e-4f735466cecf", String "element-id")
       ], st)
 
-{- TODO: get_session_id_element_id_selected -}
+get_session_id_element_id_selected
+  :: WebDriverServerState
+  -> String
+  -> String
+  -> (Either HttpException HttpResponse, WebDriverServerState)
+get_session_id_element_id_selected st session_id element_id =
+  if not $ _is_active_session session_id st
+    then (Left _err_invalid_session_id, st)
+    else (Right $ _success_with_value $ Bool True, st)
 
-{- TODO: get_session_id_element_id_attribute_name -}
+get_session_id_element_id_attribute_name
+  :: WebDriverServerState
+  -> String
+  -> String
+  -> String
+  -> (Either HttpException HttpResponse, WebDriverServerState)
+get_session_id_element_id_attribute_name st session_id element_id name =
+  if not $ _is_active_session session_id st
+    then (Left _err_invalid_session_id, st)
+    else (Right $ _success_with_value $ String "foo", st)
 
 {- TODO: get_session_id_element_id_property_name -}
 
 {- TODO: get_session_id_element_id_css_name -}
 
-{- TODO: get_session_id_element_id_text -}
+get_session_id_element_id_text
+  :: WebDriverServerState
+  -> String
+  -> String
+  -> (Either HttpException HttpResponse, WebDriverServerState)
+get_session_id_element_id_text st session_id element_id =
+  if not $ _is_active_session session_id st
+    then (Left _err_invalid_session_id, st)
+    else (Right $ _success_with_value $ String "foo", st)
 
 {- TODO: get_session_id_element_id_name -}
 
 {- TODO: get_session_id_element_id_rect -}
 
-{- TODO: get_session_id_element_id_enabled -}
+get_session_id_element_id_enabled
+  :: WebDriverServerState
+  -> String
+  -> String
+  -> (Either HttpException HttpResponse, WebDriverServerState)
+get_session_id_element_id_enabled st session_id element_id =
+  if not $ _is_active_session session_id st
+    then (Left _err_invalid_session_id, st)
+    else (Right $ _success_with_value $ Bool True, st)
 
 post_session_id_element_id_click
   :: WebDriverServerState

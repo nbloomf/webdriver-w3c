@@ -244,6 +244,38 @@ _exit_success_cases =
         () <- elementClick root
         return ()
     )
+
+  , ( "isElementSelected"
+    , do
+        navigateTo "https://www.w3.org"
+        !element <- getActiveElement
+        !p <- isElementSelected element
+        return ()
+    )
+
+  , ( "isElementEnabled"
+    , do
+        navigateTo "https://www.w3.org"
+        !element <- getActiveElement
+        !p <- isElementEnabled element
+        return ()
+    )
+
+  , ( "getElementAttribute"
+    , do
+        navigateTo "https://www.w3.org"
+        !element <- getActiveElement
+        !attr <- getElementAttribute element "href"
+        return ()
+    )
+
+  , ( "getElementText"
+    , do
+        navigateTo "https://www.w3.org"
+        !element <- getActiveElement
+        !text <- getElementText element
+        return ()
+    )
   ]
 
 _unknown_error_cases

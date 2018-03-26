@@ -88,11 +88,16 @@ module Web.Api.WebDriver.Endpoints (
   , getElementAttribute
   -- ** Get Element Property
   , getElementProperty
-  -- getElementCssValue
-  -- getElementText
-  -- getElementTagName
-  -- getElementRect
-  -- isElementEnabled
+  -- ** Get Element CSS Value
+  , getElementCssValue
+  -- ** Get Element Text
+  , getElementText
+  -- ** Get Element Tag Name
+  , getElementTagName
+  -- ** Get Element Rect
+  , getElementRect
+  -- ** Is Element Enabled
+  , isElementEnabled
 
   -- * Element Interaction
   -- ** Element Click
@@ -673,19 +678,75 @@ getElementProperty element_id name = do
     >>= lookupKey "value"
 
 
--- TODO: getElementCssValue
+-- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-element-css-value>.
+getElementCssValue
+  :: (Effectful m)
+  => ElementRef
+  -> CssPropertyName
+  -> WebDriver m String
+getElementCssValue element_id name = do
+  baseUrl <- theRemoteUrlWithSession
+  httpGet (baseUrl ++ "/element/" ++ element_id ++ "/css/" ++ name)
+    >>= (return . __response_body)
+    >>= mParseJson
+    >>= lookupKey "value"
+    >>= constructFromJSON
 
 
--- TODO: getElementText
+-- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-element-text>.
+getElementText
+  :: (Effectful m)
+  => ElementRef
+  -> WebDriver m String
+getElementText element_id = do
+  baseUrl <- theRemoteUrlWithSession
+  httpGet (baseUrl ++ "/element/" ++ element_id ++ "/text")
+    >>= (return . __response_body)
+    >>= mParseJson
+    >>= lookupKey "value"
+    >>= constructFromJSON
 
 
--- TODO: getElementTagName
+-- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-element-tag-name>.
+getElementTagName
+  :: (Effectful m)
+  => ElementRef
+  -> WebDriver m String
+getElementTagName element_id = do
+  baseUrl <- theRemoteUrlWithSession
+  httpGet (baseUrl ++ "/element/" ++ element_id ++ "/name")
+    >>= (return . __response_body)
+    >>= mParseJson
+    >>= lookupKey "value"
+    >>= constructFromJSON
 
 
--- TODO: getElementRect
+-- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-element-rect>.
+getElementRect
+  :: (Effectful m)
+  => ElementRef
+  -> WebDriver m Rect
+getElementRect element_id = do
+  baseUrl <- theRemoteUrlWithSession
+  httpGet (baseUrl ++ "/element/" ++ element_id ++ "/rect")
+    >>= (return . __response_body)
+    >>= mParseJson
+    >>= lookupKey "value"
+    >>= constructFromJSON
 
 
--- TODO: isElementEnabled
+-- | See <https://w3c.github.io/webdriver/webdriver-spec.html#is-element-enabled>.
+isElementEnabled
+  :: (Effectful m)
+  => ElementRef
+  -> WebDriver m Bool
+isElementEnabled element_id = do
+  baseUrl <- theRemoteUrlWithSession
+  httpGet (baseUrl ++ "/element/" ++ element_id ++ "/enabled")
+    >>= (return . __response_body)
+    >>= mParseJson
+    >>= lookupKey "value"
+    >>= constructFromJSON
 
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#element-click>.
