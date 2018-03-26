@@ -201,7 +201,11 @@ newSession'
 newSession' f caps = do
   baseUrl <- theRemoteUrl
   format <- readResponseFormat
-  let !payload = encode $ f $ toJSON caps
+  let
+    !payload = encode $ f $ object
+      [ "capabilities" .= object
+        [ "alwaysMatch" .= toJSON caps ]
+      ]
   httpPost (baseUrl ++ "/session") payload
     >>= (return . __response_body)
     >>= mParseJson

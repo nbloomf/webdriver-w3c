@@ -276,6 +276,20 @@ _exit_success_cases =
         !text <- getElementText element
         return ()
     )
+
+  , ( "setTimeouts"
+    , do
+        () <- setTimeouts emptyTimeoutConfig
+        return ()
+    )
+
+  , ( "getElementRect"
+    , do
+        navigateTo "https://www.w3.org"
+        !element <- getActiveElement
+        !rect <- getElementRect element
+        return ()
+    )
   ]
 
 _unknown_error_cases

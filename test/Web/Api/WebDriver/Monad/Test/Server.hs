@@ -57,6 +57,9 @@ defaultWebDriverServer = MockServer
       [_,"session",session_id,"element",element_id,"enabled"] ->
         get_session_id_element_id_enabled st session_id element_id
 
+      [_,"session",session_id,"element",element_id,"rect"] ->
+        get_session_id_element_id_rect st session_id element_id
+
       _ -> error $ "defaultWebDriverServer: get url: " ++ url
 
   , __http_post = \st !url !payload -> case splitUrl $ stripScheme url of
@@ -101,6 +104,9 @@ defaultWebDriverServer = MockServer
 
       [_,"session",session_id,"element",element_id,"click"] ->
         post_session_id_element_id_click st session_id element_id
+
+      [_,"session",session_id,"timeouts"] ->
+        post_session_id_timeouts st session_id payload
 
       _ -> error $ "defaultWebDriverServer: post url: " ++ stripScheme url
 
@@ -178,7 +184,18 @@ get_session_id_timeouts st session_id =
       , ("implicit", Number 0)
       ], st)
 
-{-- TODO: post_session_id_timeouts --}
+post_session_id_timeouts
+  :: WebDriverServerState
+  -> String
+  -> LB.ByteString
+  -> (Either HttpException HttpResponse, WebDriverServerState)
+post_session_id_timeouts st session_id !payload =
+  if not $ _is_active_session session_id st
+    then (Left _err_invalid_session_id, st)
+    else case decode payload of
+      Nothing -> (Left _err_invalid_argument, st)
+      Just (Object m) -> (Right _success_with_empty_object, st)
+      Just _ -> (Left _err_invalid_argument, st)
 
 post_session_id_url
   :: WebDriverServerState
@@ -427,6 +444,21 @@ get_session_id_element_id_text st session_id element_id =
 {- TODO: get_session_id_element_id_name -}
 
 {- TODO: get_session_id_element_id_rect -}
+
+get_session_id_element_id_rect
+  :: WebDriverServerState
+  -> String
+  -> String
+  -> (Either HttpException HttpResponse, WebDriverServerState)
+get_session_id_element_id_rect !st !session_id !element_id =
+  if not $ _is_active_session session_id st
+    then (Left _err_invalid_session_id, st)
+    else (Right $ _success_with_value $ object
+      [ ("x", Number 0)
+      , ("y", Number 0)
+      , ("height", Number 48)
+      , ("width", Number 64)
+      ], st)
 
 get_session_id_element_id_enabled
   :: WebDriverServerState

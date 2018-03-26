@@ -33,6 +33,7 @@ module Web.Api.WebDriver.Types (
   , PlatformName(..)
   , emptyCapabilities
   , defaultFirefoxCapabilities
+  , headlessFirefoxCapabilities
   , defaultChromeCapabilities
   , FirefoxOptions(..)
   , defaultFirefoxOptions
@@ -77,11 +78,13 @@ import Data.Char
   ( toLower )
 import Data.Text
   ( Text, pack, unpack )
+import Data.Scientific
+  ( Scientific, scientific )
 import Data.Aeson.Types
   ( ToJSON(..), FromJSON(..), Value(..), KeyValue
   , Pair, (.:?), (.:), (.=), object, typeMismatch )
 import Test.QuickCheck
-  ( Arbitrary(..), arbitraryBoundedEnum )
+  ( Arbitrary(..), arbitraryBoundedEnum, Gen )
 import Test.QuickCheck.Gen
   ( listOf, oneof )
 
@@ -353,6 +356,14 @@ emptyCapabilities = Capabilities
 defaultFirefoxCapabilities :: Capabilities
 defaultFirefoxCapabilities = emptyCapabilities
   { _browser_name = Just Firefox
+  }
+
+-- | Passing the "-headless" parameter to Firefox.
+headlessFirefoxCapabilities :: Capabilities
+headlessFirefoxCapabilities = defaultFirefoxCapabilities
+  { _firefox_options = Just $ defaultFirefoxOptions
+    { _firefox_args = Just ["-headless"]
+    }
   }
 
 -- | All members set to `Nothing` except `_browser_name`, which is @Just Chrome@.
@@ -881,10 +892,10 @@ emptyActionItem = ActionItem
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-element-rect>.
 data Rect = Rect
-  { _rect_x :: Int -- ^ @x@
-  , _rect_y :: Int -- ^ @y@
-  , _rect_width :: Int -- ^ @width@
-  , _rect_height :: Int -- ^ @height@
+  { _rect_x :: Scientific -- ^ @x@
+  , _rect_y :: Scientific -- ^ @y@
+  , _rect_width :: Scientific -- ^ @width@
+  , _rect_height :: Scientific -- ^ @height@
   } deriving (Eq, Show)
 
 instance ToJSON Rect where
@@ -903,12 +914,16 @@ instance FromJSON Rect where
     <*> v .: "height"
   parseJSON invalid = typeMismatch "Rect" invalid
 
+arbScientific :: Gen Scientific
+arbScientific = scientific <$> arbitrary <*> arbitrary
+  
+
 instance Arbitrary Rect where
   arbitrary = Rect
-    <$> arbitrary
-    <*> arbitrary
-    <*> arbitrary
-    <*> arbitrary
+    <$> arbScientific
+    <*> arbScientific
+    <*> arbScientific
+    <*> arbScientific
 
 -- | All members set to `Nothing`.
 emptyRect :: Rect
