@@ -217,14 +217,6 @@ _exit_success_cases =
         return ()
     )
 
-  , ( "closeWindow"
-    , do
-        !handles <- getWindowHandle
-        case handles of
-          [] -> return ()
-          (!x:xs) -> return ()
-    )
-
   , ( "sessionStatus"
     , do
         (!r,!m) <- sessionStatus
@@ -296,6 +288,15 @@ _exit_success_cases =
         navigateTo "https://www.w3.org"
         () <- switchToFrame TopLevelFrame
         return ()
+    )
+
+  , ( "getWindowHandles"
+    , do
+        navigateTo "https://www.w3.org"
+        !handles <- getWindowHandles
+        case handles of
+          [] -> return ()
+          (!x):xs -> return ()
     )
   ]
 
