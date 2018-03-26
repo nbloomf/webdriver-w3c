@@ -3,9 +3,12 @@ module Web.Api.WebDriver.Monad.Test.Server.State (
   , defaultWebDriverServerState
   , _is_active_session
   , _create_session
+  , _delete_session
   , _get_current_url
   , _set_current_url
   ) where
+
+import Data.List (delete)
 
 -- | Models the internal state of a WebDriver remote end.
 data WebDriverServerState = WebDriverServerState
@@ -54,6 +57,13 @@ _create_session st =
           }
       in Just (_id, _st)
     else Nothing
+
+_delete_session
+  :: String
+  -> WebDriverServerState
+  -> WebDriverServerState
+_delete_session str st =
+  st { _active_sessions = delete str $ _active_sessions st }
 
 _get_current_url
   :: WebDriverServerState

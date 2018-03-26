@@ -89,127 +89,55 @@ _exit_success_cases =
         return ()
     )
 
-  , ( "findElement (CSS Selector)"
+  , ( "findElement"
     , do
         navigateTo "https://www.w3.org"
         !element <- findElement CssSelector "body"
-        return ()
-    )
-
-  , ( "findElement (Link Text)"
-    , do
-        navigateTo "https://www.w3.org"
         !element <- findElement LinkTextSelector "Standards"
-        return ()
-    )
-
-  , ( "findElement (Partial Link Text)"
-    , do
-        navigateTo "https://www.w3.org"
         !element <- findElement PartialLinkTextSelector "Standards"
-        return ()
-    )
-
-  , ( "findElement (Tag Name)"
-    , do
-        navigateTo "https://www.w3.org"
         !element <- findElement TagName "body"
-        return ()
-    )
-
-  , ( "findElement (XPath)"
-    , do
-        navigateTo "https://www.w3.org"
         !element <- findElement XPathSelector "*"
         return ()
     )
 
-  , ( "findElements (CSS Selector)"
+  , ( "findElements"
     , do
         navigateTo "https://www.w3.org"
         !elements <- findElements CssSelector "body"
         case elements of
           [] -> return ()
           (!x):xs -> return ()
-    )
-
-  , ( "findElements (Link Text)"
-    , do
-        navigateTo "https://www.w3.org"
         !elements <- findElements LinkTextSelector "Standards"
         case elements of
           [] -> return ()
           (!x):xs -> return ()
-    )
-
-  , ( "findElements (Partial Link Text)"
-    , do
-        navigateTo "https://www.w3.org"
         !elements <- findElements PartialLinkTextSelector "Standards"
         case elements of
           [] -> return ()
           (!x):xs -> return ()
-    )
-
-  , ( "findElements (Tag Name)"
-    , do
-        navigateTo "https://www.w3.org"
         !elements <- findElements TagName "body"
         case elements of
           [] -> return ()
           (!x):xs -> return ()
-    )
-
-  , ( "findElements (XPath)"
-    , do
-        navigateTo "https://www.w3.org"
         !elements <- findElements XPathSelector "*"
         case elements of
           [] -> return ()
           (!x):xs -> return ()
     )
 
-  , ( "findElementFromElement (CSS Selector)"
+  , ( "findElementFromElement"
     , do
         navigateTo "https://www.w3.org"
         root <- findElement CssSelector "body"
         !element <- findElementFromElement CssSelector "p" root
-        return ()
-    )
-
-  , ( "findElementFromElement (Link Text)"
-    , do
-        navigateTo "https://www.w3.org"
-        root <- findElement CssSelector "body"
         !element <- findElementFromElement LinkTextSelector "Standards" root
-        return ()
-    )
-
-  , ( "findElementFromElement (Partial Link Text)"
-    , do
-        navigateTo "https://www.w3.org"
-        root <- findElement CssSelector "body"
         !element <- findElementFromElement PartialLinkTextSelector "Standards" root
-        return ()
-    )
-
-  , ( "findElementFromElement (Tag Name)"
-    , do
-        navigateTo "https://www.w3.org"
-        root <- findElement CssSelector "body"
         !element <- findElementFromElement TagName "p" root
-        return ()
-    )
-
-  , ( "findElementFromElement (XPath)"
-    , do
-        navigateTo "https://www.w3.org"
-        root <- findElement CssSelector "body"
         !element <- findElementFromElement XPathSelector "*" root
         return ()
     )
 
-  , ( "findElementsFromElement (CSS Selector)"
+  , ( "findElementsFromElement"
     , do
         navigateTo "https://www.w3.org"
         root <- findElement CssSelector "body"
@@ -217,42 +145,18 @@ _exit_success_cases =
         case elements of
           [] -> return ()
           (!x):xs -> return ()
-    )
-
-  , ( "findElementsFromElement (Link Text)"
-    , do
-        navigateTo "https://www.w3.org"
-        root <- findElement CssSelector "body"
         !elements <- findElementsFromElement LinkTextSelector "Standards" root
         case elements of
           [] -> return ()
           (!x):xs -> return ()
-    )
-
-  , ( "findElementsFromElement (Partial Link Text)"
-    , do
-        navigateTo "https://www.w3.org"
-        root <- findElement CssSelector "body"
         !elements <- findElementsFromElement PartialLinkTextSelector "Standards" root
         case elements of
           [] -> return ()
           (!x):xs -> return ()
-    )
-
-  , ( "findElementsFromElement (Tag Name)"
-    , do
-        navigateTo "https://www.w3.org"
-        root <- findElement CssSelector "body"
         !elements <- findElementsFromElement TagName "p" root
         case elements of
           [] -> return ()
           (!x):xs -> return ()
-    )
-
-  , ( "findElementsFromElement (XPath)"
-    , do
-        navigateTo "https://www.w3.org"
-        root <- findElement CssSelector "body"
         !elements <- findElementsFromElement XPathSelector "*" root
         case elements of
           [] -> return ()
