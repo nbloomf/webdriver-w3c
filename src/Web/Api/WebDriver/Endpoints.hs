@@ -110,6 +110,7 @@ module Web.Api.WebDriver.Endpoints (
   -- * Document Handling
   -- ** Get Page Source
   , getPageSource
+  , getPageSourceStealth
   -- ** Execute Script
   , executeScript
   -- ** Execute Async Script
