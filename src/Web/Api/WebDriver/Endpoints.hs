@@ -300,6 +300,10 @@ navigateToStealth url = do
   baseUrl <- theRemoteUrlWithSession
   let !payload = encode $ object [ "url" .= url ]
   httpSilentPost (baseUrl ++ "/url") payload
+    >>= (return . __response_body)
+    >>= mParseJson
+    >>= lookupKey "value"
+    >>= expect (object [])
   return ()
 
 
@@ -809,6 +813,20 @@ getPageSource
 getPageSource = do
   baseUrl <- theRemoteUrlWithSession
   httpGet (baseUrl ++ "/source")
+    >>= (return . __response_body)
+    >>= mParseJson
+    >>= lookupKey "value"
+    >>= constructFromJSON
+    >>= (return . unpack)
+
+
+-- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-page-source>. Does not dump the page source into the logs. :)
+getPageSourceStealth
+  :: (Effectful m)
+  => WebDriver m String
+getPageSourceStealth = do
+  baseUrl <- theRemoteUrlWithSession
+  httpSilentGet (baseUrl ++ "/source")
     >>= (return . __response_body)
     >>= mParseJson
     >>= lookupKey "value"
