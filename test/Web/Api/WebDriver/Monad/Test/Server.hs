@@ -27,20 +27,23 @@ defaultWebDriverServer = MockServer
       [_,"status"] ->
         get_session_id_status st
 
+      [_,"session",session_id,"timeouts"] ->
+        get_session_id_timeouts st session_id
+
       [_,"session",session_id,"url"] ->
         get_session_id_url st session_id
 
       [_,"session",session_id,"title"] ->
         get_session_id_title st session_id
 
-      [_,"session",session_id,"timeouts"] ->
-        get_session_id_timeouts st session_id
+      [_,"session",session_id,"window"] ->
+        get_session_id_window st session_id
+
+      [_,"session",session_id,"window","handles"] ->
+        get_session_id_window_handles st session_id
 
       [_,"session",session_id,"window","rect"] ->
         get_session_id_window_rect st session_id
-
-      [_,"session",session_id,"window"] ->
-        get_session_id_window st session_id
 
       [_,"session",session_id,"element","active"] ->
         get_session_id_element_active st session_id
@@ -48,26 +51,53 @@ defaultWebDriverServer = MockServer
       [_,"session",session_id,"element",element_id,"selected"] ->
         get_session_id_element_id_selected st session_id element_id
 
-      [_,"session",session_id,"element",element_id,"text"] ->
-        get_session_id_element_id_text st session_id element_id
-
       [_,"session",session_id,"element",element_id,"attribute",name] ->
         get_session_id_element_id_attribute_name st session_id element_id name
 
-      [_,"session",session_id,"element",element_id,"enabled"] ->
-        get_session_id_element_id_enabled st session_id element_id
+      [_,"session",session_id,"element",element_id,"property",name] ->
+        undefined
+
+      [_,"session",session_id,"element",element_id,"css",name] ->
+        undefined
+
+      [_,"session",session_id,"element",element_id,"text"] ->
+        get_session_id_element_id_text st session_id element_id
+
+      [_,"session",session_id,"element",element_id,"name"] ->
+        undefined
 
       [_,"session",session_id,"element",element_id,"rect"] ->
         get_session_id_element_id_rect st session_id element_id
 
-      [_,"session",session_id,"window","handles"] ->
-        get_session_id_window_handles st session_id
+      [_,"session",session_id,"element",element_id,"enabled"] ->
+        get_session_id_element_id_enabled st session_id element_id
+
+      [_,"session",session_id,"source"] ->
+        undefined
+
+      [_,"session",session_id,"cookie"] ->
+        undefined
+
+      [_,"session",session_id,"cookie",name] ->
+        undefined
+
+      [_,"session",session_id,"alert","text"] ->
+        undefined
+
+      [_,"session",session_id,"screenshot"] ->
+        undefined
+
+      [_,"session",session_id,"element",element_id,"screenshot"] ->
+        undefined
 
       _ -> error $ "defaultWebDriverServer: get url: " ++ url
 
   , __http_post = \st !url !payload -> case splitUrl $ stripScheme url of
       [_,"session"] ->
         post_session st
+
+      [_,"session",session_id,"timeouts"] ->
+        post_session_id_timeouts st session_id payload
 
       [_,"session",session_id,"url"] ->
         post_session_id_url st session_id payload
@@ -80,6 +110,18 @@ defaultWebDriverServer = MockServer
 
       [_,"session",session_id,"refresh"] ->
         post_session_id_refresh st session_id
+
+      [_,"session",session_id,"window"] ->
+        undefined
+
+      [_,"session",session_id,"frame"] ->
+        post_session_id_frame st session_id payload
+
+      [_,"session",session_id,"frame","parent"] ->
+        undefined
+
+      [_,"session",session_id,"window","rect"] ->
+        undefined
 
       [_,"session",session_id,"window","maximize"] ->
         post_session_id_window_maximize st session_id
@@ -102,17 +144,35 @@ defaultWebDriverServer = MockServer
       [_,"session",session_id,"element",element_id,"elements"] ->
         post_session_id_element_id_elements st session_id element_id payload
 
-      [_,"session",session_id,"actions"] ->
-        post_session_id_actions st session_id payload
-
       [_,"session",session_id,"element",element_id,"click"] ->
         post_session_id_element_id_click st session_id element_id
 
-      [_,"session",session_id,"timeouts"] ->
-        post_session_id_timeouts st session_id payload
+      [_,"session",session_id,"element",element_id,"clear"] ->
+        undefined
 
-      [_,"session",session_id,"frame"] ->
-        post_session_id_frame st session_id payload
+      [_,"session",session_id,"element",element_id,"value"] ->
+        undefined
+ 
+      [_,"session",session_id,"execute","sync"] ->
+        undefined
+
+      [_,"session",session_id,"execute","async"] ->
+        undefined
+
+      [_,"session",session_id,"cookie"] ->
+        undefined
+
+      [_,"session",session_id,"actions"] ->
+        post_session_id_actions st session_id payload
+
+      [_,"session",session_id,"alert","dismiss"] ->
+        undefined
+
+      [_,"session",session_id,"alert","accept"] ->
+        undefined
+
+      [_,"session",session_id,"alert","text"] ->
+        undefined
 
       _ -> error $ "defaultWebDriverServer: post url: " ++ stripScheme url
 
@@ -120,11 +180,17 @@ defaultWebDriverServer = MockServer
       [_,"session",session_id] ->
         delete_session_id st session_id
 
+      [_,"session",session_id,"window"] ->
+        delete_session_id_window st session_id
+
+      [_,"session",session_id,"cookie",name] ->
+        undefined
+
       [_,"session",session_id,"cookie"] ->
         delete_session_id_cookie st session_id
 
-      [_,"session",session_id,"window"] ->
-        delete_session_id_window st session_id
+      [_,"session",session_id,"actions"] ->
+        undefined
 
       _ -> error $ "defaultWebDriverServer: delete url: " ++ url
   }
