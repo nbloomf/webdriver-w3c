@@ -11,21 +11,21 @@ _exit_success_cases
   :: (Effectful m)
   => [(String, WebDriver m ())]
 _exit_success_cases =
-  [ ( "goBack"
+  [ ( "sessionStatus"
     , do
-        () <- goBack
+        (!r,!m) <- sessionStatus
         return ()
     )
 
-  , ( "goForward"
+  , ( "getTimeouts"
     , do
-        () <- goForward
+        !timeouts <- getTimeouts
         return ()
     )
 
-  , ( "pageRefresh"
+  , ( "setTimeouts"
     , do
-        () <- pageRefresh
+        () <- setTimeouts emptyTimeoutConfig
         return ()
     )
 
@@ -47,11 +47,73 @@ _exit_success_cases =
         return ()
     )
 
+  , ( "goBack"
+    , do
+        () <- goBack
+        return ()
+    )
+
+  , ( "goForward"
+    , do
+        () <- goForward
+        return ()
+    )
+
+  , ( "pageRefresh"
+    , do
+        () <- pageRefresh
+        return ()
+    )
+
   , ( "getTitle"
     , do
         !title <- getTitle
         return ()
     )
+
+  , ( "getWindowHandle"
+    , do
+        !handle <- getWindowHandle
+        return ()
+    )
+
+  -- TODO: closeWindow
+
+  , ( "switchToWindow"
+    , do
+        hs <- getWindowHandles
+        case hs of
+          [] -> error "no window handles"
+          h:_ -> do
+            () <- switchToWindow h
+            return ()
+    )
+
+  , ( "getWindowHandles"
+    , do
+        navigateTo "https://www.w3.org"
+        !handles <- getWindowHandles
+        case handles of
+          [] -> return ()
+          (!x):xs -> return ()
+    )
+
+  , ( "switchToFrame"
+    , do
+        navigateTo "https://www.w3.org"
+        () <- switchToFrame TopLevelFrame
+        return ()
+    )
+
+  -- TODO: switchToParentFrame
+
+  , ( "getWindowRect"
+    , do
+        !rect <- getWindowRect
+        return ()
+    )
+
+  -- TODO: setWindowRect
 
   , ( "maximizeWindow"
     , do
@@ -68,24 +130,6 @@ _exit_success_cases =
   , ( "fullscreenWindow"
     , do
         !rect <- fullscreenWindow
-        return ()
-    )
-
-  , ( "getTimeouts"
-    , do
-        !timeouts <- getTimeouts
-        return ()
-    )
-
-  , ( "getWindowRect"
-    , do
-        !rect <- getWindowRect
-        return ()
-    )
-
-  , ( "deleteAllCookies"
-    , do
-        () <- deleteAllCookies
         return ()
     )
 
@@ -163,6 +207,107 @@ _exit_success_cases =
           (!x):xs -> return ()
     )
 
+  , ( "getActiveElement"
+    , do
+        !element <- getActiveElement
+        return ()
+    )
+
+  , ( "isElementSelected"
+    , do
+        navigateTo "https://www.w3.org"
+        !element <- getActiveElement
+        !p <- isElementSelected element
+        return ()
+    )
+
+  , ( "getElementAttribute"
+    , do
+        navigateTo "https://www.w3.org"
+        !element <- getActiveElement
+        !attr <- getElementAttribute element "href"
+        return ()
+    )
+
+  -- TODO: getElementProperty
+
+  -- TODO: getElementCssValue
+
+  , ( "getElementText"
+    , do
+        navigateTo "https://www.w3.org"
+        !element <- getActiveElement
+        !text <- getElementText element
+        return ()
+    )
+
+  -- TODO: getElementTagName
+
+  , ( "getElementRect"
+    , do
+        navigateTo "https://www.w3.org"
+        !element <- getActiveElement
+        !rect <- getElementRect element
+        return ()
+    )
+
+  , ( "isElementEnabled"
+    , do
+        navigateTo "https://www.w3.org"
+        !element <- getActiveElement
+        !p <- isElementEnabled element
+        return ()
+    )
+
+  , ( "elementClick"
+    , do
+        navigateTo "https://www.w3.org"
+        !root <- findElement CssSelector "body"
+        () <- elementClick root
+        return ()
+    )
+
+  , ( "elementClear"
+    , do
+        navigateTo "https://www.w3.org"
+        !element <- findElement CssSelector "input.text"
+        !rect <- elementClear element
+        return ()
+    )
+
+  , ( "elementSendKeys"
+    , do
+        navigateTo "https://www.w3.org"
+        !element <- findElement CssSelector "input.text"
+        !rect <- elementSendKeys element "foo"
+        return ()
+    )
+
+  , ( "getPageSource"
+    , do
+        navigateTo "https://www.w3.org"
+        !src <- getPageSource
+        return ()
+    )
+
+  -- TODO: executeScript
+
+  -- TODO: executeAsyncScript
+
+  -- TODO: getAllCookies
+
+  -- TODO: getNamedCookie
+
+  -- TODO: addCookie
+
+  -- TODO: deleteCookie
+
+  , ( "deleteAllCookies"
+    , do
+        () <- deleteAllCookies
+        return ()
+    )
+
   , ( "performActions (keyboard)"
     , do
         () <- performActions [ press UnidentifiedKey ]
@@ -211,126 +356,19 @@ _exit_success_cases =
         return ()
     )
 
-  , ( "getWindowHandle"
-    , do
-        !handle <- getWindowHandle
-        return ()
-    )
+  -- TODO: releaseActions
 
-  , ( "sessionStatus"
-    , do
-        (!r,!m) <- sessionStatus
-        return ()
-    )
+  -- TODO: dismissAlert
 
-  , ( "getActiveElement"
-    , do
-        !element <- getActiveElement
-        return ()
-    )
+  -- TODO: acceptAlert
 
-  , ( "elementClick"
-    , do
-        navigateTo "https://www.w3.org"
-        !root <- findElement CssSelector "body"
-        () <- elementClick root
-        return ()
-    )
+  -- TODO: getAlertText
 
-  , ( "isElementSelected"
-    , do
-        navigateTo "https://www.w3.org"
-        !element <- getActiveElement
-        !p <- isElementSelected element
-        return ()
-    )
+  -- TODO: sendAlertText
 
-  , ( "isElementEnabled"
-    , do
-        navigateTo "https://www.w3.org"
-        !element <- getActiveElement
-        !p <- isElementEnabled element
-        return ()
-    )
+  -- TODO: takeScreenshot
 
-  , ( "getElementAttribute"
-    , do
-        navigateTo "https://www.w3.org"
-        !element <- getActiveElement
-        !attr <- getElementAttribute element "href"
-        return ()
-    )
-
-  , ( "getElementText"
-    , do
-        navigateTo "https://www.w3.org"
-        !element <- getActiveElement
-        !text <- getElementText element
-        return ()
-    )
-
-  , ( "setTimeouts"
-    , do
-        () <- setTimeouts emptyTimeoutConfig
-        return ()
-    )
-
-  , ( "getElementRect"
-    , do
-        navigateTo "https://www.w3.org"
-        !element <- getActiveElement
-        !rect <- getElementRect element
-        return ()
-    )
-
-  , ( "switchToFrame"
-    , do
-        navigateTo "https://www.w3.org"
-        () <- switchToFrame TopLevelFrame
-        return ()
-    )
-
-  , ( "getWindowHandles"
-    , do
-        navigateTo "https://www.w3.org"
-        !handles <- getWindowHandles
-        case handles of
-          [] -> return ()
-          (!x):xs -> return ()
-    )
-
-  , ( "elementClear"
-    , do
-        navigateTo "https://www.w3.org"
-        !element <- findElement CssSelector "input.text"
-        !rect <- elementClear element
-        return ()
-    )
-
-  , ( "elementSendKeys"
-    , do
-        navigateTo "https://www.w3.org"
-        !element <- findElement CssSelector "input.text"
-        !rect <- elementSendKeys element "foo"
-        return ()
-    )
-
-  , ( "getPageSource"
-    , do
-        navigateTo "https://www.w3.org"
-        !src <- getPageSource
-        return ()
-    )
-
-  , ( "switchToWindow"
-    , do
-        hs <- getWindowHandles
-        case hs of
-          [] -> error "no window handles"
-          h:_ -> do
-            () <- switchToWindow h
-            return ()
-    )
+  -- TODO: takeElementScreenshot
   ]
 
 _unknown_error_cases

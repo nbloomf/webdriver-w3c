@@ -538,8 +538,6 @@ get_session_id_element_id_text st session_id element_id =
 
 {- TODO: get_session_id_element_id_name -}
 
-{- TODO: get_session_id_element_id_rect -}
-
 get_session_id_element_id_rect
   :: WebDriverServerState
   -> String
