@@ -778,6 +778,10 @@ elementClear element_id = do
   baseUrl <- theRemoteUrlWithSession
   let !payload = encode $ object []
   httpPost (baseUrl ++ "/element/" ++ element_id ++ "/clear") payload
+    >>= (return . __response_body)
+    >>= mParseJson
+    >>= lookupKey "value"
+    >>= expect (object [])
   return ()
 
 
@@ -791,6 +795,10 @@ elementSendKeys element_id text = do
   baseUrl <- theRemoteUrlWithSession
   let !payload = encode $ object [ "text" .= text ]
   httpPost (baseUrl ++ "/element/" ++ element_id ++ "/value") payload
+    >>= (return . __response_body)
+    >>= mParseJson
+    >>= lookupKey "value"
+    >>= expect (object [])
   return ()
 
 

@@ -73,7 +73,7 @@ defaultWebDriverServer = MockServer
         get_session_id_element_id_enabled st session_id element_id
 
       [_,"session",session_id,"source"] ->
-        undefined
+        get_session_id_source st session_id
 
       [_,"session",session_id,"cookie"] ->
         undefined
@@ -112,7 +112,7 @@ defaultWebDriverServer = MockServer
         post_session_id_refresh st session_id
 
       [_,"session",session_id,"window"] ->
-        undefined
+        post_session_id_window st session_id payload
 
       [_,"session",session_id,"frame"] ->
         post_session_id_frame st session_id payload
@@ -148,10 +148,10 @@ defaultWebDriverServer = MockServer
         post_session_id_element_id_click st session_id element_id
 
       [_,"session",session_id,"element",element_id,"clear"] ->
-        undefined
+        post_session_id_element_id_clear st session_id element_id
 
       [_,"session",session_id,"element",element_id,"value"] ->
-        undefined
+        post_session_id_element_id_value st session_id element_id payload
  
       [_,"session",session_id,"execute","sync"] ->
         undefined
@@ -351,7 +351,15 @@ delete_session_id_window st session_id =
     then (Left _err_invalid_session_id, st)
     else (Right $ _success_with_value $ toJSONList [String "window-1"], st)
 
-{- TODO: post_session_id_window -}
+post_session_id_window
+  :: WebDriverServerState
+  -> String
+  -> LB.ByteString
+  -> (Either HttpException HttpResponse, WebDriverServerState)
+post_session_id_window st session_id payload =
+  if not $ _is_active_session session_id st
+    then (Left _err_invalid_session_id, st)
+    else (Right $ _success_with_empty_object, st)
 
 get_session_id_window_handles
   :: WebDriverServerState
@@ -567,11 +575,35 @@ post_session_id_element_id_click st session_id element_id =
     then (Left _err_invalid_session_id, st)
     else (Right _success_with_empty_object, st)
 
-{- TODO: get_session_id_element_id_clear -}
+post_session_id_element_id_clear
+  :: WebDriverServerState
+  -> String
+  -> String
+  -> (Either HttpException HttpResponse, WebDriverServerState)
+post_session_id_element_id_clear st session_id element_id =
+  if not $ _is_active_session session_id st
+    then (Left _err_invalid_session_id, st)
+    else (Right _success_with_empty_object, st)
 
-{- TODO: post_session_id_element_id_value -}
+post_session_id_element_id_value
+  :: WebDriverServerState
+  -> String
+  -> String
+  -> LB.ByteString
+  -> (Either HttpException HttpResponse, WebDriverServerState)
+post_session_id_element_id_value st session_id element_id payload =
+  if not $ _is_active_session session_id st
+    then (Left _err_invalid_session_id, st)
+    else (Right _success_with_empty_object, st)
 
-{- TODO: get_session_id_source -}
+get_session_id_source
+  :: WebDriverServerState
+  -> String
+  -> (Either HttpException HttpResponse, WebDriverServerState)
+get_session_id_source st session_id =
+  if not $ _is_active_session session_id st
+    then (Left _err_invalid_session_id, st)
+    else (Right $ _success_with_value $ String "the source", st)
 
 {- TODO: post_session_id_execute_sync -}
 

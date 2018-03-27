@@ -298,6 +298,39 @@ _exit_success_cases =
           [] -> return ()
           (!x):xs -> return ()
     )
+
+  , ( "elementClear"
+    , do
+        navigateTo "https://www.w3.org"
+        !element <- findElement CssSelector "input.text"
+        !rect <- elementClear element
+        return ()
+    )
+
+  , ( "elementSendKeys"
+    , do
+        navigateTo "https://www.w3.org"
+        !element <- findElement CssSelector "input.text"
+        !rect <- elementSendKeys element "foo"
+        return ()
+    )
+
+  , ( "getPageSource"
+    , do
+        navigateTo "https://www.w3.org"
+        !src <- getPageSource
+        return ()
+    )
+
+  , ( "switchToWindow"
+    , do
+        hs <- getWindowHandles
+        case hs of
+          [] -> error "no window handles"
+          h:_ -> do
+            () <- switchToWindow h
+            return ()
+    )
   ]
 
 _unknown_error_cases
