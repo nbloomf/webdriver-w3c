@@ -76,8 +76,9 @@ executable webdriver-w3c-demo
   hs-source-dirs: app
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base          >=4.7 && <5
-    , webdriver-w3c
+      webdriver-w3c
+    , base                  >=4.7        && <5
+
     , tasty                 >=1.0.1.1    && <1.1
 
 
