@@ -9,6 +9,10 @@ Hello, and welcome to the wonderful world of browser automation with WebDriver a
 > 
 > import Web.Api.Http
 > import Web.Api.WebDriver
+> import Test.Tasty.WebDriver
+> 
+> import Test.Tasty
+> import qualified System.Environment as SE
 > 
 > main :: IO ()
 > main = return ()
@@ -146,7 +150,7 @@ So what kinds of assertions can be made? The best place to learn about these is 
 Suites of Tests
 ---------------
 
-Alright. If you're writing e2e tests, you probably want to write a *lot* of e2e tests. In this case, we'd like our tests to be modular, isolated, and well-organized, so that when things go wrong we can quickly diagnose what happened. The library has some extra bits for this as well.
+Alright. If you're writing e2e tests, you probably want to write a *lot* of e2e tests. In this case, we'd like our tests to be modular, isolated, and well-organized, so that when things go wrong we can quickly diagnose what happened. For this, `webdriver-w3c` integrates with the [tasty](https://hackage.haskell.org/package/tasty) test framework -- just import `Test.Tasty.WebDriver`.
 
 Suppose we've got two WebDriver tests. These are pretty dweeby just for illustration's sake.
 
@@ -170,13 +174,11 @@ Suppose we've got two WebDriver tests. These are pretty dweeby just for illustra
 
 We can organize them into a hierarchy of tests like so.
 
-> test_suite :: TestTree (WebDriver IO ())
-> test_suite = TestLabel "All Tests" $ TestGroup
->   [ TestLabel "Back Button" $ TestCase back_button
->   , TestLabel "Refresh" $ TestCase refresh_page
+> test_suite :: TestTree
+> test_suite = testGroup "All Tests"
+>   [ testCase "Back Button" back_button
+>   , testCase "Refresh" refresh_page
 >   ]
-
-`TestTree` is just a labeled rose tree -- it knows nothing about WebDriver, assertions, or any of that.
 
 Try running the suite with
 
@@ -186,19 +188,21 @@ in the interpreter. Here's what `example3` looks like:
 
 > example3 :: IO ()
 > example3 = do
->   summary <- debugSuites
->     defaultWebDriverConfig
->     defaultFirefoxCapabilities
->     (return ())
->     (return ())
->     [test_suite]
->   printSummary summary
+>   SE.setEnv "TASTY_NUM_THREADS" "1"
+>   defaultMain
+>     $ localOption (WebDriverLogHandle $ Path "/dev/null")
+>     $ localOption (WebDriverAssertionLogHandle $ Path "/dev/null")
+>     $ test_suite
 
 Here's what happened:
 
-1. `test_suite` is a tree of individual `WebDriver` sessions. Each node in the tree is either an individual test (`TestCase`), a list of test trees (`TestGroup`), or a named test tree (`TestLabel`).
-2. `debugSuites` runs a list of test trees -- here there's only one. Note the reappearance of `defaultWebDriverConfig` and `defaultFirefoxCapabilities`; these are used for running the individual tests, just like in the previous examples. Those two `return ()` statements are placeholders for additional setup and teardown code, like auth or deleting saved screenshots, to run before and after the test trees.
-3. When run, `debugSuites` now uses the `TestLabel` info from our test trees to provide nested context on any failed assertions.
+1. `test_suite` is a Tasty tree of individual `WebDriver` test cases.
+2. `defaultMain` is a Tasty function that runs test trees. In this case we've also used `localOption` to tweak how the tests run. Sending the logs to `/dev/null` keeps the output less cluttered.
+3. Tasty gives us lots of nice things for free, like pretty printing test results, timings, and more.
+
+Other test case constructors and test options are available. For now the best place to see what's possible is the haddoc documentation for `Test.Tasty.WebDriver`.
+
+Also the test suite for `webdriver-w3c` itself uses the Tasty integration.
 
 
 

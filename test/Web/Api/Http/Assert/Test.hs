@@ -49,13 +49,13 @@ _assertion_summary_cases =
   [ ( "assertSuccess"
     , do
         assertSuccess "yay!"
-    , summarize [success "Success!" "" "yay!"]
+    , summarize [success "Success!" "yay!"]
     )
 
   , ( "assertFailure"
     , do
         assertFailure "oh no"
-    , summarize [failure "Failure :(" "" "oh no"]
+    , summarize [failure "Failure :(" "oh no"]
     )
   ]
 
@@ -85,132 +85,132 @@ _assertion_cases =
   [ ( "assertSuccess"
     , do
         assertSuccess "yay!"
-    , [success "Success!" "" "yay!"]
+    , [success "Success!" "yay!"]
     )
 
   , ( "assertFailure"
     , do
         assertFailure "oh no"
-    , [failure "Failure :(" "" "oh no"]
+    , [failure "Failure :(" "oh no"]
     )
 
   , ( "assertTrue (success)"
     , do
         assertTrue True "test"
-    , [success "True is True" "" "test"]
+    , [success "True is True" "test"]
     )
 
   , ( "assertTrue (failure)"
     , do
         assertTrue False "test"
-    , [failure "False is True" "" "test"]
+    , [failure "False is True" "test"]
     )
 
   , ( "assertFalse (success)"
     , do
         assertFalse False "test"
-    , [success "False is False" "" "test"]
+    , [success "False is False" "test"]
     )
 
   , ( "assertFalse (failure)"
     , do
         assertFalse True "test"
-    , [failure "True is False" "" "test"]
+    , [failure "True is False" "test"]
     )
 
   , ( "assertEqual (Int, success)"
     , do
         assertEqual (1::Int) (1::Int) "test"
-    , [success "1 is equal to 1" "" "test"]
+    , [success "1 is equal to 1" "test"]
     )
 
   , ( "assertEqual (Int, failure)"
     , do
         assertEqual (2::Int) (1::Int) "test"
-    , [failure "2 is equal to 1" "" "test"]
+    , [failure "2 is equal to 1" "test"]
     )
 
   , ( "assertEqual (String, success)"
     , do
         assertEqual "A" "A" "test"
-    , [success "\"A\" is equal to \"A\"" "" "test"]
+    , [success "\"A\" is equal to \"A\"" "test"]
     )
 
   , ( "assertEqual (String, failure)"
     , do
         assertEqual "B" "A" "test"
-    , [failure "\"B\" is equal to \"A\"" "" "test"]
+    , [failure "\"B\" is equal to \"A\"" "test"]
     )
 
   , ( "assertNotEqual (Int, success)"
     , do
         assertNotEqual (2::Int) (1::Int) "test"
-    , [success "2 is not equal to 1" "" "test"]
+    , [success "2 is not equal to 1" "test"]
     )
 
   , ( "assertNotEqual (Int, failure)"
     , do
         assertNotEqual (1::Int) (1::Int) "test"
-    , [failure "1 is not equal to 1" "" "test"]
+    , [failure "1 is not equal to 1" "test"]
     )
 
   , ( "assertNotEqual (String, success)"
     , do
         assertNotEqual "B" "A" "test"
-    , [success "\"B\" is not equal to \"A\"" "" "test"]
+    , [success "\"B\" is not equal to \"A\"" "test"]
     )
 
   , ( "assertNotEqual (String, failure)"
     , do
         assertNotEqual "A" "A" "test"
-    , [failure "\"A\" is not equal to \"A\"" "" "test"]
+    , [failure "\"A\" is not equal to \"A\"" "test"]
     )
 
   , ( "assertIsSubstring (success)"
     , do
         assertIsSubstring "oba" "foobar" "test"
-    , [success "\"oba\" is a substring of \"foobar\"" "" "test"]
+    , [success "\"oba\" is a substring of \"foobar\"" "test"]
     )
 
   , ( "assertIsSubstring (failure)"
     , do
         assertIsSubstring "quux" "foobar" "test"
-    , [failure "\"quux\" is a substring of \"foobar\"" "" "test"]
+    , [failure "\"quux\" is a substring of \"foobar\"" "test"]
     )
 
   , ( "assertIsNotSubstring (success)"
     , do
         assertIsNotSubstring "quux" "foobar" "test"
-    , [success "\"quux\" is not a substring of \"foobar\"" "" "test"]
+    , [success "\"quux\" is not a substring of \"foobar\"" "test"]
     )
 
   , ( "assertIsNotSubstring (failure)"
     , do
         assertIsNotSubstring "oba" "foobar" "test"
-    , [failure "\"oba\" is not a substring of \"foobar\"" "" "test"]
+    , [failure "\"oba\" is not a substring of \"foobar\"" "test"]
     )
 
   , ( "assertIsNamedSubstring (success)"
     , do
         assertIsNamedSubstring "oba" ("foobar","string") "test"
-    , [success "\"oba\" is a substring of string" "" "test"]
+    , [success "\"oba\" is a substring of string" "test"]
     )
 
   , ( "assertIsNamedSubstring (failure)"
     , do
         assertIsNamedSubstring "quux" ("foobar","string") "test"
-    , [failure "\"quux\" is a substring of string" "" "test"]
+    , [failure "\"quux\" is a substring of string" "test"]
     )
 
   , ( "assertIsNotNamedSubstring (success)"
     , do
         assertIsNotNamedSubstring "quux" ("foobar","string") "test"
-    , [success "\"quux\" is not a substring of string" "" "test"]
+    , [success "\"quux\" is not a substring of string" "test"]
     )
 
   , ( "assertIsNotNamedSubstring (failure)"
     , do
         assertIsNotNamedSubstring "oba" ("foobar","string") "test"
-    , [failure "\"oba\" is not a substring of string" "" "test"]
+    , [failure "\"oba\" is not a substring of string" "test"]
     )
   ]

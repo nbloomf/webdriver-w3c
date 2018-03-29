@@ -2,4 +2,5 @@
 
 ## Next Version: 0.0.1
 
-* Initial Release
+* Features
+    * Integration with the [Tasty](https://hackage.haskell.org/package/tasty) test framework

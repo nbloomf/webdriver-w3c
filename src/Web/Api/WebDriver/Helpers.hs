@@ -12,8 +12,6 @@ module Web.Api.WebDriver.Helpers (
   -- * Running Sessions
     cleanupOnError
   , runIsolated
-  , runSuites
-  , debugSuites
 
   -- * Secrets
   , stashCookies
@@ -60,40 +58,6 @@ runIsolated caps theSession = cleanupOnError $ do
   theSession
   deleteSession
   getState >>= (putState . updateClientState (setSessionId Nothing))
-
-
--- | Run a list of `TestTree`s, throwing away the result.
-runSuites
-  :: (Effectful m)
-  => WebDriverConfig
-  -> Capabilities
-  -> WebDriver m () -- ^ Setup: run once before the suite (for logging in, etc.)
-  -> WebDriver m () -- ^ Teardown: run once after the suite
-  -> [TestTree (WebDriver m ())]
-  -> m ()
-runSuites config caps setup teardown suites = do
-  runSession config $ runIsolated caps $ do
-    setup
-    mapM_ runTestTree suites
-    teardown
-  return ()
-
-
--- | Run a list of `TestTree`s, returning a summary of any assertions made.
-debugSuites
-  :: (Effectful m)
-  => WebDriverConfig
-  -> Capabilities
-  -> WebDriver m () -- ^ Setup: run once before the suite (for logging in, etc.)
-  -> WebDriver m () -- ^ Teardown: run once after the suite
-  -> [TestTree (WebDriver m ())] -- ^ List of test trees to be run
-  -> m AssertionSummary
-debugSuites config caps setup teardown suites = do
-  assertions <- debugSession config $ runIsolated caps $ do
-    setup
-    mapM_ runTestTree suites
-    teardown
-  return $ summarize assertions
 
 
 -- | Save all cookies for the current domain to a given file.

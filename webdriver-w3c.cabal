@@ -42,6 +42,7 @@ library
     , QuickCheck            >=2.10.1     && <2.11
     , random                >=1.1        && <1.2
     , scientific            >=0.3.5.2    && <0.4
+    , tasty                 >=1.0.1.1    && <1.1
     , text                  >=1.2.3.0    && <1.3
     , time                  >=1.8.0.2    && <1.9
     , unordered-containers  >=0.2.9.0    && <0.3
@@ -50,6 +51,7 @@ library
     , wreq                  >=0.5.2      && <0.6
 
   exposed-modules:
+    Test.Tasty.WebDriver
     Web.Api.Http
     Web.Api.Http.Assert
     Web.Api.Http.Effects
@@ -76,6 +78,7 @@ executable webdriver-w3c-demo
   build-depends:
       base          >=4.7 && <5
     , webdriver-w3c
+    , tasty                 >=1.0.1.1    && <1.1
 
 
 
@@ -113,5 +116,6 @@ test-suite webdriver-w3c-test
     Web.Api.WebDriver.Monad.Test
     Web.Api.WebDriver.Monad.Test.Server
     Web.Api.WebDriver.Monad.Test.Server.State
-    Web.Api.WebDriver.Monad.Test.Sessions
+    Web.Api.WebDriver.Monad.Test.Session.Success
+    Web.Api.WebDriver.Monad.Test.Session.UnknownError
     Web.Api.WebDriver.Types.Test

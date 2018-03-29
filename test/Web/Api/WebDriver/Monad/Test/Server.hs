@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, BangPatterns #-}
+{-# LANGUAGE OverloadedStrings, BangPatterns, FlexibleInstances #-}
 module Web.Api.WebDriver.Monad.Test.Server (
     WebDriverServerState(..)
   , defaultWebDriverServerState
@@ -15,11 +15,22 @@ import Data.HashMap.Strict
 import Network.HTTP.Client (HttpException)
 import Network.HTTP.Client.Internal
 import Network.HTTP.Types
+import qualified Network.Wreq.Session as WreqS
 
 import Web.Api.Http
 import Web.Api.Http.Effects.Test.Mock
 import Web.Api.Http.Effects.Test.Server
 import Web.Api.WebDriver.Monad.Test.Server.State
+
+instance Effectful (MockIO WebDriverServerState) where
+  toIO x = do
+    session <- WreqS.newSession
+    let
+      init = mockSt defaultWebDriverServer
+        session defaultWebDriverServerState
+
+      (a,_) = runMockIO x init
+    return a
 
 defaultWebDriverServer :: MockServer WebDriverServerState
 defaultWebDriverServer = MockServer

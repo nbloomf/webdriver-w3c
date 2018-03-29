@@ -9,7 +9,7 @@ module Web.Api.Http.Effects.Test.Mock (
   , getMockException
   ) where
 
-import Data.Time (UTCTime)
+import Data.Time (UTCTime(..), Day(..))
 import Data.Time.Clock (addUTCTime)
 import Data.ByteString.Lazy (ByteString, pack)
 import Control.Exception
@@ -47,17 +47,15 @@ data MockSt st = MockSt
   } deriving Show
 
 mockSt
-  :: UTCTime
-  -> MockServer st
+  :: MockServer st
   -> WreqS.Session
-  -> ([String], String)
   -> st
   -> MockSt st
-mockSt time server session input st = MockSt
+mockSt server session st = MockSt
   { __print_log = []
   , __console_out = []
-  , __console_in = input
-  , __time = time
+  , __console_in = ([],"")
+  , __time = UTCTime (ModifiedJulianDay 0) 0
   , __exception = Nothing
   , __server = server
   , __wreq_session = session
@@ -239,6 +237,3 @@ instance EffectHttp (MockIO st) where
   mNewSessionState = do
     st <- getMockSt
     return $ __wreq_session st
-
-
-instance Effectful (MockIO st)

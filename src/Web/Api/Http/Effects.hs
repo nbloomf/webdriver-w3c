@@ -21,7 +21,7 @@ Each class represents a cluster of similar effects.
 -}
 
 module Web.Api.Http.Effects (
-    Effectful
+    Effectful(toIO)
 
   -- * Writing to Files
   , EffectPrint(..)
@@ -307,6 +307,8 @@ class
   , EffectFiles m
   , EffectRandom m
   , EffectHttp m
-  ) => Effectful m
+  ) => Effectful m where
+  toIO :: m a -> IO a
 
-instance Effectful IO
+instance Effectful IO where
+  toIO = id

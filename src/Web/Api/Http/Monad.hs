@@ -27,6 +27,7 @@ We can think of an HTTP session as a *function* taking a context, doing some com
 The actual definition of our `HttpSession` type is just barely more complicated than that. But we don't use the definition directly; instead we build and execute `HttpSessions` using the monad interface.
 -}
 
+{-# LANGUAGE DeriveDataTypeable #-}
 module Web.Api.Http.Monad
   ( HttpSession(execSession)
   , runSession
@@ -35,7 +36,6 @@ module Web.Api.Http.Monad
 
   -- * Environment
   , getEnvironment
-  , locallyAdjustEnvironment
 
   -- * State
   , getState
@@ -55,6 +55,7 @@ module Web.Api.Http.Monad
 
 import Data.Time (UTCTime)
 import Data.List (intercalate)
+import Data.Typeable (Typeable)
 import Data.ByteString.Lazy (ByteString)
 import qualified Data.Aeson.Lens as AL (_Value)
 import Control.Monad (ap)
@@ -74,7 +75,7 @@ newtype HttpSession m err st log env t = HttpSession
   { execSession ::
       (St st, Log err log, Env err log env)
         -> m (Either (Err err) t, (St st, Log err log))
-  }
+  } deriving Typeable
 
 
 -- | Run an `HttpSession`, returning either a value (@a@) or an error (@Err err@).
@@ -139,21 +140,6 @@ getEnvironment
   => HttpSession m err st log env (Env err log env)
 getEnvironment = HttpSession $ \(st, log, env) ->
   return (Right env, (st, log))
-
--- | Run a nested `HttpSession` with an adjusted environment.
-locallyAdjustEnvironment
-  :: (Env err log env -> Env err log env)
-  -> HttpSession m err st log env a
-  -> HttpSession m err st log env a
-locallyAdjustEnvironment mutate session = HttpSession $ \(st, log, env) ->
-  execSession session (st, log, mutate env)
-
-leaveCrumb
-  :: (Effectful m)
-  => String
-  -> HttpSession m err st log env a
-  -> HttpSession m err st log env a
-leaveCrumb crumb = locallyAdjustEnvironment (appendBreadcrumb crumb)
 
 
 
@@ -239,6 +225,7 @@ throwError e = do
     ErrHttp e -> logNow $ LogHttpError e
     ErrIO e -> logNow $ LogIOError e
     ErrJson e -> logNow $ LogJsonError e
+    ErrUnexpectedSuccess m -> logNow $ LogUnexpectedSuccess m
     Err e -> logNow $ LogError e
   HttpSession $ \(st, log, _) ->
     return (Left e, (st, log))
@@ -268,16 +255,8 @@ captureHttpError e = do
 
 
 
-instance (Effectful m)
-  => Assert (HttpSession m err st log env) where
-
+instance (Effectful m) => Assert (HttpSession m err st log env) where
   assert = assertNow
-
-  assertionContext = do
-    crumbs <- getEnvironment >>= theBreadcrumbs
-    return $ intercalate " > " $ reverse crumbs
-
-  nestContext = leaveCrumb
 
 instance (Monad m, Effectful m) => Json (HttpSession m err st log env) where
   mRaiseJsonError e = throwError (ErrJson e)
@@ -319,5 +298,3 @@ instance (EffectHttp m) => EffectHttp (HttpSession m err st log env) where
   mPostWith opts sesh url bytes = liftSession $ mPostWith opts sesh url bytes
   mDeleteWith opts sesh url = liftSession $ mDeleteWith opts sesh url
   mNewSessionState = liftSession mNewSessionState
-
-instance (Effectful m) => Effectful (HttpSession m err st log env)

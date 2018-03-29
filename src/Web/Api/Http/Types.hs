@@ -41,8 +41,6 @@ module Web.Api.Http.Types (
   , setAssertionLogHandle
   , theErrorInjectFunction
   , setErrorInjectFunction
-  , theBreadcrumbs
-  , appendBreadcrumb
   , theClientEnvironment
   , setClientEnvironment
   , basicEnv
@@ -108,6 +106,9 @@ data Err err
   -- | JSON parsing or decoding errors.
   | ErrJson JsonError
 
+  -- | Expected failure, and success is catastrophic.
+  | ErrUnexpectedSuccess String
+
   -- | Unspecified error; defined by consumers of `HttpSession`.
   | Err err
   deriving Show
@@ -164,6 +165,9 @@ data Entry err log
 
   -- | A JSON error was thrown.
   | LogJsonError JsonError
+
+  -- | Unexpected success.
+  | LogUnexpectedSuccess String
 
   -- | An unspecified error of type defined by consumers of `HttpSession` was thrown.
   | LogError err
@@ -256,9 +260,6 @@ data Env err log env = Env {
   -- | A function used to inject `HttpException`s into the consumer-supplied error type. Handy when dealing with APIs that use HTTP error codes semantically.
   , __http_error_inject :: Maybe (HttpException -> Maybe err)
 
-  -- | A nested "context" for sessions; intended for use in `Assert`'s `assertionContext`.
-  , __breadcrumbs :: [String]
-
   -- | Unspecified environment type; defined by consumers of `HttpSession`.
   , __user_env :: env
   }
@@ -303,17 +304,6 @@ setErrorInjectFunction
   :: Maybe (HttpException -> Maybe err) -> Env err log env -> Env err log env
 setErrorInjectFunction func env = env { __http_error_inject = func }
 
--- | Retrieve the breadcrumbs in a monadic context.
-theBreadcrumbs
-  :: (Monad m) => Env err log env -> m [String]
-theBreadcrumbs = return . __breadcrumbs
-
--- | Append a breadcrumb to an `Env`.
-appendBreadcrumb
-  :: String -> Env err log env -> Env err log env
-appendBreadcrumb crumb env = env
-  { __breadcrumbs = crumb : __breadcrumbs env }
-
 -- | Retrieve the client environment in a monadic context.
 theClientEnvironment
   :: (Monad m) => Env err log env -> m env
@@ -337,7 +327,6 @@ basicEnv printErr printLog promote env = Env
   , __log_handle = stderr
   , __assertion_log_handle = stdout
   , __http_error_inject = promote
-  , __breadcrumbs = []
   , __user_env = env
   }
 
@@ -353,7 +342,6 @@ jsonEnv printErr printLog promote env = Env
   , __log_handle = stderr
   , __assertion_log_handle = stdout
   , __http_error_inject = promote
-  , __breadcrumbs = []
   , __user_env = env
   }
 
@@ -447,6 +435,9 @@ data LogPrinter err log = LogPrinter {
   -- | Printer for `JsonError`s.
   , __json_error :: UTCTime -> JsonError -> String
 
+  -- | Printer for `UnexpectedSuccess`.
+  , __unexpected_success :: UTCTime -> String -> String
+
   -- | Printer for `Assertion`s.
   , __assertion :: UTCTime -> Assertion -> String
 
@@ -471,6 +462,7 @@ printEntryWith printer (time, entry) = case entry of
   LogSilentResponse -> __silent_response printer time
   LogIOError err -> __io_error printer time err
   LogJsonError err -> __json_error printer time err
+  LogUnexpectedSuccess msg -> __unexpected_success printer time msg
   LogSession verb -> __session printer time verb
   LogAssertion x -> __assertion printer time x
   LogPause m -> __pause printer time m
@@ -520,6 +512,8 @@ basicLogPrinter color pE pL pA = LogPrinter
     ]
   , __json_error = \time err -> unwords
     [paint color red $ trunc time, show err]
+  , __unexpected_success = \time msg -> unwords
+    [paint color red $ trunc time, "Unexpected Success:", msg]
   , __session = \time verb -> unwords
     [paint color magenta $ trunc time, show verb]
   , __assertion = \time a -> unwords

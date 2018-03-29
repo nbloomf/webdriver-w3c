@@ -22,11 +22,9 @@ module Web.Api.Http.Assert (
 
   -- * The `Assert` Class
   , Assert(..)
-  , TestTree(..)
-  , runTestTree
 
   -- * Assertion Summaries
-  , AssertionSummary()
+  , AssertionSummary(..)
   , summarize
   , summarizeAll
   , printSummary
@@ -53,7 +51,6 @@ import Data.List (unwords, isInfixOf)
 --
 -- * A human-readable statement being asserted, which may be either true or false.
 -- * A result (either success or failure).
--- * A context, representing /where/ the assertion was made, to assist in debugging.
 -- * A comment, representing /why/ the assertion was made, also to assist in debugging.
 --
 -- To construct assertions outside this module, use `success` and `failure`.
@@ -61,7 +58,6 @@ import Data.List (unwords, isInfixOf)
 data Assertion = Assertion
   { __assertion :: String
   , __assertion_comment :: String
-  , __assertion_context :: String
   , __assertion_result :: AssertionResult
   } deriving (Eq, Show)
 
@@ -81,15 +77,13 @@ showAssertion Assertion{..} =
   case __assertion_result of
     AssertSuccess -> 
       unwords
-        [ "\x1b[1;32mValid Assertion\x1b[0;39;49m in"
-        , __assertion_context
+        [ "\x1b[1;32mValid Assertion\x1b[0;39;49m"
         , "\nassertion: " ++ __assertion
         , "\ncomment: " ++ __assertion_comment
         ]
     AssertFailure ->
       unwords
-        [ "\x1b[1;31mInvalid Assertion\x1b[0;39;49m in"
-        , __assertion_context
+        [ "\x1b[1;31mInvalid Assertion\x1b[0;39;49m"
         , "\nassertion: " ++ __assertion
         , "\ncomment: " ++ __assertion_comment
         ]
@@ -97,26 +91,22 @@ showAssertion Assertion{..} =
 -- | Construct a successful assertion.
 success
   :: String -- ^ Statement being asserted (the /what/)
-  -> String -- ^ Context of the assertion (the /where/)
   -> String -- ^ An additional comment (the /why/)
   -> Assertion
-success statement context comment = Assertion
+success statement comment = Assertion
   { __assertion = statement
   , __assertion_comment = comment
-  , __assertion_context = context
   , __assertion_result = AssertSuccess
   }
 
 -- | Construct a failed assertion.
 failure
   :: String -- ^ Statement being asserted (the /what/)
-  -> String -- ^ Context of the assertion (the /where/)
   -> String -- ^ An additional comment (the /why/)
   -> Assertion
-failure statement context comment = Assertion
+failure statement comment = Assertion
   { __assertion = statement
   , __assertion_comment = comment
-  , __assertion_context = context
   , __assertion_result = AssertFailure
   }
 
@@ -128,11 +118,6 @@ class Assert m where
   -- | Make an assertion.
   assert :: Assertion -> m ()
 
-  -- | Retrieve the context of an assertion.
-  assertionContext :: m String
-
-  -- | Enter a new local context.
-  nestContext :: String -> m a -> m a
 
 
 -- | Generic boolean assertion; asserts success if @Bool@ is true and failure otherwise.
@@ -143,10 +128,7 @@ assertSuccessIf
   -> String -- ^ An additional comment (the /why/)
   -> m ()
 assertSuccessIf p statement comment = do
-  context <- assertionContext
-  assert $
-    (if p then success else failure)
-    statement context comment
+  assert $ (if p then success else failure) statement comment
 
 -- | Assertion that always succeeds.
 assertSuccess
@@ -245,26 +227,26 @@ assertIsNotNamedSubstring x (y,name) = assertSuccessIf (not $ isInfixOf x y)
 -- | `Assertion`s are the most granular kind of "test" this library deals with. Typically we'll be interested in sets of many assertions. A single test case will include one or more assertions, which for reporting purposes we'd like to summarize. The summary for a list of assertions will include the number of successes, the number of failures, and the actual failures. Modeled this way assertion summaries form a monoid, which is handy.
 
 data AssertionSummary = AssertionSummary
-  { __num_successes :: Integer
-  , __num_failures :: Integer
-  , __failures :: [Assertion]
+  { numSuccesses :: Integer
+  , numFailures :: Integer
+  , failures :: [Assertion]
   } deriving (Eq, Show)
 
 instance Monoid AssertionSummary where
   mempty = AssertionSummary 0 0 []
 
   mappend x y = AssertionSummary
-    { __num_successes = __num_successes x + __num_successes y
-    , __num_failures = __num_failures x + __num_failures y
-    , __failures = __failures x ++ __failures y
+    { numSuccesses = numSuccesses x + numSuccesses y
+    , numFailures = numFailures x + numFailures y
+    , failures = failures x ++ failures y
     }
 
 -- | Summarize a single assertion.
 summary :: Assertion -> AssertionSummary
 summary x = AssertionSummary
-  { __num_successes = if isSuccess x then 1 else 0
-  , __num_failures = if isSuccess x then 0 else 1
-  , __failures = if isSuccess x then [] else [x]
+  { numSuccesses = if isSuccess x then 1 else 0
+  , numFailures = if isSuccess x then 0 else 1
+  , failures = if isSuccess x then [] else [x]
   }
 
 -- | Summarize a list of `Assertion`s.
@@ -278,32 +260,10 @@ summarizeAll = mconcat
 -- | Very basic string representation of an `AssertionSummary`.
 printSummary :: AssertionSummary -> IO ()
 printSummary AssertionSummary{..} = do
-  mapM_ (putStrLn . showAssertion) __failures
-  putStrLn $ "Assertions: " ++ show (__num_successes + __num_failures)
-  putStrLn $ "Failures: " ++ show __num_failures
+  mapM_ (putStrLn . showAssertion) failures
+  putStrLn $ "Assertions: " ++ show (numSuccesses + numFailures)
+  putStrLn $ "Failures: " ++ show numFailures
 
-
-
--- | The `TestTree` type is for modeling hierarchies of test cases, each consisting of one or more assertions. Cribbed from the HUnit library.
-
-data TestTree u
-  -- | A single test case.
-  = TestCase u
-
-  -- | A list of test cases.
-  | TestGroup [TestTree u]
-
-  -- | A label for a tree of test cases.
-  | TestLabel String (TestTree u)
-
--- | Flattens a tree of monadic tests, using `TestLabel`s to nest context.
-runTestTree
-  :: (Monad m, Assert m)
-  => TestTree (m ())
-  -> m ()
-runTestTree suite = case suite of
-  TestCase test -> test
-  TestGroup group ->
-    mapM_ runTestTree group
-  TestLabel label test ->
-    nestContext label $ runTestTree test
+-- | Total number of assertions made.
+numAssertions :: AssertionSummary -> Integer
+numAssertions x = numSuccesses x + numFailures x
