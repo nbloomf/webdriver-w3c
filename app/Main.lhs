@@ -190,8 +190,8 @@ in the interpreter. Here's what `example3` looks like:
 > example3 = do
 >   SE.setEnv "TASTY_NUM_THREADS" "1"
 >   defaultMain
->     $ localOption (WebDriverLogHandle $ Path "/dev/null")
->     $ localOption (WebDriverAssertionLogHandle $ Path "/dev/null")
+>     $ localOption (LogHandle $ Path "/dev/null")
+>     $ localOption (AssertionLogHandle $ Path "/dev/null")
 >     $ test_suite
 
 Here's what happened:

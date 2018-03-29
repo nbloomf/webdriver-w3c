@@ -15,9 +15,10 @@ module Test.Tasty.WebDriver (
   , testCaseWithSetup
 
   -- * Options
-  , WebDriverRemoteHost(..)
-  , WebDriverLogHandle(..)
-  , WebDriverAssertionLogHandle(..)
+  , RemoteHost(..)
+  , RemotePort(..)
+  , LogHandle(..)
+  , AssertionLogHandle(..)
   , FileHandle(..)
   ) where
 
@@ -27,6 +28,7 @@ import Data.List (unlines)
 import qualified Test.Tasty.Providers as T
 import qualified Test.Tasty.Options as TO
 import System.IO
+import qualified System.Environment as SE (getEnv)
 
 import Web.Api.Http
 import Web.Api.WebDriver
@@ -40,19 +42,27 @@ data WebDriverTest m = WebDriverTest
 instance (Effectful m, Typeable m) => T.IsTest (WebDriverTest m) where
 
   testOptions = return
-    [ TO.Option (Proxy :: Proxy WebDriverRemoteHost)
-    , TO.Option (Proxy :: Proxy WebDriverLogHandle)
-    , TO.Option (Proxy :: Proxy WebDriverAssertionLogHandle)
+    [ TO.Option (Proxy :: Proxy RemoteHost)
+    , TO.Option (Proxy :: Proxy RemotePort)
+    , TO.Option (Proxy :: Proxy LogHandle)
+    , TO.Option (Proxy :: Proxy AssertionLogHandle)
+    , TO.Option (Proxy :: Proxy SecretsPath)
     ]
 
   run opts WebDriverTest{..} _ = do
     let
-      WebDriverRemoteHost host = TO.lookupOption opts
-      WebDriverLogHandle log = TO.lookupOption opts
-      WebDriverAssertionLogHandle alog = TO.lookupOption opts
+      RemoteHost host = TO.lookupOption opts
+      RemotePort port = TO.lookupOption opts
+      LogHandle log = TO.lookupOption opts
+      AssertionLogHandle alog = TO.lookupOption opts
+      SecretsPath secrets = TO.lookupOption opts
 
     logHandle <- writeModeHandle log
     alogHandle <- writeModeHandle alog
+
+    secretsPath <- case secrets of
+      "" -> fmap (++ "/.webdriver/secrets") $ SE.getEnv "HOME"
+      path -> return path
 
     let
       title = case _test_name of
@@ -65,6 +75,8 @@ instance (Effectful m, Typeable m) => T.IsTest (WebDriverTest m) where
           . setAssertionLogHandle alogHandle
           . setClientEnvironment
               ( setRemoteHostname host
+              . setRemotePort port
+              . setSecretsPath secretsPath
               $ defaultWebDriverEnv
               )
           ) 
@@ -112,39 +124,65 @@ testCaseWithSetup name setup teardown test =
 
 
 -- | Hostname of the remote end.
-newtype WebDriverRemoteHost
-  = WebDriverRemoteHost { theWebDriverRemoteHost :: String }
+newtype RemoteHost
+  = RemoteHost { theRemoteHost :: String }
   deriving Typeable
 
-instance TO.IsOption WebDriverRemoteHost where
-  defaultValue = WebDriverRemoteHost "localhost"
-  parseValue str = Just $ WebDriverRemoteHost str
+instance TO.IsOption RemoteHost where
+  defaultValue = RemoteHost "localhost"
+  parseValue str = Just $ RemoteHost str
   optionName = return "remote end hostname"
   optionHelp = return "default: localhost"
 
 
 
--- | Log location.
-newtype WebDriverLogHandle
-  = WebDriverLogHandle { theWebDriverLogHandle :: FileHandle }
+-- | Port of the remote end.
+newtype RemotePort
+  = RemotePort { theRemotePort :: Int }
   deriving Typeable
 
-instance TO.IsOption WebDriverLogHandle where
-  defaultValue = WebDriverLogHandle StdErr
-  parseValue path = Just $ WebDriverLogHandle $ Path path
+instance TO.IsOption RemotePort where
+  defaultValue = RemotePort 4444
+  parseValue str = fmap RemotePort $ TO.safeRead str
+  optionName = return "remote end port"
+  optionHelp = return "default: 4444"
+
+
+
+-- | Path where secrets are stored.
+newtype SecretsPath
+  = SecretsPath { theSecretsPath :: FilePath }
+  deriving Typeable
+
+instance TO.IsOption SecretsPath where
+  defaultValue = SecretsPath ""
+  parseValue path = Just $ SecretsPath path
+  optionName = return "secrets path"
+  optionHelp = return "default: ~/.webdriver/secrets"
+
+
+
+-- | Log location.
+newtype LogHandle
+  = LogHandle { theLogHandle :: FileHandle }
+  deriving Typeable
+
+instance TO.IsOption LogHandle where
+  defaultValue = LogHandle StdErr
+  parseValue path = Just $ LogHandle $ Path path
   optionName = return "log file name"
   optionHelp = return "default: stderr"
 
 
 
 -- | Assertion log location.
-newtype WebDriverAssertionLogHandle
-  = WebDriverAssertionLogHandle { theWebDriverAssertionLogHandle :: FileHandle }
+newtype AssertionLogHandle
+  = AssertionLogHandle { theAssertionLogHandle :: FileHandle }
   deriving Typeable
 
-instance TO.IsOption WebDriverAssertionLogHandle where
-  defaultValue = WebDriverAssertionLogHandle StdOut
-  parseValue path = Just $ WebDriverAssertionLogHandle $ Path path
+instance TO.IsOption AssertionLogHandle where
+  defaultValue = AssertionLogHandle StdOut
+  parseValue path = Just $ AssertionLogHandle $ Path path
   optionName = return "assertion log file name"
   optionHelp = return "default: stdout"
 

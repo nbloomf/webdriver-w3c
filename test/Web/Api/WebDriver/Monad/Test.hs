@@ -28,8 +28,8 @@ tests = testGroup "Web.Api.WebDriver.Monad"
   [ testGroup "Mock Server"
       (endpointTests (return () :: MockIO WebDriverServerState ()))
 
-  ,   localOption (WebDriverLogHandle $ Path "/dev/null")
-    $ localOption (WebDriverAssertionLogHandle $ Path "/dev/null")
+  ,   localOption (LogHandle $ Path "/dev/null")
+    $ localOption (AssertionLogHandle $ Path "/dev/null")
     $ testGroup "Real Server" (endpointTests (return () :: IO ()))
   ]
 
