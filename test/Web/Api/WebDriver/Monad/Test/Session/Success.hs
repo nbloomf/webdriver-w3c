@@ -12,6 +12,10 @@ import Test.Tasty.WebDriver
 import qualified Test.Tasty as T
 
 
+unexpectedError
+  :: (Effectful m, Typeable m)
+  => Err WebDriverError
+  -> WebDriver m ()
 unexpectedError _ = assertFailure "unexpected error"
 
 

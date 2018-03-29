@@ -15,8 +15,12 @@ module Test.Tasty.WebDriver (
   , testCaseWithSetup
 
   -- * Options
+  , Driver(..)
+  , DriverName(..)
   , RemoteHost(..)
   , RemotePort(..)
+  , SecretsPath(..)
+  , ApiResponseFormat(..)
   , LogHandle(..)
   , AssertionLogHandle(..)
   , FileHandle(..)
@@ -42,8 +46,11 @@ data WebDriverTest m = WebDriverTest
 instance (Effectful m, Typeable m) => T.IsTest (WebDriverTest m) where
 
   testOptions = return
-    [ TO.Option (Proxy :: Proxy RemoteHost)
+    [ TO.Option (Proxy :: Proxy Driver)
+    , TO.Option (Proxy :: Proxy Headless)
+    , TO.Option (Proxy :: Proxy RemoteHost)
     , TO.Option (Proxy :: Proxy RemotePort)
+    , TO.Option (Proxy :: Proxy ApiResponseFormat)
     , TO.Option (Proxy :: Proxy LogHandle)
     , TO.Option (Proxy :: Proxy AssertionLogHandle)
     , TO.Option (Proxy :: Proxy SecretsPath)
@@ -51,8 +58,11 @@ instance (Effectful m, Typeable m) => T.IsTest (WebDriverTest m) where
 
   run opts WebDriverTest{..} _ = do
     let
+      Driver driver = TO.lookupOption opts
+      Headless headless = TO.lookupOption opts
       RemoteHost host = TO.lookupOption opts
       RemotePort port = TO.lookupOption opts
+      ApiResponseFormat format = TO.lookupOption opts
       LogHandle log = TO.lookupOption opts
       AssertionLogHandle alog = TO.lookupOption opts
       SecretsPath secrets = TO.lookupOption opts
@@ -76,13 +86,27 @@ instance (Effectful m, Typeable m) => T.IsTest (WebDriverTest m) where
           . setClientEnvironment
               ( setRemoteHostname host
               . setRemotePort port
+              . setResponseFormat format
               . setSecretsPath secretsPath
               $ defaultWebDriverEnv
               )
           ) 
         defaultWebDriverConfig
 
-      caps = emptyCapabilities
+      caps = case driver of
+        Geckodriver -> emptyCapabilities
+          { _browser_name = Just Firefox
+          , _firefox_options = Just $ defaultFirefoxOptions
+              { _firefox_args = if headless then Just ["--headless"] else Nothing
+              }
+          }
+
+        Chromedriver -> emptyCapabilities
+          { _browser_name = Just Chrome
+          , _chrome_options = Just $ defaultChromeOptions
+              { _chrome_args = if headless then Just ["--headless"] else Nothing
+              }
+          }
 
     results <- toIO $ debugSession config $ runIsolated caps (title >> _test_session)
 
@@ -123,6 +147,35 @@ testCaseWithSetup name setup teardown test =
 
 
 
+-- | Remote end name.
+newtype Driver
+  = Driver { theDriver :: DriverName }
+  deriving Typeable
+
+instance TO.IsOption Driver where
+  defaultValue = Driver Geckodriver
+  parseValue str = case str of
+    "geckodriver" -> Just $ Driver Geckodriver
+    "chromedriver" -> Just $ Driver Chromedriver
+    _ -> Nothing
+  optionName = return "driver name"
+  optionHelp = return "default: geckodriver"
+
+
+
+-- | Run in headless mode.
+newtype Headless
+  = Headless { theHeadless :: Bool }
+  deriving Typeable
+
+instance TO.IsOption Headless where
+  defaultValue = Headless False
+  parseValue = fmap Headless . TO.safeReadBool
+  optionName = return "headless"
+  optionHelp = return "run in headless mode (default: false)"
+
+
+
 -- | Hostname of the remote end.
 newtype RemoteHost
   = RemoteHost { theRemoteHost :: String }
@@ -143,7 +196,7 @@ newtype RemotePort
 
 instance TO.IsOption RemotePort where
   defaultValue = RemotePort 4444
-  parseValue str = fmap RemotePort $ TO.safeRead str
+  parseValue = fmap RemotePort . TO.safeRead
   optionName = return "remote end port"
   optionHelp = return "default: 4444"
 
@@ -159,6 +212,22 @@ instance TO.IsOption SecretsPath where
   parseValue path = Just $ SecretsPath path
   optionName = return "secrets path"
   optionHelp = return "default: ~/.webdriver/secrets"
+
+
+
+-- | Expected API response format.
+newtype ApiResponseFormat
+  = ApiResponseFormat { theApiResponseFormat :: ResponseFormat }
+  deriving Typeable
+
+instance TO.IsOption ApiResponseFormat where
+  defaultValue = ApiResponseFormat SpecFormat
+  parseValue str = case str of
+    "spec" -> Just $ ApiResponseFormat SpecFormat
+    "chromedriver" -> Just $ ApiResponseFormat ChromeFormat
+    _ -> Nothing
+  optionName = return "response format"
+  optionHelp = return "defaul: spec"
 
 
 
@@ -201,3 +270,11 @@ writeModeHandle x = case x of
   StdOut -> return stdout
   StdErr -> return stderr
   Path path -> openFile path WriteMode
+
+
+
+-- | Remote end name.
+data DriverName
+  = Geckodriver
+  | Chromedriver
+  deriving Typeable
