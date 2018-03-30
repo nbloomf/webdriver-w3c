@@ -190,7 +190,7 @@ This is `example2`:
 ``` {.sourceCode .literate .haskell}
 example2 :: IO ()
 example2 = do
-  result <- debugSession defaultWebDriverConfig
+  (_, result) <- debugSession defaultWebDriverConfig
     (runIsolated defaultFirefoxCapabilities what_page_is_this)
   printSummary $ summarize result
   return ()
@@ -265,8 +265,8 @@ example3 :: IO ()
 example3 = do
   SE.setEnv "TASTY_NUM_THREADS" "1"
   defaultMain
-    $ localOption (WebDriverLogHandle $ Path "/dev/null")
-    $ localOption (WebDriverAssertionLogHandle $ Path "/dev/null")
+    $ localOption (LogHandle $ Path "/dev/null")
+    $ localOption (AssertionLogHandle $ Path "/dev/null")
     $ test_suite
 ```
 
