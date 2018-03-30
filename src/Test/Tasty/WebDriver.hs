@@ -19,8 +19,10 @@ module Test.Tasty.WebDriver (
   , DriverName(..)
   , RemoteHost(..)
   , RemotePort(..)
+  , RemotePath(..)
   , SecretsPath(..)
   , ApiResponseFormat(..)
+  , WebDriverApiVersion(..)
   , LogHandle(..)
   , AssertionLogHandle(..)
   , FileHandle(..)
@@ -50,7 +52,9 @@ instance (Effectful m, Typeable m) => T.IsTest (WebDriverTest m) where
     , TO.Option (Proxy :: Proxy Headless)
     , TO.Option (Proxy :: Proxy RemoteHost)
     , TO.Option (Proxy :: Proxy RemotePort)
+    , TO.Option (Proxy :: Proxy RemotePath)
     , TO.Option (Proxy :: Proxy ApiResponseFormat)
+    , TO.Option (Proxy :: Proxy WebDriverApiVersion)
     , TO.Option (Proxy :: Proxy LogHandle)
     , TO.Option (Proxy :: Proxy AssertionLogHandle)
     , TO.Option (Proxy :: Proxy SecretsPath)
@@ -62,7 +66,9 @@ instance (Effectful m, Typeable m) => T.IsTest (WebDriverTest m) where
       Headless headless = TO.lookupOption opts
       RemoteHost host = TO.lookupOption opts
       RemotePort port = TO.lookupOption opts
+      RemotePath path = TO.lookupOption opts
       ApiResponseFormat format = TO.lookupOption opts
+      WebDriverApiVersion version = TO.lookupOption opts
       LogHandle log = TO.lookupOption opts
       AssertionLogHandle alog = TO.lookupOption opts
       SecretsPath secrets = TO.lookupOption opts
@@ -72,7 +78,7 @@ instance (Effectful m, Typeable m) => T.IsTest (WebDriverTest m) where
 
     secretsPath <- case secrets of
       "" -> fmap (++ "/.webdriver/secrets") $ SE.getEnv "HOME"
-      path -> return path
+      spath -> return spath
 
     let
       title = case _test_name of
@@ -86,12 +92,13 @@ instance (Effectful m, Typeable m) => T.IsTest (WebDriverTest m) where
           . setClientEnvironment
               ( setRemoteHostname host
               . setRemotePort port
+              . setRemotePath path
               . setResponseFormat format
+              . setApiVersion version
               . setSecretsPath secretsPath
               $ defaultWebDriverEnv
               )
-          ) 
-        defaultWebDriverConfig
+          ) defaultWebDriverConfig
 
       caps = case driver of
         Geckodriver -> emptyCapabilities
@@ -206,6 +213,19 @@ instance TO.IsOption RemotePort where
 
 
 
+-- | Additional path of the remote end URL.
+newtype RemotePath
+  = RemotePath { theRemotePath :: String }
+  deriving Typeable
+
+instance TO.IsOption RemotePath where
+  defaultValue = RemotePath ""
+  parseValue = Just . RemotePath
+  optionName = return "remote end path"
+  optionHelp = return "default: (empty)"
+
+
+
 -- | Path where secrets are stored.
 newtype SecretsPath
   = SecretsPath { theSecretsPath :: FilePath }
@@ -232,6 +252,21 @@ instance TO.IsOption ApiResponseFormat where
     _ -> Nothing
   optionName = return "response format"
   optionHelp = return "defaul: spec"
+
+
+
+-- | WebDriver API version.
+newtype WebDriverApiVersion
+  = WebDriverApiVersion { theWebDriverApiVersion :: ApiVersion }
+  deriving Typeable
+
+instance TO.IsOption WebDriverApiVersion where
+  defaultValue = WebDriverApiVersion CR_2018_03_04
+  parseValue str = case str of
+    "cr-2018-03-04" -> Just $ WebDriverApiVersion CR_2018_03_04
+    _ -> Nothing
+  optionName = return "webdriver API version"
+  optionHelp = return "cr-2018-03-04"
 
 
 
