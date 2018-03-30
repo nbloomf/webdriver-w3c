@@ -564,6 +564,7 @@ instance FromJSON HostAndOptionalPort where
         { _url_host = h
         , _url_port = Just rest
         }
+    (str,rest) -> fail $ "malformed host " ++ show (str ++ rest)
   parseJSON v = fail $ "Unable to parse HostAndOptionalPort from " ++ show v
 
 instance ToJSON HostAndOptionalPort where

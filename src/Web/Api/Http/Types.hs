@@ -574,3 +574,4 @@ triageHttpException e = case e of
     json <- decode $ fromStrict r
     let status = s ^. Wreq.responseStatus 
     return (show status, unpack $ encodePretty (json :: Value))
+  _ -> Nothing
