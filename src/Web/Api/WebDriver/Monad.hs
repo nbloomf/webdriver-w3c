@@ -48,6 +48,7 @@ module Web.Api.WebDriver.Monad (
 
   -- * WebDriver Errors
   , WebDriverError(..)
+  , printWebDriverError
   , expect
 
   -- * Helpers
@@ -257,6 +258,7 @@ promoteHttpResponseError e = case e of
 
   _ -> Just UnhandledHttpException
 
+-- | For pretty printing.
 printWebDriverError :: WebDriverError -> String
 printWebDriverError e = case e of
   NoSession -> "No session in progress"

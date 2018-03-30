@@ -30,7 +30,7 @@ check_assertion_summary
   -> IO ()
 check_assertion_summary config session expect = do
   h <- openFile "/dev/null" WriteMode
-  result <- debugSession (config h) session
+  (_, result) <- debugSession (config h) session
   if summarize result == expect
     then return ()
     else HU.assertFailure $ "\n\ngot:\n " ++ show result ++ "\n\nbut expected:\n" ++ show expect
@@ -66,7 +66,7 @@ check_assertion
   -> IO ()
 check_assertion config session expect = do
   h <- openFile "/dev/null" WriteMode
-  result <- debugSession (config h) session
+  (_, result) <- debugSession (config h) session
   if result == expect
     then return ()
     else HU.assertFailure $ "\n\ngot:\n " ++ show result ++ "\n\nbut expected:\n" ++ show expect

@@ -108,9 +108,13 @@ instance (Effectful m, Typeable m) => T.IsTest (WebDriverTest m) where
               }
           }
 
-    results <- toIO $ debugSession config $ runIsolated caps (title >> _test_session)
+    (result, assertions) <- toIO $
+      debugSession config $ title >> runIsolated caps _test_session
 
-    return $ webDriverAssertionsToResult $ summarize results
+    return $ case result of
+      Right _ -> webDriverAssertionsToResult $ summarize assertions
+      Left err -> T.testFailed $
+        "Unhandled error: " ++ printErr printWebDriverError err
 
 
 webDriverAssertionsToResult :: AssertionSummary -> T.Result

@@ -13,6 +13,7 @@ Portability : POSIX
 module Web.Api.Http.Types (
   -- * Errors
     Err(..)
+  , printErr
 
   -- * Logs
   , Log(..)
@@ -112,6 +113,16 @@ data Err err
   -- | Unspecified error; defined by consumers of `HttpSession`.
   | Err err
   deriving Show
+
+
+-- | For pretty printing.
+printErr :: (err -> String) -> Err err -> String
+printErr p e = case e of
+  ErrHttp err -> show err
+  ErrIO err -> show err
+  ErrJson err -> show err
+  ErrUnexpectedSuccess msg -> msg
+  Err err -> p err
 
 
 

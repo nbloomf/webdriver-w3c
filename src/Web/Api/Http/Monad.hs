@@ -95,12 +95,12 @@ debugSession
   :: (Monad m)
   => HttpSessionConfig err st log env
   -> HttpSession m err st log env a
-  -> m [Assertion]
+  -> m (Either (Err err) a, [Assertion])
 debugSession config session = do
   let state = __initial_state config
   let env = __environment config
-  (_, (_, (Log _ assertions))) <- execSession session (state, mempty, env)
-  return $ map snd assertions
+  (result, (_, (Log _ assertions))) <- execSession session (state, mempty, env)
+  return (result, map snd assertions)
 
 
 

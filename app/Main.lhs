@@ -131,7 +131,7 @@ This is `example2`:
 
 > example2 :: IO ()
 > example2 = do
->   result <- debugSession defaultWebDriverConfig
+>   (_, result) <- debugSession defaultWebDriverConfig
 >     (runIsolated defaultFirefoxCapabilities what_page_is_this)
 >   printSummary $ summarize result
 >   return ()
