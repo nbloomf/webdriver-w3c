@@ -53,6 +53,7 @@ successfulExit x = T.testGroup "Successful Exit"
   , testCase "elementClear" (_test_elementClear_success x)
   , testCase "elementSendKeys" (_test_elementSendKeys_success x)
   , testCase "getPageSource" (_test_getPageSource_success x)
+  , testCase "getPageSourceStealth" (_test_getPageSourceStealth_success x)
   , testCase "deleteAllCookies" (_test_deleteAllCookies_success x)
   , testCase "performActions (keyboard)" (_test_performActions_keyboard_success x)
   , testCase "performStealthActions (keyboard)" (_test_performStealthActions_keyboard_success x)
@@ -574,6 +575,20 @@ _test_getPageSource_success _ =
     session = do
       navigateTo "https://www.w3.org"
       !src <- getPageSource
+      assertSuccess "yay"
+      return ()
+
+  in catchError session unexpectedError
+
+
+
+_test_getPageSourceStealth_success
+  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
+_test_getPageSourceStealth_success _ =
+  let
+    session = do
+      navigateTo "https://www.w3.org"
+      !src <- getPageSourceStealth
       assertSuccess "yay"
       return ()
 
