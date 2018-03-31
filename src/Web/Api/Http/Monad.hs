@@ -171,7 +171,7 @@ appendLog msg = HttpSession $ \(state, log, _) ->
 
 -- | Write an entry to the log.
 logNow
-  :: (Effectful m)
+  :: (EffectTimer m, EffectPrint m)
   => Entry err log
   -> HttpSession m err st log env ()
 logNow msg = do
@@ -217,7 +217,7 @@ assertNow a = do
 
 -- | Throw an error.
 throwError
-  :: (Monad m, Effectful m)
+  :: (Monad m, EffectTimer m, EffectPrint m)
   => Err err
   -> HttpSession m err st log env a
 throwError e = do
