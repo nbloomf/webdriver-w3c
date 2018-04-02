@@ -29,6 +29,8 @@ module Web.Api.WebDriver.Helpers (
   ) where
 
 import qualified Data.Aeson as Aeson (encode)
+import qualified Data.ByteString.Lazy.Char8 as BS (pack)
+import qualified Data.Digest.Pure.SHA as SHA (showDigest, sha1)
 
 import Web.Api.Http
 import Web.Api.WebDriver.Monad
@@ -60,23 +62,25 @@ runIsolated caps theSession = cleanupOnError $ do
   getState >>= (putState . updateClientState (setSessionId Nothing))
 
 
--- | Save all cookies for the current domain to a given file.
+-- | Save all cookies for the current domain to a file.
 stashCookies
   :: (Effectful m)
-  => FilePath
+  => String -- ^ Passed through SHA1, and the digest is used as the filename.
   -> WebDriver m ()
-stashCookies file =
+stashCookies string =
+  let file = SHA.showDigest $ SHA.sha1 $ BS.pack string in
   getAllCookies >>= writeCookieFile file
 
 
 -- | Load cookies from a file saved with `stashCookies`. Returns `False` if the cookie file is missing or cannot be read.
 loadCookies
   :: (Effectful m)
-  => FilePath
+  => String -- ^ Passed through SHA1, and the digest is used as the filename.
   -> WebDriver m Bool
-loadCookies file = do
-  file <- readCookieFile file
-  case file of
+loadCookies string = do
+  let file = SHA.showDigest $ SHA.sha1 $ BS.pack string
+  contents <- readCookieFile file
+  case contents of
     Nothing -> return False
     Just cs -> do
       mapM addCookie cs
