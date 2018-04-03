@@ -4,6 +4,7 @@ module Web.Api.WebDriver.Monad.Test.Session.UnknownError (
   ) where
 
 import Data.Typeable (Typeable)
+import System.IO
 
 import Web.Api.Http
 import Web.Api.WebDriver
@@ -21,8 +22,8 @@ unknownError e = case e of
   _ -> assertFailure "Expecting 'unknown error'"
 
 
-unknownErrorExit :: (Effectful m, Typeable m) => m () -> T.TestTree
-unknownErrorExit x = T.testGroup "Unknown Error"
+unknownErrorExit :: (Effectful m, Typeable m) => FilePath -> m () -> T.TestTree
+unknownErrorExit path x = T.testGroup "Unknown Error"
   [ testCase "navigateTo" (_test_navigateTo_unknown_error x)
   ]
 

@@ -4,6 +4,7 @@ module Web.Api.WebDriver.Monad.Test.Session.Success (
   ) where
 
 import Data.Typeable (Typeable)
+import System.IO
 
 import Web.Api.Http
 import Web.Api.WebDriver
@@ -19,56 +20,58 @@ unexpectedError
 unexpectedError _ = assertFailure "unexpected error"
 
 
-successfulExit :: (Effectful m, Typeable m) => m () -> T.TestTree
-successfulExit x = T.testGroup "Successful Exit"
-  [ testCase "sessionStatus" (_test_sessionStatus_success x)
-  , testCase "getTimeouts" (_test_getTimeouts_success x)
-  , testCase "setTimeouts" (_test_setTimeouts_success x)
-  , testCase "navigateTo" (_test_navigateTo_success x)
-  , testCase "navigateToStealth" (_test_navigateToStealth_success x)
-  , testCase "getCurrentUrl" (_test_getCurrentUrl_success x)
-  , testCase "goBack" (_test_goBack_success x)
-  , testCase "goForward" (_test_goForward_success x)
-  , testCase "pageRefresh" (_test_pageRefresh_success x)
-  , testCase "getTitle" (_test_getTitle_success x)
-  , testCase "getWindowHandle" (_test_getWindowHandle_success x)
-  , testCase "switchToWindow" (_test_switchToWindow_success x)
-  , testCase "getWindowHandles" (_test_getWindowHandles_success x)
-  , testCase "switchToFrame" (_test_switchToFrame_success x)
-  , testCase "getWindowRect" (_test_getWindowRect_success x)
-  , testCase "maximizeWindow" (_test_maximizeWindow_success x)
-  , testCase "minimizeWindow" (_test_minimizeWindow_success x)
-  , testCase "fullscreenWindow" (_test_fullscreenWindow_success x)
-  , testCase "findElement" (_test_findElement_success x)
-  , testCase "findElements" (_test_findElements_success x)
-  , testCase "findElementFromElement" (_test_findElementFromElement_success x)
-  , testCase "findElementsFromElement" (_test_findElementsFromElement_success x)
-  , testCase "getActiveElement" (_test_getActiveElement_success x)
-  , testCase "isElementSelected" (_test_isElementSelected_success x)
-  , testCase "getElementAttribute" (_test_getElementAttribute_success x)
-  , testCase "getElementText" (_test_getElementText_success x)
-  , testCase "getElementRect" (_test_getElementRect_success x)
-  , testCase "isElementEnabled" (_test_isElementEnabled_success x)
-  , testCase "elementClick" (_test_elementClick_success x)
-  , testCase "elementClear" (_test_elementClear_success x)
-  , testCase "elementSendKeys" (_test_elementSendKeys_success x)
-  , testCase "getPageSource" (_test_getPageSource_success x)
-  , testCase "getPageSourceStealth" (_test_getPageSourceStealth_success x)
-  , testCase "deleteAllCookies" (_test_deleteAllCookies_success x)
-  , testCase "performActions (keyboard)" (_test_performActions_keyboard_success x)
-  , testCase "performStealthActions (keyboard)" (_test_performStealthActions_keyboard_success x)
-  , testCase "takeScreenshot" (_test_takeScreenshot_success x)
-  , testCase "takeElementScreenshot" (_test_takeElementScreenshot_success x)
-  ]
+successfulExit :: (Effectful m, Typeable m) => FilePath -> m () -> T.TestTree
+successfulExit dir x =
+  let path = dir ++ "/success.html" in
+  T.testGroup "Successful Exit"
+    [ testCase "sessionStatus" (_test_sessionStatus_success path x)
+    , testCase "getTimeouts" (_test_getTimeouts_success x)
+    , testCase "setTimeouts" (_test_setTimeouts_success x)
+    , testCase "navigateTo" (_test_navigateTo_success path x)
+    , testCase "navigateToStealth" (_test_navigateToStealth_success path x)
+    , testCase "getCurrentUrl" (_test_getCurrentUrl_success x)
+    , testCase "goBack" (_test_goBack_success x)
+    , testCase "goForward" (_test_goForward_success x)
+    , testCase "pageRefresh" (_test_pageRefresh_success x)
+    , testCase "getTitle" (_test_getTitle_success x)
+    , testCase "getWindowHandle" (_test_getWindowHandle_success x)
+    , testCase "switchToWindow" (_test_switchToWindow_success x)
+    , testCase "getWindowHandles" (_test_getWindowHandles_success path x)
+    , testCase "switchToFrame" (_test_switchToFrame_success path x)
+    , testCase "getWindowRect" (_test_getWindowRect_success x)
+    , testCase "maximizeWindow" (_test_maximizeWindow_success x)
+    , testCase "minimizeWindow" (_test_minimizeWindow_success x)
+    , testCase "fullscreenWindow" (_test_fullscreenWindow_success x)
+    , testCase "findElement" (_test_findElement_success path x)
+    , testCase "findElements" (_test_findElements_success path x)
+    , testCase "findElementFromElement" (_test_findElementFromElement_success path x)
+    , testCase "findElementsFromElement" (_test_findElementsFromElement_success path x)
+    , testCase "getActiveElement" (_test_getActiveElement_success x)
+    , testCase "isElementSelected" (_test_isElementSelected_success path x)
+    , testCase "getElementAttribute" (_test_getElementAttribute_success path x)
+    , testCase "getElementText" (_test_getElementText_success path x)
+    , testCase "getElementRect" (_test_getElementRect_success path x)
+    , testCase "isElementEnabled" (_test_isElementEnabled_success path x)
+    , testCase "elementClick" (_test_elementClick_success path x)
+    , testCase "elementClear" (_test_elementClear_success path x)
+    , testCase "elementSendKeys" (_test_elementSendKeys_success path x)
+    , testCase "getPageSource" (_test_getPageSource_success path x)
+    , testCase "getPageSourceStealth" (_test_getPageSourceStealth_success path x)
+    , testCase "deleteAllCookies" (_test_deleteAllCookies_success x)
+    , testCase "performActions (keyboard)" (_test_performActions_keyboard_success x)
+    , testCase "performStealthActions (keyboard)" (_test_performStealthActions_keyboard_success x)
+    , testCase "takeScreenshot" (_test_takeScreenshot_success path x)
+    , testCase "takeElementScreenshot" (_test_takeElementScreenshot_success path x)
+    ]
 
 
 
 _test_sessionStatus_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_sessionStatus_success _ =
+  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
+_test_sessionStatus_success page _ =
   let
     session = do
-      navigateTo "https://www.w3.org"
+      navigateTo page
       (!r,!m) <- sessionStatus
       assertSuccess "yay"
       return ()
@@ -104,11 +107,11 @@ _test_setTimeouts_success _ =
 
 
 _test_navigateTo_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_navigateTo_success _ =
+  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
+_test_navigateTo_success page _ =
   let
     session = do
-      () <- navigateTo "https://www.example.org"
+      () <- navigateTo page
       assertSuccess "yay"
       return ()
 
@@ -117,11 +120,11 @@ _test_navigateTo_success _ =
 
 
 _test_navigateToStealth_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_navigateToStealth_success _ =
+  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
+_test_navigateToStealth_success page _ =
   let
     session = do
-      () <- navigateToStealth "https://www.example.org"
+      () <- navigateToStealth page
       assertSuccess "yay"
       return ()
 
@@ -229,11 +232,11 @@ _test_switchToWindow_success _ =
 
 
 _test_getWindowHandles_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_getWindowHandles_success _ =
+  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
+_test_getWindowHandles_success page _ =
   let
     session = do
-      navigateTo "https://www.w3.org"
+      navigateTo page
       !handles <- getWindowHandles
       case handles of
         [] -> do
@@ -248,11 +251,11 @@ _test_getWindowHandles_success _ =
 
 
 _test_switchToFrame_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_switchToFrame_success _ =
+  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
+_test_switchToFrame_success page _ =
   let
     session = do
-      navigateTo "https://www.w3.org"
+      navigateTo page
       () <- switchToFrame TopLevelFrame
       assertSuccess "yay"
       return ()
@@ -322,14 +325,14 @@ _test_fullscreenWindow_success _ =
 
 
 _test_findElement_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_findElement_success _ =
+  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
+_test_findElement_success page _ =
   let
     session = do
-      navigateTo "https://www.w3.org"
+      navigateTo page
       !element <- findElement CssSelector "body"
-      !element <- findElement LinkTextSelector "Standards"
-      !element <- findElement PartialLinkTextSelector "Standards"
+      !element <- findElement LinkTextSelector "A Link"
+      !element <- findElement PartialLinkTextSelector "Link"
       !element <- findElement TagName "body"
       !element <- findElement XPathSelector "*"
       assertSuccess "yay"
@@ -340,11 +343,11 @@ _test_findElement_success _ =
 
 
 _test_findElements_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_findElements_success _ =
+  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
+_test_findElements_success page _ =
   let
     session = do
-      navigateTo "https://www.w3.org"
+      navigateTo page
       !elements <- findElements CssSelector "body"
       case elements of
         [] -> return ()
@@ -373,15 +376,15 @@ _test_findElements_success _ =
 
 
 _test_findElementFromElement_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_findElementFromElement_success _ =
+  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
+_test_findElementFromElement_success page _ =
   let
     session = do
-      navigateTo "https://www.w3.org"
+      navigateTo page
       root <- findElement CssSelector "body"
       !element <- findElementFromElement CssSelector "p" root
-      !element <- findElementFromElement LinkTextSelector "Standards" root
-      !element <- findElementFromElement PartialLinkTextSelector "Standards" root
+      !element <- findElementFromElement LinkTextSelector "A Link" root
+      !element <- findElementFromElement PartialLinkTextSelector "Link" root
       !element <- findElementFromElement TagName "p" root
       !element <- findElementFromElement XPathSelector "*" root
       assertSuccess "yay"
@@ -392,11 +395,11 @@ _test_findElementFromElement_success _ =
 
 
 _test_findElementsFromElement_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_findElementsFromElement_success _ =
+  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
+_test_findElementsFromElement_success page _ =
   let
     session = do
-      navigateTo "https://www.w3.org"
+      navigateTo page
       root <- findElement CssSelector "body"
       !elements <- findElementsFromElement CssSelector "p" root
       case elements of
@@ -439,11 +442,11 @@ _test_getActiveElement_success _ =
 
 
 _test_isElementSelected_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_isElementSelected_success _ =
+  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
+_test_isElementSelected_success page _ =
   let
     session = do
-      navigateTo "https://www.w3.org"
+      navigateTo page
       !element <- getActiveElement
       !p <- isElementSelected element
       assertSuccess "yay"
@@ -454,11 +457,11 @@ _test_isElementSelected_success _ =
 
 
 _test_getElementAttribute_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_getElementAttribute_success _ =
+  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
+_test_getElementAttribute_success page _ =
   let
     session = do
-      navigateTo "https://www.w3.org"
+      navigateTo page
       !element <- getActiveElement
       !attr <- getElementAttribute element "href"
       assertSuccess "yay"
@@ -477,11 +480,11 @@ _test_getElementAttribute_success _ =
 
 
 _test_getElementText_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_getElementText_success _ =
+  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
+_test_getElementText_success page _ =
   let
     session = do
-      navigateTo "https://www.w3.org"
+      navigateTo page
       !element <- getActiveElement
       !text <- getElementText element
       assertSuccess "yay"
@@ -496,11 +499,11 @@ _test_getElementText_success _ =
 
 
 _test_getElementRect_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_getElementRect_success _ =
+  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
+_test_getElementRect_success page _ =
   let
     session = do
-      navigateTo "https://www.w3.org"
+      navigateTo page
       !element <- getActiveElement
       !rect <- getElementRect element
       assertSuccess "yay"
@@ -511,11 +514,11 @@ _test_getElementRect_success _ =
 
 
 _test_isElementEnabled_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_isElementEnabled_success _ =
+  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
+_test_isElementEnabled_success page _ =
   let
     session = do
-      navigateTo "https://www.w3.org"
+      navigateTo page
       !element <- getActiveElement
       !p <- isElementEnabled element
       assertSuccess "yay"
@@ -526,11 +529,11 @@ _test_isElementEnabled_success _ =
 
 
 _test_elementClick_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_elementClick_success _ =
+  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
+_test_elementClick_success page _ =
   let
     session = do
-      navigateTo "https://www.w3.org"
+      navigateTo page
       !root <- findElement CssSelector "body"
       () <- elementClick root
       assertSuccess "yay"
@@ -541,12 +544,12 @@ _test_elementClick_success _ =
 
 
 _test_elementClear_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_elementClear_success _ =
+  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
+_test_elementClear_success page _ =
   let
     session = do
-      navigateTo "https://www.w3.org"
-      !element <- findElement CssSelector "input.text"
+      navigateTo page
+      !element <- findElement CssSelector "input[name=\"sometext\"]"
       () <- elementClear element
       assertSuccess "yay"
       return ()
@@ -556,12 +559,12 @@ _test_elementClear_success _ =
 
 
 _test_elementSendKeys_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_elementSendKeys_success _ =
+  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
+_test_elementSendKeys_success page _ =
   let
     session = do
-      navigateTo "https://www.w3.org"
-      !element <- findElement CssSelector "input.text"
+      navigateTo page
+      !element <- findElement CssSelector "input[name=\"sometext\"]"
       () <- elementSendKeys element "foo"
       assertSuccess "yay"
       return ()
@@ -571,11 +574,11 @@ _test_elementSendKeys_success _ =
 
 
 _test_getPageSource_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_getPageSource_success _ =
+  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
+_test_getPageSource_success page _ =
   let
     session = do
-      navigateTo "https://www.w3.org"
+      navigateTo page
       !src <- getPageSource
       assertSuccess "yay"
       return ()
@@ -585,11 +588,11 @@ _test_getPageSource_success _ =
 
 
 _test_getPageSourceStealth_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_getPageSourceStealth_success _ =
+  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
+_test_getPageSourceStealth_success page _ =
   let
     session = do
-      navigateTo "https://www.w3.org"
+      navigateTo page
       !src <- getPageSourceStealth
       assertSuccess "yay"
       return ()
@@ -718,11 +721,11 @@ _test_performStealthActions_keyboard_success _ =
 
 
 _test_takeScreenshot_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_takeScreenshot_success _ =
+  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
+_test_takeScreenshot_success page _ =
   let
     session = do
-      navigateTo "https://www.w3.org"
+      navigateTo page
       !screenshot <- takeScreenshot
       assertSuccess "yay"
       return ()
@@ -732,12 +735,12 @@ _test_takeScreenshot_success _ =
 
 
 _test_takeElementScreenshot_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_takeElementScreenshot_success _ =
+  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
+_test_takeElementScreenshot_success page _ =
   let
     session = do
-      navigateTo "https://www.w3.org"
-      !element <- findElement CssSelector "input.text"
+      navigateTo page
+      !element <- findElement CssSelector "body"
       !screenshot <- takeElementScreenshot element
       assertSuccess "yay"
       return ()

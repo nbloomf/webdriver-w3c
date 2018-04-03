@@ -23,19 +23,19 @@ import Web.Api.WebDriver.Monad.Test.Session.Success
 import Web.Api.WebDriver.Monad.Test.Session.UnknownError
 
 
-tests :: TestTree
-tests = testGroup "Web.Api.WebDriver.Monad"
+tests :: FilePath -> TestTree
+tests path = testGroup "Web.Api.WebDriver.Monad"
   [ testGroup "Mock Server"
-      (endpointTests (return () :: MockIO WebDriverServerState ()))
+      (endpointTests path (return () :: MockIO WebDriverServerState ()))
 
   ,   localOption (LogHandle $ Path "/dev/null")
     $ localOption (AssertionLogHandle $ Path "/dev/null")
-    $ testGroup "Real Server" (endpointTests (return () :: IO ()))
+    $ testGroup "Real Server" (endpointTests path (return () :: IO ()))
   ]
 
 
-endpointTests :: (Effectful m, Typeable m) => m () -> [TestTree]
-endpointTests x =
-  [ successfulExit x
-  , unknownErrorExit x
+endpointTests :: (Effectful m, Typeable m) => FilePath -> m () -> [TestTree]
+endpointTests path x =
+  [ successfulExit path x
+  , unknownErrorExit path x
   ]
