@@ -11,3 +11,5 @@ Stack tips:
 * `stack install`: install the demo program (not super useful)
 * `stack haddock`: generate the docs
 * `stack test --coverage`: run the tests and generate a coverage report
+
+Special thanks to Jonathan Lipps' (Simplified Guide)[https://github.com/jlipps/simple-wd-spec] to the WebDriver spec.
