@@ -7,15 +7,19 @@ module Web.Api.WebDriver.Monad.Test.Server (
 
 import Data.List
 import Data.Text (Text, pack, unpack)
+import Data.Text.Encoding (decodeUtf8)
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.ByteString as SB
+import qualified Data.ByteString.Base64 as B64
 import Data.Aeson
 import Data.HashMap.Strict
 import Network.HTTP.Client (HttpException)
 import Network.HTTP.Client.Internal
 import Network.HTTP.Types
 import qualified Network.Wreq.Session as WreqS
+import Codec.Picture
+import Codec.Picture.Saving
 
 import Web.Api.Http
 import Web.Api.Http.Effects.Test.Mock
@@ -96,10 +100,10 @@ defaultWebDriverServer = MockServer
         undefined
 
       [_,"session",session_id,"screenshot"] ->
-        undefined
+        get_session_id_screenshot st session_id
 
       [_,"session",session_id,"element",element_id,"screenshot"] ->
-        undefined
+        get_session_id_element_id_screenshot st session_id element_id
 
       _ -> error $ "defaultWebDriverServer: get url: " ++ url
 
@@ -655,9 +659,44 @@ post_session_id_actions !st !session_id payload =
 
 {- TODO: post_session_id_alert_text -}
 
-{- TODO: get_session_id_screenshot -}
+get_session_id_screenshot
+  :: WebDriverServerState
+  -> String
+  -> (Either HttpException HttpResponse, WebDriverServerState)
+get_session_id_screenshot !st !session_id =
+  let
+    black :: Int -> Int -> PixelRGB8
+    black _ _ = PixelRGB8 0 0 0
 
-{- TODO: get_session_id_element_id_screenshot -}
+    img :: DynamicImage
+    img = ImageRGB8 (generateImage black 640 480)
+
+    resp :: Text
+    resp = decodeUtf8 $ B64.encode $ LB.toStrict $ imageToPng img
+  in
+    if not $ _is_active_session session_id st
+      then (Left _err_invalid_session_id, st)
+      else (Right $ _success_with_value $ String resp, st)
+
+get_session_id_element_id_screenshot
+  :: WebDriverServerState
+  -> String
+  -> String
+  -> (Either HttpException HttpResponse, WebDriverServerState)
+get_session_id_element_id_screenshot st session_id element_id =
+  let
+    black :: Int -> Int -> PixelRGB8
+    black _ _ = PixelRGB8 0 0 0
+
+    img :: DynamicImage
+    img = ImageRGB8 (generateImage black 64 48)
+
+    resp :: Text
+    resp = decodeUtf8 $ B64.encode $ LB.toStrict $ imageToPng img
+  in
+    if not $ _is_active_session session_id st
+      then (Left _err_invalid_session_id, st)
+      else (Right $ _success_with_value $ String resp, st)
 
 
 

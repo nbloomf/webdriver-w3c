@@ -57,6 +57,8 @@ successfulExit x = T.testGroup "Successful Exit"
   , testCase "deleteAllCookies" (_test_deleteAllCookies_success x)
   , testCase "performActions (keyboard)" (_test_performActions_keyboard_success x)
   , testCase "performStealthActions (keyboard)" (_test_performStealthActions_keyboard_success x)
+  , testCase "takeScreenshot" (_test_takeScreenshot_success x)
+  , testCase "takeElementScreenshot" (_test_takeElementScreenshot_success x)
   ]
 
 
@@ -715,8 +717,29 @@ _test_performStealthActions_keyboard_success _ =
 
 
 
--- TODO: takeScreenshot
+_test_takeScreenshot_success
+  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
+_test_takeScreenshot_success _ =
+  let
+    session = do
+      navigateTo "https://www.w3.org"
+      !screenshot <- takeScreenshot
+      assertSuccess "yay"
+      return ()
+
+  in catchError session unexpectedError
 
 
 
--- TODO: takeElementScreenshot
+_test_takeElementScreenshot_success
+  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
+_test_takeElementScreenshot_success _ =
+  let
+    session = do
+      navigateTo "https://www.w3.org"
+      !element <- findElement CssSelector "input.text"
+      !screenshot <- takeElementScreenshot element
+      assertSuccess "yay"
+      return ()
+
+  in catchError session unexpectedError
