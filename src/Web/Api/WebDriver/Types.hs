@@ -93,6 +93,16 @@ import Web.Api.WebDriver.Types.Keyboard
 
 
 
+unrecognizedValue :: (Monad m) => String -> Text -> m a
+unrecognizedValue name string = fail $
+  "Unrecognized value for type " ++ name ++ ": " ++ unpack string
+
+malformedValue :: (Monad m) => String -> String -> m a
+malformedValue name value = fail $
+  "Malformed value for type" ++ name ++ ": " ++ value
+
+
+
 object_ :: [Maybe Pair] -> Value
 object_ = object . filter (\(_, v) -> v /= Null) . catMaybes
 
@@ -136,6 +146,7 @@ data FrameReference
   = TopLevelFrame
   | FrameNumber Int
   | FrameContainingElement ElementRef
+  deriving (Eq, Show)
 
 
 
@@ -305,7 +316,7 @@ instance FromJSON Capabilities where
     <*> v .:? "unhandledPromptBehavior"
     <*> v .:? "chromeOptions"
     <*> v .:? "moz:firefoxOptions"
-  parseJSON v = fail $ "Unable to parse Capabilities from " ++ show v
+  parseJSON invalid = typeMismatch "Capabilities" invalid
 
 instance ToJSON Capabilities where
   toJSON Capabilities{..} = object_
@@ -386,7 +397,7 @@ instance FromJSON BrowserName where
     "firefox" -> return Firefox
     "chrome" -> return Chrome
     "safari" -> return Safari
-    _ -> fail $ "Unrecognized browser name " ++ show x
+    _ -> unrecognizedValue "BrowserName" x
   parseJSON invalid = typeMismatch "BrowserName" invalid
 
 instance ToJSON BrowserName where
@@ -407,7 +418,7 @@ data PlatformName
 instance FromJSON PlatformName where
   parseJSON (String x) = case (map toLower $ unpack x) of
     "mac" -> return Mac
-    _ -> fail $ "Unrecognized PlaformName " ++ show x
+    _ -> unrecognizedValue "PlaformName" x
   parseJSON invalid = typeMismatch "PlatformName" invalid
 
 instance ToJSON PlatformName where
@@ -460,7 +471,7 @@ instance FromJSON FirefoxOptions where
   parseJSON (Object v) = FirefoxOptions
     <$> v .:? "binary"
     <*> v .:? "args"
-  parseJSON v = fail $ "Cannot parse FirefoxOptions from " ++ show v
+  parseJSON invalid = typeMismatch "FirefoxOptions" invalid
 
 instance ToJSON FirefoxOptions where
   toJSON FirefoxOptions{..} = object_
@@ -504,7 +515,7 @@ instance FromJSON ProxyConfig where
     <*> v .:? "sslProxy"
     <*> v .:? "socksProxy"
     <*> v .:? "socksVersion"
-  parseJSON v = fail $ "Cannot parse ProxyConfig value from " ++ show v
+  parseJSON invalid = typeMismatch "ProxyConfig" invalid
 
 instance ToJSON ProxyConfig where
   toJSON ProxyConfig{..} = object_
@@ -547,30 +558,32 @@ emptyProxyConfig = ProxyConfig
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#dfn-host-and-optional-port>.
 data HostAndOptionalPort = HostAndOptionalPort
   { _url_host :: Host
-  , _url_port :: Maybe String
+  , _url_port :: Maybe Port
   } deriving (Eq, Show)
 
 instance FromJSON HostAndOptionalPort where
   parseJSON (String x) = case span (/= ':') (unpack x) of
-    (str,[]) -> case host str of
-      Nothing -> fail $ "malformed host " ++ show str
+    (str,[]) -> case mkHost str of
+      Nothing -> malformedValue "Host" str
       Just h -> return $ HostAndOptionalPort
         { _url_host = h
         , _url_port = Nothing
         }
-    (str,':':rest) -> case host str of
-      Nothing -> fail $ "malformed host " ++ show str
-      Just h -> return $ HostAndOptionalPort
-        { _url_host = h
-        , _url_port = Just rest
-        }
-    (str,rest) -> fail $ "malformed host " ++ show (str ++ rest)
-  parseJSON v = fail $ "Unable to parse HostAndOptionalPort from " ++ show v
+    (str,':':rest) -> case mkHost str of
+      Nothing -> malformedValue "Host" str
+      Just h -> case mkPort rest of
+        Nothing -> malformedValue "Port" rest
+        Just p -> return $ HostAndOptionalPort
+          { _url_host = h
+          , _url_port = Just p
+          }
+    (str,rest) -> malformedValue "Host" (str ++ rest)
+  parseJSON invalid = typeMismatch "HostAndOptionalPort" invalid
 
 instance ToJSON HostAndOptionalPort where
   toJSON HostAndOptionalPort{..} = case _url_port of
     Nothing -> String $ pack $ show _url_host
-    Just pt -> String $ pack $ concat [show _url_host, ":", pt]
+    Just pt -> String $ pack $ concat [show _url_host, ":", show pt]
 
 instance Arbitrary HostAndOptionalPort where
   arbitrary = HostAndOptionalPort
@@ -595,8 +608,8 @@ instance FromJSON ProxyType where
     "autodetect" -> return ProxyAutodetect
     "system" -> return ProxySystem
     "manual" -> return ProxyManual
-    _ -> fail $ "Unrecognized ProxyType " ++ show x
-  parseJSON v = fail $ "Unable to parse ProxyType from " ++ show v
+    _ -> unrecognizedValue "ProxyType" x
+  parseJSON invalid = typeMismatch "ProxyType" invalid
 
 instance ToJSON ProxyType where
   toJSON x = case x of
@@ -666,8 +679,8 @@ instance FromJSON LocationStrategy where
     "partial link text" -> return PartialLinkTextSelector
     "tag name" -> return TagName
     "xpath" -> return XPathSelector
-    _ -> fail $ "Unrecognized LocationStrategy " ++ show x
-  parseJSON v = fail $ "Unable to parse LocationStrategy from " ++ show v
+    _ -> unrecognizedValue "LocationStrategy" x
+  parseJSON invalid = typeMismatch "LocationStrategy" invalid
 
 instance ToJSON LocationStrategy where
   toJSON x = case x of
@@ -694,8 +707,8 @@ instance FromJSON InputSource where
     "null" -> return NullInputSource
     "key" -> return KeyInputSource
     "pointer" -> return PointerInputSource
-    _ -> fail $ "Unrecognized InputSource " ++ show x
-  parseJSON v = fail $ "Unable to parse InputSource from " ++ show v
+    _ -> unrecognizedValue "InputSource" x
+  parseJSON invalid = typeMismatch "InputSource" invalid
 
 instance ToJSON InputSource where
   toJSON x = case x of
@@ -720,7 +733,7 @@ instance FromJSON PointerSubtype where
     "mouse" -> return PointerMouse
     "pen" -> return PointerPen
     "touch" -> return PointerTouch
-    _ -> fail $ "Unrecognized PointerSubtype " ++ show x
+    _ -> unrecognizedValue "PointerSubtype" x
   parseJSON invalid = typeMismatch "PointerSubtype" invalid
 
 instance ToJSON PointerSubtype where
@@ -795,7 +808,7 @@ instance FromJSON ActionType where
     "pointerUp" -> return PointerUpAction
     "pointerMove" -> return PointerMoveAction
     "pointerCancel" -> return PointerCancelAction
-    _ -> fail $ "Unrecognized ActionType: " ++ unpack x
+    _ -> unrecognizedValue "ActionType" x
   parseJSON invalid = typeMismatch "ActionType" invalid
 
 instance ToJSON ActionType where
@@ -953,7 +966,7 @@ instance FromJSON PromptHandler where
     "dismiss and notify" -> return DismissPromptsAndNotify
     "accept and notify" -> return AcceptPromptsAndNotify
     "ignore" -> return IgnorePrompts
-    _ -> fail $ "Unrecognized PromptHandler " ++ show x
+    _ -> unrecognizedValue "PromptHandler" x
   parseJSON invalid = typeMismatch "PromptHandler" invalid
 
 instance ToJSON PromptHandler where
