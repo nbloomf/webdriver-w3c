@@ -16,7 +16,7 @@ module Web.Api.Http.Uri (
   ) where
 
 import Test.QuickCheck
-  ( Arbitrary(..), oneof, vectorOf, NonNegative(..))
+  ( Arbitrary(..), oneof, vectorOf, Positive(..))
 
 
 -- | The host part of a URI. See <https://tools.ietf.org/html/rfc3986#page-18>.
@@ -35,7 +35,7 @@ instance Show Host where
 
 instance Arbitrary Host where
   arbitrary = do
-    NonNegative k <- arbitrary
+    Positive k <- arbitrary
     str <- vectorOf k $ oneof $ map return host_allowed_chars
     case mkHost str of
       Just h -> return h
@@ -63,7 +63,7 @@ instance Show Port where
 
 instance Arbitrary Port where
   arbitrary = do
-    NonNegative k <- arbitrary
+    Positive k <- arbitrary
     str <- vectorOf k $ oneof $ map return ['0'..'9']
     case mkPort str of
       Just p -> return p

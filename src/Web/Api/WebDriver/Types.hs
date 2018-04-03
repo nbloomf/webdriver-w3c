@@ -12,7 +12,7 @@ The WebDriver protocol involves passing several different kinds of JSON objects.
 Note that while the WebDriver spec defines some JSON objects, in general a given WebDriver server can accept additional properties on any given object. Our types here will be limited to the "spec" object signatures, but our API will need to be user extensible.
 -}
 
-{-# LANGUAGE OverloadedStrings, RecordWildCards #-}
+{-# LANGUAGE OverloadedStrings, RecordWildCards, BangPatterns #-}
 module Web.Api.WebDriver.Types (
   -- * Stringy Types
     SessionId
@@ -94,11 +94,11 @@ import Web.Api.WebDriver.Types.Keyboard
 
 
 unrecognizedValue :: (Monad m) => String -> Text -> m a
-unrecognizedValue name string = fail $
+unrecognizedValue !name !string = fail $
   "Unrecognized value for type " ++ name ++ ": " ++ unpack string
 
 malformedValue :: (Monad m) => String -> String -> m a
-malformedValue name value = fail $
+malformedValue !name !value = fail $
   "Malformed value for type" ++ name ++ ": " ++ value
 
 
@@ -416,7 +416,7 @@ data PlatformName
   deriving (Eq, Show, Enum, Bounded)
 
 instance FromJSON PlatformName where
-  parseJSON (String x) = case (map toLower $ unpack x) of
+  parseJSON (String x) = case unpack x of
     "mac" -> return Mac
     _ -> unrecognizedValue "PlaformName" x
   parseJSON invalid = typeMismatch "PlatformName" invalid
@@ -562,22 +562,26 @@ data HostAndOptionalPort = HostAndOptionalPort
   } deriving (Eq, Show)
 
 instance FromJSON HostAndOptionalPort where
-  parseJSON (String x) = case span (/= ':') (unpack x) of
-    (str,[]) -> case mkHost str of
-      Nothing -> malformedValue "Host" str
-      Just h -> return $ HostAndOptionalPort
-        { _url_host = h
-        , _url_port = Nothing
-        }
-    (str,':':rest) -> case mkHost str of
-      Nothing -> malformedValue "Host" str
-      Just h -> case mkPort rest of
-        Nothing -> malformedValue "Port" rest
-        Just p -> return $ HostAndOptionalPort
+  parseJSON (String x) =
+    let string = unpack x in
+    case span (/= ':') string of
+      ("",_) -> malformedValue "Host" string
+      (str,[]) -> case mkHost str of
+        Nothing -> malformedValue "Host" string
+        Just h -> return $ HostAndOptionalPort
           { _url_host = h
-          , _url_port = Just p
+          , _url_port = Nothing
           }
-    (str,rest) -> malformedValue "Host" (str ++ rest)
+      (str,":") -> malformedValue "Port" string
+      (str,':':rest) -> case mkHost str of
+        Nothing -> malformedValue "Host" string
+        Just h -> case mkPort rest of
+          Nothing -> malformedValue "Port" rest
+          Just p -> return $ HostAndOptionalPort
+            { _url_host = h
+            , _url_port = Just p
+            }
+      (str,rest) -> malformedValue "Host" string
   parseJSON invalid = typeMismatch "HostAndOptionalPort" invalid
 
 instance ToJSON HostAndOptionalPort where

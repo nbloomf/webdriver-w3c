@@ -1,9 +1,11 @@
+{-# LANGUAGE OverloadedStrings, BangPatterns #-}
 module Web.Api.WebDriver.Types.Test (
     tests
   ) where
 
+import Data.Proxy
 import qualified Data.Aeson as A
-  ( ToJSON(..), FromJSON, fromJSON, Result(..), object )
+  ( ToJSON(..), FromJSON, fromJSON, Result(..), object, Value(..) )
 import Test.QuickCheck
   ( quickCheck, Arbitrary(..), label, Property )
 
@@ -19,6 +21,7 @@ tests :: TestTree
 tests = testGroup "Web.Api.WebDriver.Types"
   [ test_fromJson_toJson_id
   , test_empty_objects
+  , test_fromJson_parse_error
   ]
 
 
@@ -123,4 +126,180 @@ test_empty_objects = testGroup "empty objects"
 
   , HU.testCase "emptyCookie is an empty object" $
       prop_is_empty_object emptyCookie
+  ]
+
+
+
+-- | JSON parse errors.
+prop_fromJson_parse_error
+  :: (Eq a, Show a, A.FromJSON a)
+  => Proxy a -> A.Value -> IO ()
+prop_fromJson_parse_error x str =
+  case A.fromJSON str of
+    A.Error !err -> return ()
+    A.Success !y -> do
+      let z = asProxyTypeOf y x
+      assertFailure $ "Expected parse failure!"
+
+test_fromJson_parse_error :: TestTree
+test_fromJson_parse_error = testGroup "JSON parse error expected"
+  [ HU.testCase "BrowserName (unrecognized value)" $
+      prop_fromJson_parse_error (Proxy :: Proxy BrowserName) $
+      A.String "mosaic"
+
+  , HU.testCase "BrowserName (wrong case)" $
+      prop_fromJson_parse_error (Proxy :: Proxy BrowserName) $
+      A.String "FIREFOX"
+
+  , HU.testCase "BrowserName (wrong type - object)" $
+      prop_fromJson_parse_error (Proxy :: Proxy BrowserName) $
+      A.object [("browser","firefox")]
+
+  , HU.testCase "BrowserName (wrong type - bool)" $
+      prop_fromJson_parse_error (Proxy :: Proxy BrowserName) $
+      A.Bool True
+
+
+  , HU.testCase "PlatformName (unrecognized value)" $
+      prop_fromJson_parse_error (Proxy :: Proxy PlatformName) $
+      A.String "os/2"
+
+  , HU.testCase "PlatformName (wrong case)" $
+      prop_fromJson_parse_error (Proxy :: Proxy PlatformName) $
+      A.String "MAC"
+
+  , HU.testCase "PlatformName (wrong type - object)" $
+      prop_fromJson_parse_error (Proxy :: Proxy PlatformName) $
+      A.object [("platform","windows")]
+
+  , HU.testCase "PlatformName (wrong type - bool)" $
+      prop_fromJson_parse_error (Proxy :: Proxy PlatformName) $
+      A.Bool True
+
+
+  , HU.testCase "HostAndOptionalPort (malformed value - ':')" $
+      prop_fromJson_parse_error (Proxy :: Proxy HostAndOptionalPort) $
+      A.String ":"
+
+  , HU.testCase "HostAndOptionalPort (malformed value - '@:123')" $
+      prop_fromJson_parse_error (Proxy :: Proxy HostAndOptionalPort) $
+      A.String "@:123"
+
+  , HU.testCase "HostAndOptionalPort (malformed value - 'host:')" $
+      prop_fromJson_parse_error (Proxy :: Proxy HostAndOptionalPort) $
+      A.String "host:"
+
+  , HU.testCase "HostAndOptionalPort (malformed value - 'host:foo')" $
+      prop_fromJson_parse_error (Proxy :: Proxy HostAndOptionalPort) $
+      A.String "host:foo"
+
+  , HU.testCase "HostAndOptionalPort (wrong type - object)" $
+      prop_fromJson_parse_error (Proxy :: Proxy HostAndOptionalPort) $
+      A.object [("platform","windows")]
+
+  , HU.testCase "HostAndOptionalPort (wrong type - bool)" $
+      prop_fromJson_parse_error (Proxy :: Proxy HostAndOptionalPort) $
+      A.Bool True
+
+
+  , HU.testCase "ProxyType (unrecognized value)" $
+      prop_fromJson_parse_error (Proxy :: Proxy ProxyType) $
+      A.String "lan"
+
+  , HU.testCase "ProxyType (wrong case)" $
+      prop_fromJson_parse_error (Proxy :: Proxy ProxyType) $
+      A.String "PAC"
+
+  , HU.testCase "ProxyType (wrong type - object)" $
+      prop_fromJson_parse_error (Proxy :: Proxy ProxyType) $
+      A.object [("proxy","what")]
+
+  , HU.testCase "ProxyType (wrong type - bool)" $
+      prop_fromJson_parse_error (Proxy :: Proxy ProxyType) $
+      A.Bool True
+
+
+  , HU.testCase "LocationStrategy (unrecognized value)" $
+      prop_fromJson_parse_error (Proxy :: Proxy LocationStrategy) $
+      A.String "tag"
+
+  , HU.testCase "LocationStrategy (wrong case)" $
+      prop_fromJson_parse_error (Proxy :: Proxy LocationStrategy) $
+      A.String "CSS Selector"
+
+  , HU.testCase "LocationStrategy (wrong type - object)" $
+      prop_fromJson_parse_error (Proxy :: Proxy LocationStrategy) $
+      A.object [("css","selector")]
+
+  , HU.testCase "LocationStrategy (wrong type - bool)" $
+      prop_fromJson_parse_error (Proxy :: Proxy LocationStrategy) $
+      A.Bool True
+
+
+  , HU.testCase "InputSource (unrecognized value)" $
+      prop_fromJson_parse_error (Proxy :: Proxy InputSource) $
+      A.String "keyboard"
+
+  , HU.testCase "InputSource (wrong case)" $
+      prop_fromJson_parse_error (Proxy :: Proxy InputSource) $
+      A.String "NULL"
+
+  , HU.testCase "InputSource (wrong type - object)" $
+      prop_fromJson_parse_error (Proxy :: Proxy InputSource) $
+      A.object [("key","board")]
+
+  , HU.testCase "InputSource (wrong type - bool)" $
+      prop_fromJson_parse_error (Proxy :: Proxy InputSource) $
+      A.Bool True
+
+
+  , HU.testCase "PointerSubtype (unrecognized value)" $
+      prop_fromJson_parse_error (Proxy :: Proxy PointerSubtype) $
+      A.String "stylus"
+
+  , HU.testCase "PointerSubtype (wrong case)" $
+      prop_fromJson_parse_error (Proxy :: Proxy PointerSubtype) $
+      A.String "Mouse"
+
+  , HU.testCase "PointerSubtype (wrong type - object)" $
+      prop_fromJson_parse_error (Proxy :: Proxy PointerSubtype) $
+      A.object [("track","pad")]
+
+  , HU.testCase "PointerSubtype (wrong type - bool)" $
+      prop_fromJson_parse_error (Proxy :: Proxy PointerSubtype) $
+      A.Bool True
+
+
+  , HU.testCase "ActionType (unrecognized value)" $
+      prop_fromJson_parse_error (Proxy :: Proxy ActionType) $
+      A.String "keypress"
+
+  , HU.testCase "ActionType (wrong case)" $
+      prop_fromJson_parse_error (Proxy :: Proxy ActionType) $
+      A.String "Pause"
+
+  , HU.testCase "ActionType (wrong type - object)" $
+      prop_fromJson_parse_error (Proxy :: Proxy ActionType) $
+      A.object [("click","button")]
+
+  , HU.testCase "ActionType (wrong type - bool)" $
+      prop_fromJson_parse_error (Proxy :: Proxy ActionType) $
+      A.Bool True
+
+
+  , HU.testCase "PromptHandler (unrecognized value)" $
+      prop_fromJson_parse_error (Proxy :: Proxy PromptHandler) $
+      A.String "check"
+
+  , HU.testCase "PromptHandler (wrong case)" $
+      prop_fromJson_parse_error (Proxy :: Proxy PromptHandler) $
+      A.String "Dismiss"
+
+  , HU.testCase "PromptHandler (wrong type - object)" $
+      prop_fromJson_parse_error (Proxy :: Proxy PromptHandler) $
+      A.object [("accept","alert")]
+
+  , HU.testCase "PromptHandler (wrong type - bool)" $
+      prop_fromJson_parse_error (Proxy :: Proxy PromptHandler) $
+      A.Bool True
   ]
