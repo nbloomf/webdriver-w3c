@@ -38,7 +38,9 @@ successfulExit dir x =
     , testCase "switchToWindow" (_test_switchToWindow_success x)
     , testCase "getWindowHandles" (_test_getWindowHandles_success path x)
     , testCase "switchToFrame" (_test_switchToFrame_success path x)
+    , testCase "switchToParentFrame" (_test_switchToParentFrame_success path x)
     , testCase "getWindowRect" (_test_getWindowRect_success x)
+    , testCase "setWindowRect" (_test_setWindowRect_success x)
     , testCase "maximizeWindow" (_test_maximizeWindow_success x)
     , testCase "minimizeWindow" (_test_minimizeWindow_success x)
     , testCase "fullscreenWindow" (_test_fullscreenWindow_success x)
@@ -274,7 +276,17 @@ _test_switchToFrame_success page _ =
 
 
 
--- TODO: switchToParentFrame
+_test_switchToParentFrame_success
+  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
+_test_switchToParentFrame_success page _ =
+  let
+    session = do
+      navigateTo page
+      () <- switchToParentFrame
+      assertSuccess "yay"
+      return ()
+
+  in catchError session unexpectedError
 
 
 
@@ -291,7 +303,21 @@ _test_getWindowRect_success _ =
 
 
 
--- TODO: setWindowRect
+_test_setWindowRect_success
+  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
+_test_setWindowRect_success _ =
+  let
+    session = do
+      !rect <- setWindowRect $ Rect
+        { _rect_x = 0
+        , _rect_y = 0
+        , _rect_width = 640
+        , _rect_height = 480
+        }
+      assertSuccess "yay"
+      return ()
+
+  in catchError session unexpectedError
 
 
 

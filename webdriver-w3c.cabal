@@ -53,6 +53,7 @@ library
     , wreq                  >=0.5.2      && <0.6
 
   exposed-modules:
+    Test.Tasty.HttpSession
     Test.Tasty.WebDriver
     Web.Api.Http
     Web.Api.Http.Assert

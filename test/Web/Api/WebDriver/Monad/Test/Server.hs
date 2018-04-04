@@ -135,10 +135,10 @@ defaultWebDriverServer = MockServer
         post_session_id_frame st session_id payload
 
       [_,"session",session_id,"frame","parent"] ->
-        undefined
+        post_session_id_frame_parent st session_id
 
       [_,"session",session_id,"window","rect"] ->
-        undefined
+        post_session_id_window_rect st session_id payload
 
       [_,"session",session_id,"window","maximize"] ->
         post_session_id_window_maximize st session_id
@@ -397,7 +397,14 @@ post_session_id_frame st session_id !payload =
     then (Left _err_invalid_session_id, st)
     else (Right _success_with_empty_object, st)
 
-{- TODO: post_session_id_frame_parent -}
+post_session_id_frame_parent
+  :: WebDriverServerState
+  -> String
+  -> (Either HttpException HttpResponse, WebDriverServerState)
+post_session_id_frame_parent st session_id =
+  if not $ _is_active_session session_id st
+    then (Left _err_invalid_session_id, st)
+    else (Right _success_with_empty_object, st)
 
 get_session_id_window_rect
   :: WebDriverServerState
@@ -413,7 +420,20 @@ get_session_id_window_rect st session_id =
       , ("width", Number 640)
       ], st)
 
-{- TODO:: post_session_id_window_rect -}
+post_session_id_window_rect
+  :: WebDriverServerState
+  -> String
+  -> LB.ByteString
+  -> (Either HttpException HttpResponse, WebDriverServerState)
+post_session_id_window_rect st session_id payload =
+  if not $ _is_active_session session_id st
+    then (Left _err_invalid_session_id, st)
+    else (Right $ _success_with_value $ object
+      [ ("x", Number 0)
+      , ("y", Number 0)
+      , ("height", Number 480)
+      , ("width", Number 640)
+      ], st)
 
 post_session_id_window_maximize
   :: WebDriverServerState
