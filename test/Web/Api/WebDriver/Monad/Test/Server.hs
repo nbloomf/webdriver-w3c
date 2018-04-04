@@ -75,13 +75,13 @@ defaultWebDriverServer = MockServer
         undefined
 
       [_,"session",session_id,"element",element_id,"css",name] ->
-        undefined
+        get_session_id_element_id_css_name st session_id element_id name
 
       [_,"session",session_id,"element",element_id,"text"] ->
         get_session_id_element_id_text st session_id element_id
 
       [_,"session",session_id,"element",element_id,"name"] ->
-        undefined
+        get_session_id_element_id_name st session_id element_id
 
       [_,"session",session_id,"element",element_id,"rect"] ->
         get_session_id_element_id_rect st session_id element_id
@@ -207,7 +207,7 @@ defaultWebDriverServer = MockServer
         delete_session_id_cookie st session_id
 
       [_,"session",session_id,"actions"] ->
-        undefined
+        delete_session_id_actions st session_id
 
       _ -> error $ "defaultWebDriverServer: delete url: " ++ url
   }
@@ -541,7 +541,16 @@ get_session_id_element_id_attribute_name st session_id element_id name =
 
 {- TODO: get_session_id_element_id_property_name -}
 
-{- TODO: get_session_id_element_id_css_name -}
+get_session_id_element_id_css_name
+  :: WebDriverServerState
+  -> String
+  -> String
+  -> String
+  -> (Either HttpException HttpResponse, WebDriverServerState)
+get_session_id_element_id_css_name st session_id element_id name =
+  if not $ _is_active_session session_id st
+    then (Left _err_invalid_session_id, st)
+    else (Right $ _success_with_value $ String "none", st)
 
 get_session_id_element_id_text
   :: WebDriverServerState
@@ -553,7 +562,15 @@ get_session_id_element_id_text st session_id element_id =
     then (Left _err_invalid_session_id, st)
     else (Right $ _success_with_value $ String "foo", st)
 
-{- TODO: get_session_id_element_id_name -}
+get_session_id_element_id_name
+  :: WebDriverServerState
+  -> String
+  -> String
+  -> (Either HttpException HttpResponse, WebDriverServerState)
+get_session_id_element_id_name st session_id element_id =
+  if not $ _is_active_session session_id st
+    then (Left _err_invalid_session_id, st)
+    else (Right $ _success_with_value $ String "div", st)
 
 get_session_id_element_id_rect
   :: WebDriverServerState
@@ -684,7 +701,14 @@ post_session_id_actions !st !session_id payload =
     then (Left _err_invalid_session_id, st)
     else (Right _success_with_empty_object, st)
 
-{- TODO: delete_session_id_actions -}
+delete_session_id_actions
+  :: WebDriverServerState
+  -> String
+  -> (Either HttpException HttpResponse, WebDriverServerState)
+delete_session_id_actions !st !session_id =
+  if not $ _is_active_session session_id st
+    then (Left _err_invalid_session_id, st)
+    else (Right _success_with_empty_object, st)
 
 post_session_id_alert_dismiss
   :: WebDriverServerState

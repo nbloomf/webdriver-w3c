@@ -49,7 +49,9 @@ successfulExit dir x =
     , testCase "getActiveElement" (_test_getActiveElement_success x)
     , testCase "isElementSelected" (_test_isElementSelected_success path x)
     , testCase "getElementAttribute" (_test_getElementAttribute_success path x)
+    , testCase "getElementCssValue" (_test_getElementCssValue_success path x)
     , testCase "getElementText" (_test_getElementText_success path x)
+    , testCase "getElementTagName" (_test_getElementTagName_success path x)
     , testCase "getElementRect" (_test_getElementRect_success path x)
     , testCase "isElementEnabled" (_test_isElementEnabled_success path x)
     , testCase "elementClick" (_test_elementClick_success path x)
@@ -63,6 +65,7 @@ successfulExit dir x =
     , testCase "deleteAllCookies" (_test_deleteAllCookies_success x)
     , testCase "performActions (keyboard)" (_test_performActions_keyboard_success x)
     , testCase "performStealthActions (keyboard)" (_test_performStealthActions_keyboard_success x)
+    , testCase "releaseActions" (_test_releaseActions_success x)
     , testCase "dismissAlert" (_test_dismissAlert_success path x)
     , testCase "acceptAlert" (_test_acceptAlert_success path x)
     , testCase "getAlertText" (_test_getAlertText_success path x)
@@ -482,7 +485,20 @@ _test_getElementAttribute_success page _ =
 
 
 
--- TODO: getElementCssValue
+_test_getElementCssValue_success
+  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
+_test_getElementCssValue_success page _ =
+  let
+    session = do
+      navigateTo page
+      !element <- findElement CssSelector "#super-cool"
+      !text <- getElementCssValue element "text-decoration"
+      case text of
+        "none" -> assertSuccess "yay"
+        _ -> assertFailure $ "expected 'none', got '" ++ text ++ "'"
+      return ()
+
+  in catchError session unexpectedError
 
 
 
@@ -492,16 +508,29 @@ _test_getElementText_success page _ =
   let
     session = do
       navigateTo page
-      !element <- getActiveElement
-      !text <- getElementText element
-      assertSuccess "yay"
+      !element <- findElement CssSelector ".test"
+      !text <- getElementTagName element
+      case text of
+        "div" -> assertSuccess "yay"
+        _ -> assertFailure $ "expected 'div', got '" ++ text ++ "'"
       return ()
 
   in catchError session unexpectedError
 
 
 
--- TODO: getElementTagName
+_test_getElementTagName_success
+  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
+_test_getElementTagName_success page _ =
+  let
+    session = do
+      navigateTo page
+      !element <- getActiveElement
+      !text <- getElementText element
+      assertSuccess "yay"
+      return ()
+
+  in catchError session unexpectedError
 
 
 
@@ -742,7 +771,16 @@ _test_performStealthActions_keyboard_success _ =
 
 
 
--- TODO: releaseActions
+_test_releaseActions_success
+  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
+_test_releaseActions_success _ =
+  let
+    session = do
+      () <- releaseActions
+      assertSuccess "yay"
+      return ()
+
+  in catchError session unexpectedError
 
 
 
