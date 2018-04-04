@@ -902,6 +902,10 @@ addCookie cookie = do
   baseUrl <- theRemoteUrlWithSession
   let !payload = encode $ object [ "cookie" .= cookie ]
   httpSilentPost (baseUrl ++ "/cookie") payload
+    >>= (return . __response_body)
+    >>= mParseJson
+    >>= lookupKey "value"
+    >>= expect (object [])
   return ()
 
 
@@ -913,6 +917,10 @@ deleteCookie
 deleteCookie name = do
   baseUrl <- theRemoteUrlWithSession
   httpDelete (baseUrl ++ "/cookie/" ++ E.encode name)
+    >>= (return . __response_body)
+    >>= mParseJson
+    >>= lookupKey "value"
+    >>= expect (object [])
   return ()
 
 

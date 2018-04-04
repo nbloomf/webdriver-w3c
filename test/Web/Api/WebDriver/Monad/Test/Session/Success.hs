@@ -17,7 +17,7 @@ unexpectedError
   :: (Effectful m, Typeable m)
   => Err WebDriverError
   -> WebDriver m ()
-unexpectedError _ = assertFailure "unexpected error"
+unexpectedError e = assertFailure $ "Unexpected error:\n" ++ show e
 
 
 successfulExit :: (Effectful m, Typeable m) => FilePath -> m () -> T.TestTree
@@ -57,6 +57,9 @@ successfulExit dir x =
     , testCase "elementSendKeys" (_test_elementSendKeys_success path x)
     , testCase "getPageSource" (_test_getPageSource_success path x)
     , testCase "getPageSourceStealth" (_test_getPageSourceStealth_success path x)
+    , testCase "getAllCookies" (_test_getAllCookies_success path x)
+    , testCase "getNamedCookie" (_test_getNamedCookie_success path x)
+    , testCase "deleteCookie" (_test_deleteCookie_success path x)
     , testCase "deleteAllCookies" (_test_deleteAllCookies_success x)
     , testCase "performActions (keyboard)" (_test_performActions_keyboard_success x)
     , testCase "performStealthActions (keyboard)" (_test_performStealthActions_keyboard_success x)
@@ -613,19 +616,54 @@ _test_getPageSourceStealth_success page _ =
 
 
 
--- TODO: getAllCookies
+_test_getAllCookies_success
+  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
+_test_getAllCookies_success page _ =
+  let
+    session = do
+      navigateTo page
+      !jar <- getAllCookies
+      case jar of
+        [] -> assertSuccess "yay"
+        (!x):_ -> assertFailure "unexpected cookie"
+      return ()
+
+  in catchError session unexpectedError
 
 
 
--- TODO: getNamedCookie
+_test_getNamedCookie_success
+  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
+_test_getNamedCookie_success page _ =
+  let
+    session = do
+      navigateTo page
+      findElement CssSelector "#add-cookie-button" >>= elementClick
+      !cookie <- getNamedCookie "fakeCookie"
+      assertEqual (_cookie_name cookie) (Just "fakeCookie") "cookie name"
+      assertEqual (_cookie_value cookie) (Just "fakeValue") "cookie name"
+      return ()
+
+  in catchError session unexpectedError
 
 
 
--- TODO: addCookie
+{- TODO: addCookie -}
+{- note: file:// addresses do not like cookies -}
 
 
 
--- TODO: deleteCookie
+_test_deleteCookie_success
+  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
+_test_deleteCookie_success page _ =
+  let
+    session = do
+      navigateTo page
+      findElement CssSelector "#add-cookie-button" >>= elementClick
+      () <- deleteCookie "fakeCookie"
+      return ()
+
+  in catchError session unexpectedError
 
 
 

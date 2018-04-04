@@ -12,6 +12,7 @@ import qualified Data.HashMap.Strict as HMS
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.ByteString as SB
 import qualified Data.ByteString.Base64 as B64
+import qualified Data.Vector as V
 import Data.Aeson
 import Data.HashMap.Strict
 import Network.HTTP.Client (HttpException)
@@ -24,6 +25,7 @@ import Codec.Picture.Saving
 import Web.Api.Http
 import Web.Api.Http.Effects.Test.Mock
 import Web.Api.Http.Effects.Test.Server
+import Web.Api.WebDriver
 import Web.Api.WebDriver.Monad.Test.Server.State
 
 instance Effectful (MockIO WebDriverServerState) where
@@ -91,10 +93,10 @@ defaultWebDriverServer = MockServer
         get_session_id_source st session_id
 
       [_,"session",session_id,"cookie"] ->
-        undefined
+        get_session_id_cookie st session_id
 
       [_,"session",session_id,"cookie",name] ->
-        undefined
+        get_session_id_cookie_name st session_id
 
       [_,"session",session_id,"alert","text"] ->
         get_session_id_alert_text st session_id
@@ -175,7 +177,7 @@ defaultWebDriverServer = MockServer
         undefined
 
       [_,"session",session_id,"cookie"] ->
-        undefined
+        post_session_id_cookie st session_id payload
 
       [_,"session",session_id,"actions"] ->
         post_session_id_actions st session_id payload
@@ -199,7 +201,7 @@ defaultWebDriverServer = MockServer
         delete_session_id_window st session_id
 
       [_,"session",session_id,"cookie",name] ->
-        undefined
+        delete_session_id_cookie_name st session_id name
 
       [_,"session",session_id,"cookie"] ->
         delete_session_id_cookie st session_id
@@ -622,13 +624,46 @@ get_session_id_source st session_id =
 
 {- TODO: post_session_id_execute_async -}
 
-{- TODO: get_session_id_cookie -}
+get_session_id_cookie
+  :: WebDriverServerState
+  -> String
+  -> (Either HttpException HttpResponse, WebDriverServerState)
+get_session_id_cookie st session_id =
+  if not $ _is_active_session session_id st
+    then (Left _err_invalid_session_id, st)
+    else (Right $ _success_with_value $ Array $ V.fromList [], st)
 
-{- TODO: get_session_id_cookie_name -}
+get_session_id_cookie_name
+  :: WebDriverServerState
+  -> String
+  -> (Either HttpException HttpResponse, WebDriverServerState)
+get_session_id_cookie_name st session_id =
+  if not $ _is_active_session session_id st
+    then (Left _err_invalid_session_id, st)
+    else (Right $ _success_with_value $ toJSON $ emptyCookie
+      { _cookie_name = Just "fakeCookie"
+      , _cookie_value = Just "fakeValue"
+      }, st)
 
-{- TODO: post_session_id_cookie -}
+post_session_id_cookie
+  :: WebDriverServerState
+  -> String
+  -> LB.ByteString
+  -> (Either HttpException HttpResponse, WebDriverServerState)
+post_session_id_cookie st session_id payload =
+  if not $ _is_active_session session_id st
+    then (Left _err_invalid_session_id, st)
+    else (Right _success_with_empty_object, st)
 
-{- TODO: delete_session_id_cookie_name -}
+delete_session_id_cookie_name
+  :: WebDriverServerState
+  -> String
+  -> String
+  -> (Either HttpException HttpResponse, WebDriverServerState)
+delete_session_id_cookie_name st session_id name =
+  if not $ _is_active_session session_id st
+    then (Left _err_invalid_session_id, st)
+    else (Right _success_with_empty_object, st)
 
 delete_session_id_cookie
   :: WebDriverServerState

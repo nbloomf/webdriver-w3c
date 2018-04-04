@@ -1,6 +1,6 @@
 <html>
 <head>
-  <title>Success Tests</title>
+ <title>Success Tests</title>
 </head>
 <body>
 <h1>Success Tests</h1>
@@ -28,6 +28,15 @@ function showConfirm() {
 
 function showPrompt() {
   prompt("WOO!!");
+}
+</script>
+
+<h2>Cookies</h2>
+<button id="add-cookie-button" onclick="addCookie()">add cookie</button>
+
+<script>
+function addCookie() {
+  document.cookie = "fakeCookie=fakeValue";
 }
 </script>
 </body>
