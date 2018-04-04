@@ -31,10 +31,14 @@ module Web.Api.Http.Helpers (
   , closeTcpSession
   ) where
 
-import Data.ByteString.Lazy (ByteString)
-import qualified Network.Wreq as Wreq (defaults, Options)
-import qualified Network.Wreq.Session as WreqS (Session)
-import Network.HTTP.Client (HttpException)
+import qualified Data.ByteString.Lazy as LB
+  ( ByteString )
+import qualified Network.Wreq as Wreq
+  ( defaults, Options )
+import qualified Network.Wreq.Session as WreqS
+  ( Session )
+import Network.HTTP.Client
+  ( HttpException )
 
 import Web.Api.Http.Types
 import Web.Api.Http.Effects
@@ -68,7 +72,7 @@ promptForSecret prompt =
 readFilePath
   :: (EffectTry m, EffectTimer m, EffectFiles m, EffectPrint m)
   => FilePath
-  -> HttpSession m err st log env ByteString
+  -> HttpSession m err st log env LB.ByteString
 readFilePath path = do
   result <- mTry $ mReadFile path
   case result of
@@ -81,7 +85,7 @@ readFilePath path = do
 writeFilePath
   :: (EffectTry m, EffectTimer m, EffectFiles m, EffectPrint m)
   => FilePath
-  -> ByteString
+  -> LB.ByteString
   -> HttpSession m err st log env ()
 writeFilePath path contents = do
   result <- liftSession $ mTry $ mWriteFile path contents
@@ -214,7 +218,7 @@ httpPostWith
   :: (EffectTry m, EffectTimer m, EffectFiles m, EffectPrint m, EffectHttp m)
   => RequestOptions
   -> Url
-  -> ByteString -- ^ Payload
+  -> LB.ByteString -- ^ Payload
   -> HttpSession m err st log env HttpResponse
 httpPostWith opt url payload = processRequest opt
   (LogRequest POST url (_http_options opt) (Just payload))
@@ -224,7 +228,7 @@ httpPostWith opt url payload = processRequest opt
 httpPost
   :: (EffectTry m, EffectTimer m, EffectFiles m, EffectPrint m, EffectHttp m)
   => Url
-  -> ByteString -- ^ Payload
+  -> LB.ByteString -- ^ Payload
   -> HttpSession m err st log env HttpResponse
 httpPost = httpPostWith defaultRequestOptions
 
@@ -232,7 +236,7 @@ httpPost = httpPostWith defaultRequestOptions
 httpSilentPost
   :: (EffectTry m, EffectTimer m, EffectFiles m, EffectPrint m, EffectHttp m)
   => Url
-  -> ByteString -- ^ Payload
+  -> LB.ByteString -- ^ Payload
   -> HttpSession m err st log env HttpResponse
 httpSilentPost = httpPostWith silentRequestOptions
 

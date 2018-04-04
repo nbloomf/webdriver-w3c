@@ -28,9 +28,12 @@ module Web.Api.WebDriver.Helpers (
   , closeSession
   ) where
 
-import qualified Data.Aeson as Aeson (encode)
-import qualified Data.ByteString.Lazy.Char8 as BS (pack)
-import qualified Data.Digest.Pure.SHA as SHA (showDigest, sha1)
+import qualified Data.Aeson as Aeson
+  ( encode )
+import qualified Data.ByteString.Lazy.Char8 as BS
+  ( pack )
+import qualified Data.Digest.Pure.SHA as SHA
+  ( showDigest, sha1 )
 
 import Web.Api.Http
 import Web.Api.WebDriver.Monad

@@ -16,7 +16,7 @@ module Web.Api.Http.Uri (
   ) where
 
 import Test.QuickCheck
-  ( Arbitrary(..), oneof, vectorOf, Positive(..))
+  ( Arbitrary(..), oneof, vectorOf, Positive(..) )
 
 
 -- | The host part of a URI. See <https://tools.ietf.org/html/rfc3986#page-18>.

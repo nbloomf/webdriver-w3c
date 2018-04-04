@@ -28,13 +28,18 @@ module Test.Tasty.WebDriver (
   , FileHandle(..)
   ) where
 
-import Control.Monad.IO.Class (MonadIO, liftIO)
-import Data.Typeable (Typeable, Proxy(Proxy))
-import Data.List (unlines)
-import qualified Test.Tasty.Providers as T
-import qualified Test.Tasty.Options as TO
+import Control.Monad.IO.Class
+  ( MonadIO, liftIO )
+import Data.Typeable
+  ( Typeable, Proxy(Proxy) )
+import Data.List
+  ( unlines )
 import System.IO
-import qualified System.Environment as SE (getEnv)
+  ( Handle, stdout, stderr, openFile, IOMode(..) )
+import qualified Test.Tasty.Providers as TT
+import qualified Test.Tasty.Options as TO
+import qualified System.Environment as SE
+  ( getEnv )
 
 import Web.Api.Http
 import Web.Api.WebDriver
@@ -45,7 +50,7 @@ data WebDriverTest m = WebDriverTest
   , _test_session :: (WebDriver m ())
   } deriving Typeable
 
-instance (Effectful m, Typeable m) => T.IsTest (WebDriverTest m) where
+instance (Effectful m, Typeable m) => TT.IsTest (WebDriverTest m) where
 
   testOptions = return
     [ TO.Option (Proxy :: Proxy Driver)
@@ -120,24 +125,24 @@ instance (Effectful m, Typeable m) => T.IsTest (WebDriverTest m) where
 
     return $ case result of
       Right _ -> webDriverAssertionsToResult $ summarize assertions
-      Left err -> T.testFailed $
+      Left err -> TT.testFailed $
         "Unhandled error: " ++ printErr printWebDriverError err
 
 
-webDriverAssertionsToResult :: AssertionSummary -> T.Result
+webDriverAssertionsToResult :: AssertionSummary -> TT.Result
 webDriverAssertionsToResult x =
   if numFailures x > 0
-    then T.testFailed $ unlines $ map showAssertion $ failures x
-    else T.testPassed $ show (numSuccesses x) ++ " assertion(s)"
+    then TT.testFailed $ unlines $ map showAssertion $ failures x
+    else TT.testPassed $ show (numSuccesses x) ++ " assertion(s)"
 
 
 
 -- | Simple WebDriver test case.
 testCase
   :: (Effectful m, Typeable m)
-  => T.TestName
+  => TT.TestName
   -> WebDriver m ()
-  -> T.TestTree
+  -> TT.TestTree
 testCase name test =
   testCaseWithSetup name (return ()) (return ()) test
 
@@ -145,13 +150,13 @@ testCase name test =
 -- | WebDriver test case with additional setup and teardown phases -- setup runs before the test (for e.g. logging in) and teardown runs after the test (for e.g. deleting temp files).
 testCaseWithSetup
   :: (Effectful m, Typeable m)
-  => T.TestName
+  => TT.TestName
   -> WebDriver m () -- ^ Setup
   -> WebDriver m () -- ^ Teardown
   -> WebDriver m () -- ^ The test
-  -> T.TestTree
+  -> TT.TestTree
 testCaseWithSetup name setup teardown test =
-  T.singleTest name $ WebDriverTest
+  TT.singleTest name $ WebDriverTest
     { _test_name = Just name
     , _test_session = setup >> test >> teardown
     }

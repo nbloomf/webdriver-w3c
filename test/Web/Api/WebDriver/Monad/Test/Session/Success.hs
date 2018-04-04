@@ -690,6 +690,7 @@ _test_deleteCookie_success page _ =
       navigateTo page
       findElement CssSelector "#add-cookie-button" >>= elementClick
       () <- deleteCookie "fakeCookie"
+      assertSuccess "yay"
       return ()
 
   in catchError session unexpectedError

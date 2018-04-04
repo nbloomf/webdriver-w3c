@@ -59,18 +59,30 @@ module Web.Api.WebDriver.Monad (
   , wdshInit
   ) where
 
-import Control.Lens hiding ((.=))
-import Data.Void (Void)
+import Control.Lens
+  ( (^.), (^?) )
+import Data.Void
+  ( Void )
 import qualified Data.Map.Strict as M
 import Data.Aeson
+  ( Value(), Result(Success), toJSON, (.=), fromJSON
+  , object )
 import Data.Aeson.Lens
-import Data.Aeson.Encode.Pretty (encodePretty)
+  ( key, _Value, _String )
+import Data.Aeson.Encode.Pretty
+  ( encodePretty )
 import Data.IORef
-import Data.Text (pack, unpack, Text)
-import qualified Data.ByteString.Lazy as LB (ByteString, unpack)
-import qualified Data.ByteString.Lazy.Char8 as LC (unpack, pack)
-import qualified Data.ByteString.Char8 as SC (unpack)
-import Network.Wreq (Status, statusMessage, statusCode, responseStatus)
+  ( IORef )
+import Data.Text
+  ( pack, unpack, Text )
+import qualified Data.ByteString.Lazy as LB
+  ( ByteString, unpack )
+import qualified Data.ByteString.Lazy.Char8 as LC
+  ( unpack, pack )
+import qualified Data.ByteString.Char8 as SC
+  ( unpack )
+import Network.Wreq
+  ( Status, statusMessage, statusCode, responseStatus )
 import qualified Network.HTTP.Client as N
 
 import Web.Api.Http

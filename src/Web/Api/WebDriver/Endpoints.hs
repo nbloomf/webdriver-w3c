@@ -158,8 +158,11 @@ module Web.Api.WebDriver.Endpoints (
   ) where
 
 import Data.Aeson
-import Data.Text (Text, unpack, pack)
-import Data.Text.Encoding (encodeUtf8)
+  ( Value(..), encode, object, (.=), toJSON )
+import Data.Text
+  ( Text, unpack, pack )
+import Data.Text.Encoding
+  ( encodeUtf8 )
 import qualified Data.ByteString as SB
 import qualified Data.ByteString.Base64 as B64
 import qualified Network.URI.Encode as E

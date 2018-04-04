@@ -43,7 +43,8 @@ module Web.Api.Http.Assert (
   , assertIsNotNamedSubstring
   ) where
 
-import Data.List (unwords, isInfixOf)
+import Data.List
+  ( unwords, isInfixOf )
 
 
 
