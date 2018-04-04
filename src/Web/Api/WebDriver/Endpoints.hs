@@ -981,6 +981,10 @@ dismissAlert = do
   baseUrl <- theRemoteUrlWithSession
   let !payload = encode $ object []
   httpPost (baseUrl ++ "/alert/dismiss") payload
+    >>= (return . __response_body)
+    >>= mParseJson
+    >>= lookupKey "value"
+    >>= expect (object [])
   return ()
 
 
@@ -992,6 +996,10 @@ acceptAlert = do
   baseUrl <- theRemoteUrlWithSession
   let !payload = encode $ object []
   httpPost (baseUrl ++ "/alert/accept") payload
+    >>= (return . __response_body)
+    >>= mParseJson
+    >>= lookupKey "value"
+    >>= expect (object [])
   return ()
 
 
@@ -1020,6 +1028,10 @@ sendAlertText msg = do
   baseUrl <- theRemoteUrlWithSession
   let !payload = encode $ object [ "text" .= msg ]
   httpPost (baseUrl ++ "/alert/text") payload
+    >>= (return . __response_body)
+    >>= mParseJson
+    >>= lookupKey "value"
+    >>= expect (object [])
   return ()
 
 

@@ -10,7 +10,7 @@ import Web.Api.Http
 import Web.Api.WebDriver
 import Test.Tasty.WebDriver
 
-import qualified Test.Tasty as T
+import qualified Test.Tasty as T (TestTree, testGroup)
 
 
 unexpectedError
@@ -60,6 +60,10 @@ successfulExit dir x =
     , testCase "deleteAllCookies" (_test_deleteAllCookies_success x)
     , testCase "performActions (keyboard)" (_test_performActions_keyboard_success x)
     , testCase "performStealthActions (keyboard)" (_test_performStealthActions_keyboard_success x)
+    , testCase "dismissAlert" (_test_dismissAlert_success path x)
+    , testCase "acceptAlert" (_test_acceptAlert_success path x)
+    , testCase "getAlertText" (_test_getAlertText_success path x)
+    , testCase "sendAlertText" (_test_sendAlertText_success path x)
     , testCase "takeScreenshot" (_test_takeScreenshot_success path x)
     , testCase "takeElementScreenshot" (_test_takeElementScreenshot_success path x)
     ]
@@ -704,19 +708,90 @@ _test_performStealthActions_keyboard_success _ =
 
 
 
--- TODO: dismissAlert
+_test_dismissAlert_success
+  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
+_test_dismissAlert_success page _ =
+  let
+    session = do
+      navigateTo page
+      findElement CssSelector "#alert-button" >>= elementClick
+      () <- dismissAlert
+      assertSuccess "yay alert"
+      findElement CssSelector "#confirm-button" >>= elementClick
+      () <- dismissAlert
+      assertSuccess "yay confirm"
+      findElement CssSelector "#prompt-button" >>= elementClick
+      () <- dismissAlert
+      assertSuccess "yay prompt"
+      return ()
+
+  in catchError session unexpectedError
 
 
 
--- TODO: acceptAlert
+_test_acceptAlert_success
+  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
+_test_acceptAlert_success page _ =
+  let
+    session = do
+      navigateTo page
+      findElement CssSelector "#alert-button" >>= elementClick
+      () <- acceptAlert
+      assertSuccess "yay alert"
+      findElement CssSelector "#confirm-button" >>= elementClick
+      () <- acceptAlert
+      assertSuccess "yay confirm"
+      findElement CssSelector "#prompt-button" >>= elementClick
+      () <- acceptAlert
+      assertSuccess "yay prompt"
+      return ()
+
+  in catchError session unexpectedError
 
 
 
--- TODO: getAlertText
+_test_getAlertText_success
+  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
+_test_getAlertText_success page _ =
+  let
+    session = do
+      navigateTo page
+      findElement CssSelector "#alert-button" >>= elementClick
+      !box <- getAlertText
+      case box of
+        Nothing -> assertFailure "oh no alert"
+        Just msg -> assertEqual msg "WOO!!" "alert text"
+      acceptAlert
+      findElement CssSelector "#confirm-button" >>= elementClick
+      !box <- getAlertText
+      case box of
+        Nothing -> assertFailure "oh no confirm"
+        Just msg -> assertEqual msg "WOO!!" "confirm text"
+      acceptAlert
+      findElement CssSelector "#prompt-button" >>= elementClick
+      !box <- getAlertText
+      case box of
+        Nothing -> assertFailure "oh no prompt"
+        Just msg -> assertEqual msg "WOO!!" "prompt text"
+      acceptAlert
+      return ()
+
+  in catchError session unexpectedError
 
 
 
--- TODO: sendAlertText
+_test_sendAlertText_success
+  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
+_test_sendAlertText_success page _ =
+  let
+    session = do
+      navigateTo page
+      findElement CssSelector "#prompt-button" >>= elementClick
+      () <- sendAlertText "wut"
+      assertSuccess "yay prompt"
+      return ()
+
+  in catchError session unexpectedError
 
 
 

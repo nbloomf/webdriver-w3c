@@ -10,6 +10,25 @@
 <form>
  An input box: <input type="text" name="sometext"><br>
  <input type="submit" value="Submit">
-</form> 
+</form>
+
+<h2>Alerts</h2>
+<button id="alert-button" onclick="showAlert()">show alert</button>
+<button id="confirm-button" onclick="showConfirm()">show confirm</button>
+<button id="prompt-button" onclick="showPrompt()">show prompt</button>
+
+<script>
+function showAlert() {
+  alert("WOO!!");
+}
+
+function showConfirm() {
+  confirm("WOO!!");
+}
+
+function showPrompt() {
+  prompt("WOO!!");
+}
+</script>
 </body>
 </html>

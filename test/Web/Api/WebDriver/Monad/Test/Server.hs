@@ -97,7 +97,7 @@ defaultWebDriverServer = MockServer
         undefined
 
       [_,"session",session_id,"alert","text"] ->
-        undefined
+        get_session_id_alert_text st session_id
 
       [_,"session",session_id,"screenshot"] ->
         get_session_id_screenshot st session_id
@@ -181,13 +181,13 @@ defaultWebDriverServer = MockServer
         post_session_id_actions st session_id payload
 
       [_,"session",session_id,"alert","dismiss"] ->
-        undefined
+        post_session_id_alert_dismiss st session_id
 
       [_,"session",session_id,"alert","accept"] ->
-        undefined
+        post_session_id_alert_accept st session_id
 
       [_,"session",session_id,"alert","text"] ->
-        undefined
+        post_session_id_alert_text st session_id
 
       _ -> error $ "defaultWebDriverServer: post url: " ++ stripScheme url
 
@@ -651,13 +651,41 @@ post_session_id_actions !st !session_id payload =
 
 {- TODO: delete_session_id_actions -}
 
-{- TODO: post_session_id_alert_dismiss -}
+post_session_id_alert_dismiss
+  :: WebDriverServerState
+  -> String
+  -> (Either HttpException HttpResponse, WebDriverServerState)
+post_session_id_alert_dismiss st session_id =
+  if not $ _is_active_session session_id st
+    then (Left _err_invalid_session_id, st)
+    else (Right _success_with_empty_object, st)
 
-{- TODO: post_session_id_alert_accept -}
+post_session_id_alert_accept
+  :: WebDriverServerState
+  -> String
+  -> (Either HttpException HttpResponse, WebDriverServerState)
+post_session_id_alert_accept st session_id =
+  if not $ _is_active_session session_id st
+    then (Left _err_invalid_session_id, st)
+    else (Right _success_with_empty_object, st)
 
-{- TODO: get_session_id_alert_text -}
+get_session_id_alert_text
+  :: WebDriverServerState
+  -> String
+  -> (Either HttpException HttpResponse, WebDriverServerState)
+get_session_id_alert_text st session_id =
+  if not $ _is_active_session session_id st
+    then (Left _err_invalid_session_id, st)
+    else (Right $ _success_with_value $ String "WOO!!", st)
 
-{- TODO: post_session_id_alert_text -}
+post_session_id_alert_text
+  :: WebDriverServerState
+  -> String
+  -> (Either HttpException HttpResponse, WebDriverServerState)
+post_session_id_alert_text st session_id =
+  if not $ _is_active_session session_id st
+    then (Left _err_invalid_session_id, st)
+    else (Right _success_with_empty_object, st)
 
 get_session_id_screenshot
   :: WebDriverServerState
