@@ -2,5 +2,6 @@
 
 ## Next Version: 0.0.1
 
-* Features
+* New Features
+    * Bindings for all [WebDriver endpoints](https://w3c.github.io/webdriver/webdriver-spec.html)
     * Integration with the [Tasty](https://hackage.haskell.org/package/tasty) test framework

@@ -38,6 +38,8 @@ effectTests x =
   , testCase "mRandomLowerCaseLetter" (_test_mRandomLowerCaseLetter_success x)
   , testCase "mRandomUpperCaseLetter" (_test_mRandomUpperCaseLetter_success x)
   , testCase "mRandomAlphanumericCharacter" (_test_mRandomAlphanumericCharacter_success x)
+  , testCase "mRandomDecimalDigitString" (_test_mRandomDecimalDigitString_success x)
+  , testCase "mRandomAlphanumericString" (_test_mRandomAlphanumericString_success x)
   ]
 
 instance Effectful (MockIO ()) where
@@ -154,6 +156,42 @@ _test_mRandomAlphanumericCharacter_success _ =
         else do
           assertFailure $ "Expected an alphanumeric character; got '" ++ [c] ++ "'"
           throwError $ ErrUnexpectedFailure "mRandomAlphanumericCharacter: bad characters."
+      return ()
+
+    session = sequence_ [check | i <- [1..1000]]
+
+  in catchError session unexpectedError
+
+
+_test_mRandomDecimalDigitString_success
+  :: (Effectful m, Typeable m) => m () -> HttpSession m () () () () ()
+_test_mRandomDecimalDigitString_success _ =
+  let
+    check = do
+      cs <- mRandomDecimalDigitString 8
+      if all (`elem` ['0'..'9']) cs
+        then assertSuccess "yay"
+        else do
+          assertFailure $ "Expected only decimal digits; got '" ++ cs ++ "'"
+          throwError $ ErrUnexpectedFailure "mRandomDecimalDigitString: bad characters."
+      return ()
+
+    session = sequence_ [check | i <- [1..1000]]
+
+  in catchError session unexpectedError
+
+
+_test_mRandomAlphanumericString_success
+  :: (Effectful m, Typeable m) => m () -> HttpSession m () () () () ()
+_test_mRandomAlphanumericString_success _ =
+  let
+    check = do
+      cs <- mRandomAlphanumericString 8
+      if all (`elem` (['0'..'9'] ++ ['a'..'z'] ++ ['A'..'Z'])) cs
+        then assertSuccess "yay"
+        else do
+          assertFailure $ "Expected only alphanumeric characters; got '" ++ cs ++ "'"
+          throwError $ ErrUnexpectedFailure "mRandomAlphanumericString: bad characters."
       return ()
 
     session = sequence_ [check | i <- [1..1000]]

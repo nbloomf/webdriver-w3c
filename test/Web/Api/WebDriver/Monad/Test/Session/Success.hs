@@ -66,7 +66,7 @@ successfulExit dir x =
     , testCase "deleteCookie" (_test_deleteCookie_success path x)
     , testCase "deleteAllCookies" (_test_deleteAllCookies_success x)
     , testCase "performActions (keyboard)" (_test_performActions_keyboard_success x)
-    , testCase "performStealthActions (keyboard)" (_test_performStealthActions_keyboard_success x)
+    , testCase "performActionsStealth (keyboard)" (_test_performActionsStealth_keyboard_success x)
     , testCase "releaseActions" (_test_releaseActions_success x)
     , testCase "dismissAlert" (_test_dismissAlert_success path x)
     , testCase "acceptAlert" (_test_acceptAlert_success path x)
@@ -785,12 +785,12 @@ _test_performActions_keyboard_success _ =
 
 
 
-_test_performStealthActions_keyboard_success
+_test_performActionsStealth_keyboard_success
   :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_performStealthActions_keyboard_success _ =
+_test_performActionsStealth_keyboard_success _ =
   let
     session = do
-      () <- performStealthActions [ press EnterKey ]
+      () <- performActionsStealth [ press EnterKey ]
       assertSuccess "yay"
       return ()
 

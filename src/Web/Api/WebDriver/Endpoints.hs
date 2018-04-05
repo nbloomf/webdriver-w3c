@@ -9,7 +9,7 @@ Portability : POSIX
 
 These bindings try to stick as closely to the spec as possible. We use the following conventions.
 
-* The @Stealth@ prefix on a function indicates that it does not log request or response data (but it does log that a request/response occurred).
+* The @Stealth@ suffix on a function indicates that it does not log request or response data (but it does log that a request/response occurred).
 * A prime (@'@) on a POST function name indicates that it takes an additional function parameter that mutates the payload after it is converted to JSON, but before sending the request. This is a cheap way to future-proof the API and accommodate nonstandard request parameters.
 
 The most recent version of the spec is available at <https://w3c.github.io/webdriver/webdriver-spec.html>.
@@ -131,7 +131,7 @@ module Web.Api.WebDriver.Endpoints (
   -- * Actions
   -- ** Perform Actions
   , performActions
-  , performStealthActions
+  , performActionsStealth
   -- ** Release Actions
   , releaseActions
 
@@ -950,11 +950,11 @@ performActions = _performActions False
 
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#perform-actions>. This function is identical to `performActions` except that it does not log the request or response. Handy if the action includes secret info.
-performStealthActions
+performActionsStealth
   :: (Effectful m)
   => [Action]
   -> WebDriver m ()
-performStealthActions = _performActions True
+performActionsStealth = _performActions True
 
 
 _performActions
