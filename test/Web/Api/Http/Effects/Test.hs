@@ -26,6 +26,7 @@ tests = testGroup "Web.Api.Http.Effects"
 
   ,   localOption (LogHandle $ Path "/dev/null")
     $ localOption (AssertionLogHandle $ Path "/dev/null")
+    $ localOption (ConsoleOutHandle $ Path "/dev/null")
     $ testGroup "Real Server" (effectTests (return () :: IO ()))
   ]
 
@@ -34,6 +35,9 @@ effectTests x =
   [ testCase "mPauseInSeconds" (_test_mPauseInSeconds_success x)
   , testCase "mPutStr" (_test_mPutStr_success x)
   , testCase "mRandomDecimalDigit" (_test_mRandomDecimalDigit_success x)
+  , testCase "mRandomLowerCaseLetter" (_test_mRandomLowerCaseLetter_success x)
+  , testCase "mRandomUpperCaseLetter" (_test_mRandomUpperCaseLetter_success x)
+  , testCase "mRandomAlphanumericCharacter" (_test_mRandomAlphanumericCharacter_success x)
   ]
 
 instance Effectful (MockIO ()) where
@@ -93,9 +97,65 @@ _test_mRandomDecimalDigit_success _ =
       c <- mRandomDecimalDigit
       if elem c ['0'..'9']
         then assertSuccess "yay"
-        else assertFailure $ "Expected a decimal digit; got '" ++ [c] ++ "'"
+        else do
+          assertFailure $ "Expected a decimal digit; got '" ++ [c] ++ "'"
+          throwError $ ErrUnexpectedFailure "mRandomDecimalDigit: bad characters."
       return ()
 
-    session = sequence_ [check | i <- [1..100]]
+    session = sequence_ [check | i <- [1..1000]]
+
+  in catchError session unexpectedError
+
+
+_test_mRandomLowerCaseLetter_success
+  :: (Effectful m, Typeable m) => m () -> HttpSession m () () () () ()
+_test_mRandomLowerCaseLetter_success _ =
+  let
+    check = do
+      c <- mRandomLowerCaseLetter
+      if elem c ['a'..'z']
+        then assertSuccess "yay"
+        else do
+          assertFailure $ "Expected a lower case letter; got '" ++ [c] ++ "'"
+          throwError $ ErrUnexpectedFailure "mRandomLowerCaseLetter: bad characters."
+      return ()
+
+    session = sequence_ [check | i <- [1..1000]]
+
+  in catchError session unexpectedError
+
+
+_test_mRandomUpperCaseLetter_success
+  :: (Effectful m, Typeable m) => m () -> HttpSession m () () () () ()
+_test_mRandomUpperCaseLetter_success _ =
+  let
+    check = do
+      c <- mRandomUpperCaseLetter
+      if elem c ['A'..'Z']
+        then assertSuccess "yay"
+        else do
+          assertFailure $ "Expected an upper case letter; got '" ++ [c] ++ "'"
+          throwError $ ErrUnexpectedFailure "mRandomUpperCaseLetter: bad characters."
+      return ()
+
+    session = sequence_ [check | i <- [1..1000]]
+
+  in catchError session unexpectedError
+
+
+_test_mRandomAlphanumericCharacter_success
+  :: (Effectful m, Typeable m) => m () -> HttpSession m () () () () ()
+_test_mRandomAlphanumericCharacter_success _ =
+  let
+    check = do
+      c <- mRandomAlphanumericCharacter
+      if elem c $ ['0'..'9'] ++ ['a'..'z'] ++ ['A'..'Z']
+        then assertSuccess "yay"
+        else do
+          assertFailure $ "Expected an alphanumeric character; got '" ++ [c] ++ "'"
+          throwError $ ErrUnexpectedFailure "mRandomAlphanumericCharacter: bad characters."
+      return ()
+
+    session = sequence_ [check | i <- [1..1000]]
 
   in catchError session unexpectedError

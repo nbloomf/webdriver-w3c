@@ -17,13 +17,15 @@ module Test.Tasty.HttpSession (
   -- * Options
   , LogHandle(..)
   , AssertionLogHandle(..)
+  , ConsoleInHandle(..)
+  , ConsoleOutHandle(..)
   , FileHandle(..)
   ) where
 
 import Data.Typeable
   ( Typeable, Proxy(Proxy) )
 import System.IO
-  ( Handle, stdout, stderr, openFile, IOMode(..) )
+  ( Handle, stdout, stderr, stdin, openFile, IOMode(..) )
 
 import qualified Test.Tasty.Providers as TT
 import qualified Test.Tasty.Options as TO
@@ -42,12 +44,16 @@ instance (Effectful m, Typeable m) => TT.IsTest (HttpSessionTest m) where
   testOptions = return
     [ TO.Option (Proxy :: Proxy LogHandle)
     , TO.Option (Proxy :: Proxy AssertionLogHandle)
+    , TO.Option (Proxy :: Proxy ConsoleInHandle)
+    , TO.Option (Proxy :: Proxy ConsoleOutHandle)
     ]
 
   run opts HttpSessionTest{..} _ = do
     let
       LogHandle log = TO.lookupOption opts
       AssertionLogHandle alog = TO.lookupOption opts
+      ConsoleInHandle cin = TO.lookupOption opts
+      ConsoleOutHandle cout = TO.lookupOption opts
 
       title = case _test_name of
         Nothing -> return ()
@@ -55,12 +61,16 @@ instance (Effectful m, Typeable m) => TT.IsTest (HttpSessionTest m) where
 
     logHandle <- writeModeHandle log
     alogHandle <- writeModeHandle alog
+    cinHandle <- readModeHandle cin
+    coutHandle <- writeModeHandle cout
 
     let
       config =
         setEnv
           ( setLogHandle logHandle
           . setAssertionLogHandle alogHandle
+          . setConsoleInHandle cinHandle
+          . setConsoleOutHandle coutHandle
           ) $ basicHttpSessionConfig (const "") (const "") Nothing () ()
 
     (result, assertions) <- toIO $
@@ -125,6 +135,33 @@ instance TO.IsOption AssertionLogHandle where
   optionHelp = return "default: stdout"
 
 
+
+-- | Console in location.
+newtype ConsoleInHandle
+  = ConsoleInHandle { theConsoleInHandle :: FileHandle }
+  deriving Typeable
+
+instance TO.IsOption ConsoleInHandle where
+  defaultValue = ConsoleInHandle StdIn
+  parseValue path = Just $ ConsoleInHandle $ Path path
+  optionName = return "console input file name"
+  optionHelp = return "default: stdin"
+
+
+
+-- | Console out location.
+newtype ConsoleOutHandle
+  = ConsoleOutHandle { theConsoleOutHandle :: FileHandle }
+  deriving Typeable
+
+instance TO.IsOption ConsoleOutHandle where
+  defaultValue = ConsoleOutHandle StdOut
+  parseValue path = Just $ ConsoleOutHandle $ Path path
+  optionName = return "console out file name"
+  optionHelp = return "default: stdout"
+
+
+
 -- | Representation of file handles, both paths and the stdin/out/err handles.
 data FileHandle
   = StdIn
@@ -138,3 +175,10 @@ writeModeHandle x = case x of
   StdOut -> return stdout
   StdErr -> return stderr
   Path path -> openFile path WriteMode
+
+readModeHandle :: FileHandle -> IO Handle
+readModeHandle x = case x of
+  StdIn -> return stdin
+  StdOut ->  error "readModeHandle: Cannot open stdout in read mode."
+  StdErr ->  error "readModeHandle: Cannot open stderr in read mode."
+  Path path -> openFile path ReadMode

@@ -171,15 +171,15 @@ appendLog msg = HttpSession $ \(state, log, _) ->
 
 -- | Write an entry to the log.
 logNow
-  :: (EffectTimer m, EffectPrint m)
+  :: (EffectTimer m, EffectConsole m)
   => Entry err log
   -> HttpSession m err st log env ()
 logNow msg = do
   time <- mGetSystemTime
   printer <- getEnvironment >>= theLogPrinter
   handle <- getEnvironment >>= theLogHandle
-  mPrintLine handle $ printEntryWith printer (time, msg)
-  mFlush handle
+  mhPutStrLn handle $ printEntryWith printer (time, msg)
+  mhFlush handle
   appendLog $ Log [(time, msg)] []
 
 -- | Write a comment to the log.
@@ -209,15 +209,15 @@ assertNow a = do
     else do
       printer <- getEnvironment >>= theLogPrinter
       handle <- getEnvironment >>= theAssertionLogHandle
-      mPrintLine handle $ printEntryWith printer (time, LogAssertion a)
-      mFlush handle
+      mhPutStrLn handle $ printEntryWith printer (time, LogAssertion a)
+      mhFlush handle
   appendLog $ Log [] [(time, a)]
 
 
 
 -- | Throw an error.
 throwError
-  :: (Monad m, EffectTimer m, EffectPrint m)
+  :: (Monad m, EffectTimer m, EffectConsole m)
   => Err err
   -> HttpSession m err st log env a
 throwError e = do
@@ -226,6 +226,7 @@ throwError e = do
     ErrIO e -> logNow $ LogIOError e
     ErrJson e -> logNow $ LogJsonError e
     ErrUnexpectedSuccess m -> logNow $ LogUnexpectedSuccess m
+    ErrUnexpectedFailure m -> logNow $ LogUnexpectedFailure m
     Err e -> logNow $ LogError e
   HttpSession $ \(st, log, _) ->
     return (Left e, (st, log))
@@ -261,15 +262,19 @@ instance (Effectful m) => Assert (HttpSession m err st log env) where
 instance (Monad m, Effectful m) => Json (HttpSession m err st log env) where
   mRaiseJsonError e = throwError (ErrJson e)
 
-instance (EffectPrint m) => EffectPrint (HttpSession m err st log env) where
-  mPrintLine handle string = liftSession $ mPrintLine handle string
-  mFlush handle = liftSession $ mFlush handle
-
 instance (EffectConsole m) => EffectConsole (HttpSession m err st log env) where
-  mPutStr string = liftSession $ mPutStr string
-  mPutStrLn string = liftSession $ mPutStrLn string
-  mReadLine = liftSession mReadLine
-  mReadLineNoEcho = liftSession mReadLineNoEcho
+  mhGetEcho handle = liftSession $ mhGetEcho handle
+  mhSetEcho handle bool = liftSession $ mhSetEcho handle bool
+
+  mStdIn = getEnvironment >>= theConsoleInHandle
+  mhGetChar handle = liftSession $ mhGetChar handle
+  mhGetLine handle = liftSession $ mhGetLine handle
+
+  mStdOut = getEnvironment >>= theConsoleOutHandle
+  mhFlush handle = liftSession $ mhFlush handle
+  mhPutChar handle c = liftSession $ mhPutChar handle c
+  mhPutStr handle str = liftSession $ mhPutStr handle str
+  mhPutStrLn handle str = liftSession $ mhPutStrLn handle str
 
 instance (EffectTimer m) => EffectTimer (HttpSession m err st log env) where
   mGetSystemTime = liftSession mGetSystemTime

@@ -14,7 +14,7 @@ import Data.Time.Clock (addUTCTime)
 import Data.ByteString.Lazy (ByteString, pack)
 import Control.Exception
 import Control.Monad
-import System.IO (Handle)
+import System.IO (Handle, stdin, stdout)
 import System.IO.Error
   ( mkIOError, eofErrorType, doesNotExistErrorType, fullErrorType )
 import System.Random
@@ -139,27 +139,31 @@ instance RandomGen MockGen where
   split (MockGen k) = (MockGen k, MockGen (k+1))
 
 
-
-instance EffectPrint (MockIO st) where
-  mPrintLine handle string = MockIO $ \state ->
-    ((), state { __print_log = (handle, string) : __print_log state })
-
-  mFlush _ = return ()
-
-
 instance EffectConsole (MockIO st) where
-  mPutStr string = MockIO $ \state ->
-    ((), state { __console_out = string : __console_out state })
+  mhGetEcho _ = return True
+  mhSetEcho _ _ = return ()
 
-  mPutStrLn string = mPutStr (string ++ "\n")
+  mStdIn = return stdin
 
-  mReadLine = MockIO $ \state ->
+  mhGetChar _ = return 'y'
+
+  mhGetLine _ = MockIO $ \state ->
     let (stack, def) = __console_in state in
     case stack of
       [] -> (def, state)
       m:ms -> (m, state { __console_in = (ms,def) })
 
-  mReadLineNoEcho = mReadLine
+  mStdOut = return stdout
+
+  mhFlush _ = return ()
+
+  mhPutChar _ c = MockIO $ \state ->
+    ((), state { __console_out = [c] : __console_out state })
+
+  mhPutStr _ string = MockIO $ \state ->
+    ((), state { __console_out = string : __console_out state })
+
+  mhPutStrLn _ string = mPutStr (string ++ "\n")
 
 
 instance EffectTimer (MockIO st) where

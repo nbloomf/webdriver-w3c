@@ -11,7 +11,6 @@ Typeclasses representing IO effects. By writing our effectful code against the c
 
 Each class represents a cluster of similar effects.
 
-* `EffectPrint`: Writing to files
 * `EffectConsole`: Reading and writing to the terminal
 * `EffectTimer`: Getting the current time, suspending the current thread
 * `EffectTry`: Throwing exceptions
@@ -23,11 +22,14 @@ Each class represents a cluster of similar effects.
 module Web.Api.Http.Effects (
     Effectful(toIO)
 
-  -- * Writing to Files
-  , EffectPrint(..)
-
   -- * Read and write from the terminal
   , EffectConsole(..)
+  , mGetChar
+  , mGetLine
+  , mGetLineNoEcho
+  , mPutChar
+  , mPutStr
+  , mPutStrLn
 
   -- * Time
   , EffectTimer(..)
@@ -74,7 +76,7 @@ import qualified Network.Wreq.Session as S
   ( Session, newSession, getWith, postWith, deleteWith )
 import System.IO
   ( Handle, hPutStrLn, stdin, hGetEcho, hSetEcho, hFlush
-  , hFlush, stdout, putChar, getLine )
+  , hFlush, stdout, putChar, hGetLine, hGetChar, hPutStr, hPutChar )
 import System.Directory
   ( doesFileExist )
 import System.Random
@@ -85,51 +87,125 @@ import Network.HTTP.Types (Status, ResponseHeaders, HttpVersion)
 
 
 
--- | Monads that can print strings to file handles.
-
-class (Monad m) => EffectPrint m where
-  -- | Acts like `hPutStrLn`.
-  mPrintLine :: Handle -> String -> m ()
-
-  -- | Acts like `hFlush`.
-  mFlush :: Handle -> m ()
-
-
-instance EffectPrint IO where
-  mPrintLine = hPutStrLn
-  mFlush = hFlush
-
-
--- | Monads that can read from and write to a terminal.
+-- | Monads that can read from and write to handles.
 
 class (Monad m) => EffectConsole m where
-  -- | Acts like `putStr`.
-  mPutStr :: String -> m ()
+  -- | Acts like `hGetEcho`.
+  mhGetEcho :: Handle -> m Bool
 
-  -- | Acts like `putStrLn`.
-  mPutStrLn :: String -> m ()
+  -- | Acts like `hSetEcho`.
+  mhSetEcho :: Handle -> Bool -> m ()
+
+
+  -- | Acts like `stdin`.
+  mStdIn :: m Handle
+
+  -- | Acts like `getChar`.
+  mhGetChar :: Handle -> m Char
 
   -- | Flush `stdout`, then `getLine`.
-  mReadLine :: m String
+  mhGetLine :: Handle -> m String
 
-  -- | Flush `stdout`, then `getLine`, but do not echo typed characters to the terminal. For reading suuuper secret infos.
-  mReadLineNoEcho :: m String
+
+  -- | Acts like `stdout`.
+  mStdOut :: m Handle
+
+  -- | Acts like `hFlush`.
+  mhFlush :: Handle -> m ()
+
+  -- | Acts like `putChar`.
+  mhPutChar :: Handle -> Char -> m ()
+
+  -- | Acts like `putStr`.
+  mhPutStr :: Handle -> String -> m ()
+
+  -- | Acts like `putStrLn`.
+  mhPutStrLn :: Handle -> String -> m ()
 
 
 instance EffectConsole IO where
-  mPutStr = putStr
-  mPutStrLn = putStrLn
+  mhGetEcho = hGetEcho
+  mhSetEcho = hSetEcho
 
-  mReadLine = hFlush stdout >> getLine
+  mStdIn = return stdin
+  mhGetChar = hGetChar
+  mhGetLine = hGetLine
 
-  mReadLineNoEcho = do
-    hFlush stdout
-    oldSetting <- hGetEcho stdin
-    hSetEcho stdin False
-    secret <- getLine
-    hSetEcho stdin oldSetting
-    putChar '\n'
-    return secret
+  mStdOut = return stdout
+  mhFlush = hFlush
+  mhPutChar = hPutChar
+  mhPutStr = hPutStr
+  mhPutStrLn = hPutStrLn
+
+
+-- | Acts like `getChar`.
+mGetChar
+  :: (Monad m, EffectConsole m)
+  => m Char
+mGetChar = do
+  hin <- mStdIn
+  mhFlush hin
+  mhGetChar hin
+
+-- | Acts like `getLine`.
+mGetLine
+  :: (Monad m, EffectConsole m)
+  => m String
+mGetLine = do
+  hin <- mStdIn
+  mhFlush hin
+  mhGetLine hin
+
+-- | Acts like `hGetLine`, but do not echo input characters to the console.
+mhGetLineNoEcho
+  :: (Monad m, EffectConsole m)
+  => Handle
+  -> m String
+mhGetLineNoEcho handle = do
+  oldSetting <- mhGetEcho handle
+  mhSetEcho handle False
+  secret <- mhGetLine handle
+  mhSetEcho handle oldSetting
+  return secret
+
+-- | Acts like `getLine`, but do not echo input characters to the console.
+mGetLineNoEcho
+  :: (Monad m, EffectConsole m)
+  => m String
+mGetLineNoEcho = do
+  hin <- mStdIn
+  hout <- mStdOut
+  mhFlush hout
+  secret <- mhGetLineNoEcho hin
+  mhPutChar hout '\n'
+  return secret
+
+-- | Acts like `putChar`.
+mPutChar
+  :: (Monad m, EffectConsole m)
+  => Char
+  -> m ()
+mPutChar c = do
+  hout <- mStdOut
+  mhPutChar hout c
+
+-- | Acts like `putStr`.
+mPutStr
+  :: (Monad m, EffectConsole m)
+  => String
+  -> m ()
+mPutStr str = do
+  hout <- mStdOut
+  mhPutStr hout str
+
+-- | Acts like `putStrLn`.
+mPutStrLn
+  :: (Monad m, EffectConsole m)
+  => String
+  -> m ()
+mPutStrLn str = do
+  hout <- mStdOut
+  mhPutStr hout str
 
 
 
@@ -300,7 +376,6 @@ readHttpResponse r = HttpResponse
 
 class
   ( Monad m
-  , EffectPrint m
   , EffectConsole m
   , EffectTimer m
   , EffectTry m

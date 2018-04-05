@@ -58,7 +58,7 @@ promptForString
   => String -- ^ Prompt text
   -> m String
 promptForString prompt =
-  mPutStrLn prompt >> mReadLine
+  mPutStrLn prompt >> mGetLine
 
 -- | Prompt for input on @stdin@, but do not echo the typed characters back to the screen - handy for getting suuper secret info.
 promptForSecret
@@ -66,11 +66,11 @@ promptForSecret
   => String -- ^ Prompt text
   -> m String
 promptForSecret prompt =
-  mPutStrLn prompt >> mReadLineNoEcho
+  mPutStrLn prompt >> mGetLineNoEcho
 
 -- | Read a file as a `ByteString`, capturing any IO errors in `HttpSession`.
 readFilePath
-  :: (EffectTry m, EffectTimer m, EffectFiles m, EffectPrint m)
+  :: (EffectTry m, EffectTimer m, EffectFiles m, EffectConsole m)
   => FilePath
   -> HttpSession m err st log env LB.ByteString
 readFilePath path = do
@@ -83,7 +83,7 @@ readFilePath path = do
 
 -- | Write a `ByteString` to a file, capturing any IO errors in `HttpSession`.
 writeFilePath
-  :: (EffectTry m, EffectTimer m, EffectFiles m, EffectPrint m)
+  :: (EffectTry m, EffectTimer m, EffectFiles m, EffectConsole m)
   => FilePath
   -> LB.ByteString
   -> HttpSession m err st log env ()
@@ -99,7 +99,7 @@ writeFilePath path contents = do
 
 -- | Opens a session (in the @wreq@ sense)
 openTcpSession
-  :: (EffectTry m, EffectTimer m, EffectFiles m, EffectPrint m, EffectHttp m)
+  :: (EffectTry m, EffectTimer m, EffectFiles m, EffectConsole m, EffectHttp m)
   => HttpSession m err st log env ()
 openTcpSession = do
   session <- mNewSessionState
@@ -109,7 +109,7 @@ openTcpSession = do
 
 -- | Closes a session (in the @wreq@ sense)
 closeTcpSession
-  :: (EffectTry m, EffectTimer m, EffectFiles m, EffectPrint m, EffectHttp m)
+  :: (EffectTry m, EffectTimer m, EffectFiles m, EffectConsole m, EffectHttp m)
   => HttpSession m err st log env ()
 closeTcpSession = do
   logNow $ LogSession Close
@@ -140,7 +140,7 @@ silentRequestOptions = RequestOptions
 
 -- | The basic shape of all requests is the same, so we abstract it here for consistency.
 processRequest
-  :: (EffectTry m, EffectTimer m, EffectFiles m, EffectPrint m, EffectHttp m)
+  :: (EffectTry m, EffectTimer m, EffectFiles m, EffectConsole m, EffectHttp m)
   => RequestOptions
   -> Entry err log
   -> (Maybe WreqS.Session -> m (Either HttpException HttpResponse))
@@ -192,7 +192,7 @@ processRequest opt entry request = do
 
 
 httpGetWith
-  :: (EffectTry m, EffectTimer m, EffectFiles m, EffectPrint m, EffectHttp m)
+  :: (EffectTry m, EffectTimer m, EffectFiles m, EffectConsole m, EffectHttp m)
   => RequestOptions
   -> Url
   -> HttpSession m err st log env HttpResponse
@@ -202,20 +202,20 @@ httpGetWith opt url = processRequest opt
 
 -- | Send a @GET@ request to a url.
 httpGet
-  :: (EffectTry m, EffectTimer m, EffectFiles m, EffectPrint m, EffectHttp m)
+  :: (EffectTry m, EffectTimer m, EffectFiles m, EffectConsole m, EffectHttp m)
   => Url -> HttpSession m err st log env HttpResponse
 httpGet = httpGetWith defaultRequestOptions
 
 -- | Send a @GET@ request to a url, without logging either the request or the response.
 httpSilentGet
-  :: (EffectTry m, EffectTimer m, EffectFiles m, EffectPrint m, EffectHttp m)
+  :: (EffectTry m, EffectTimer m, EffectFiles m, EffectConsole m, EffectHttp m)
   => Url -> HttpSession m err st log env HttpResponse
 httpSilentGet = httpGetWith silentRequestOptions
 
 
 
 httpPostWith
-  :: (EffectTry m, EffectTimer m, EffectFiles m, EffectPrint m, EffectHttp m)
+  :: (EffectTry m, EffectTimer m, EffectFiles m, EffectConsole m, EffectHttp m)
   => RequestOptions
   -> Url
   -> LB.ByteString -- ^ Payload
@@ -226,7 +226,7 @@ httpPostWith opt url payload = processRequest opt
 
 -- | Send a @POST@ request with a given payload to a url.
 httpPost
-  :: (EffectTry m, EffectTimer m, EffectFiles m, EffectPrint m, EffectHttp m)
+  :: (EffectTry m, EffectTimer m, EffectFiles m, EffectConsole m, EffectHttp m)
   => Url
   -> LB.ByteString -- ^ Payload
   -> HttpSession m err st log env HttpResponse
@@ -234,7 +234,7 @@ httpPost = httpPostWith defaultRequestOptions
 
 -- | Send a @POST@ request with a given payload to a url, without logging either the request or the response.
 httpSilentPost
-  :: (EffectTry m, EffectTimer m, EffectFiles m, EffectPrint m, EffectHttp m)
+  :: (EffectTry m, EffectTimer m, EffectFiles m, EffectConsole m, EffectHttp m)
   => Url
   -> LB.ByteString -- ^ Payload
   -> HttpSession m err st log env HttpResponse
@@ -243,7 +243,7 @@ httpSilentPost = httpPostWith silentRequestOptions
 
 
 httpDeleteWith
-  :: (EffectTry m, EffectTimer m, EffectFiles m, EffectPrint m, EffectHttp m)
+  :: (EffectTry m, EffectTimer m, EffectFiles m, EffectConsole m, EffectHttp m)
   => RequestOptions
   -> Url
   -> HttpSession m err st log env HttpResponse
@@ -253,14 +253,14 @@ httpDeleteWith opt url = processRequest opt
 
 -- | Send a @DELETE@ request to a url.
 httpDelete
-  :: (EffectTry m, EffectTimer m, EffectFiles m, EffectPrint m, EffectHttp m)
+  :: (EffectTry m, EffectTimer m, EffectFiles m, EffectConsole m, EffectHttp m)
   => Url
   -> HttpSession m err st log env HttpResponse
 httpDelete = httpDeleteWith defaultRequestOptions
 
 -- | Send a @DELETE@ request to a url without logging either the request or the response.
 httpSilentDelete
-  :: (EffectTry m, EffectTimer m, EffectFiles m, EffectPrint m, EffectHttp m)
+  :: (EffectTry m, EffectTimer m, EffectFiles m, EffectConsole m, EffectHttp m)
   => Url
   -> HttpSession m err st log env HttpResponse
 httpSilentDelete = httpDeleteWith silentRequestOptions

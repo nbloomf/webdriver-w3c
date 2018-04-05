@@ -25,6 +25,8 @@ module Test.Tasty.WebDriver (
   , WebDriverApiVersion(..)
   , LogHandle(..)
   , AssertionLogHandle(..)
+  , ConsoleInHandle(..)
+  , ConsoleOutHandle(..)
   , FileHandle(..)
   ) where
 
@@ -35,7 +37,7 @@ import Data.Typeable
 import Data.List
   ( unlines )
 import System.IO
-  ( Handle, stdout, stderr, openFile, IOMode(..) )
+  ( Handle, stdout, stderr, stdin, openFile, IOMode(..) )
 import qualified Test.Tasty.Providers as TT
 import qualified Test.Tasty.Options as TO
 import qualified System.Environment as SE
@@ -62,6 +64,8 @@ instance (Effectful m, Typeable m) => TT.IsTest (WebDriverTest m) where
     , TO.Option (Proxy :: Proxy WebDriverApiVersion)
     , TO.Option (Proxy :: Proxy LogHandle)
     , TO.Option (Proxy :: Proxy AssertionLogHandle)
+    , TO.Option (Proxy :: Proxy ConsoleInHandle)
+    , TO.Option (Proxy :: Proxy ConsoleOutHandle)
     , TO.Option (Proxy :: Proxy SecretsPath)
     ]
 
@@ -76,10 +80,14 @@ instance (Effectful m, Typeable m) => TT.IsTest (WebDriverTest m) where
       WebDriverApiVersion version = TO.lookupOption opts
       LogHandle log = TO.lookupOption opts
       AssertionLogHandle alog = TO.lookupOption opts
+      ConsoleInHandle cin = TO.lookupOption opts
+      ConsoleOutHandle cout = TO.lookupOption opts
       SecretsPath secrets = TO.lookupOption opts
 
     logHandle <- writeModeHandle log
     alogHandle <- writeModeHandle alog
+    cinHandle <- readModeHandle cin
+    coutHandle <- writeModeHandle cout
 
     secretsPath <- case secrets of
       "" -> fmap (++ "/.webdriver/secrets") $ SE.getEnv "HOME"
@@ -94,6 +102,8 @@ instance (Effectful m, Typeable m) => TT.IsTest (WebDriverTest m) where
         setEnv
           ( setLogHandle logHandle
           . setAssertionLogHandle alogHandle
+          . setConsoleInHandle cinHandle
+          . setConsoleOutHandle coutHandle
           . setClientEnvironment
               ( setRemoteHostname host
               . setRemotePort port
@@ -301,6 +311,32 @@ instance TO.IsOption AssertionLogHandle where
 
 
 
+-- | Console in location.
+newtype ConsoleInHandle
+  = ConsoleInHandle { theConsoleInHandle :: FileHandle }
+  deriving Typeable
+
+instance TO.IsOption ConsoleInHandle where
+  defaultValue = ConsoleInHandle StdIn
+  parseValue path = Just $ ConsoleInHandle $ Path path
+  optionName = return "console input file name"
+  optionHelp = return "default: stdin"
+
+
+
+-- | Console out location.
+newtype ConsoleOutHandle
+  = ConsoleOutHandle { theConsoleOutHandle :: FileHandle }
+  deriving Typeable
+
+instance TO.IsOption ConsoleOutHandle where
+  defaultValue = ConsoleOutHandle StdOut
+  parseValue path = Just $ ConsoleOutHandle $ Path path
+  optionName = return "console out file name"
+  optionHelp = return "default: stdout"
+
+
+
 -- | Representation of file handles, both paths and the stdin/out/err handles.
 data FileHandle
   = StdIn
@@ -314,6 +350,13 @@ writeModeHandle x = case x of
   StdOut -> return stdout
   StdErr -> return stderr
   Path path -> openFile path WriteMode
+
+readModeHandle :: FileHandle -> IO Handle
+readModeHandle x = case x of
+  StdIn -> return stdin
+  StdOut ->  error "readModeHandle: Cannot open stdout in read mode."
+  StdErr ->  error "readModeHandle: Cannot open stderr in read mode."
+  Path path -> openFile path ReadMode
 
 
 

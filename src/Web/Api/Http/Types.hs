@@ -40,6 +40,10 @@ module Web.Api.Http.Types (
   , setLogHandle
   , theAssertionLogHandle
   , setAssertionLogHandle
+  , theConsoleInHandle
+  , setConsoleInHandle
+  , theConsoleOutHandle
+  , setConsoleOutHandle
   , theErrorInjectFunction
   , setErrorInjectFunction
   , theClientEnvironment
@@ -85,7 +89,7 @@ import Network.HTTP.Client
   ( HttpException(HttpExceptionRequest)
   , HttpExceptionContent(StatusCodeException) )
 import System.IO
-  ( Handle, stderr, stdout )
+  ( Handle, stderr, stdout, stdin )
 import System.IO.Error
   ( ioeGetFileName, ioeGetLocation, ioeGetErrorString )
 
@@ -110,6 +114,9 @@ data Err err
   -- | Expected failure, and success is catastrophic.
   | ErrUnexpectedSuccess String
 
+  -- | For catastrophic failed assertions.
+  | ErrUnexpectedFailure String
+
   -- | Unspecified error; defined by consumers of `HttpSession`.
   | Err err
   deriving Show
@@ -122,6 +129,7 @@ printErr p e = case e of
   ErrIO err -> show err
   ErrJson err -> show err
   ErrUnexpectedSuccess msg -> msg
+  ErrUnexpectedFailure msg -> msg
   Err err -> p err
 
 
@@ -179,6 +187,9 @@ data Entry err log
 
   -- | Unexpected success.
   | LogUnexpectedSuccess String
+
+  -- | Unexpected failure.
+  | LogUnexpectedFailure String
 
   -- | An unspecified error of type defined by consumers of `HttpSession` was thrown.
   | LogError err
@@ -268,6 +279,12 @@ data Env err log env = Env {
   -- | The handle of the assertion log file.
   , __assertion_log_handle :: Handle
 
+  -- | The handle of console input.
+  , __console_in_handle :: Handle
+
+  -- | The handle of console output.
+  , __console_out_handle :: Handle
+
   -- | A function used to inject `HttpException`s into the consumer-supplied error type. Handy when dealing with APIs that use HTTP error codes semantically.
   , __http_error_inject :: Maybe (HttpException -> Maybe err)
 
@@ -305,6 +322,26 @@ setAssertionLogHandle
   :: Handle -> Env err log env -> Env err log env
 setAssertionLogHandle handle env = env { __assertion_log_handle = handle }
 
+-- | Retrieve the log handle in a monadic context.
+theConsoleInHandle
+  :: (Monad m) => Env err log env -> m Handle
+theConsoleInHandle = return . __console_in_handle
+
+-- | Set the log handle of an `Env`.
+setConsoleInHandle
+  :: Handle -> Env err log env -> Env err log env
+setConsoleInHandle handle env = env { __console_in_handle = handle }
+
+-- | Retrieve the log handle in a monadic context.
+theConsoleOutHandle
+  :: (Monad m) => Env err log env -> m Handle
+theConsoleOutHandle = return . __console_out_handle
+
+-- | Set the log handle of an `Env`.
+setConsoleOutHandle
+  :: Handle -> Env err log env -> Env err log env
+setConsoleOutHandle handle env = env { __console_out_handle = handle }
+
 -- | Retrieve the HTTP exception injecting function in a monadic context.
 theErrorInjectFunction
   :: (Monad m) => Env err log env -> m (Maybe (HttpException -> Maybe err))
@@ -337,6 +374,8 @@ basicEnv printErr printLog promote env = Env
   { __log_printer = basicLogPrinter True printErr printLog showAssertion
   , __log_handle = stderr
   , __assertion_log_handle = stdout
+  , __console_in_handle = stdin
+  , __console_out_handle = stdout
   , __http_error_inject = promote
   , __user_env = env
   }
@@ -352,6 +391,8 @@ jsonEnv printErr printLog promote env = Env
   { __log_printer = jsonLogPrinter True printErr printLog showAssertion
   , __log_handle = stderr
   , __assertion_log_handle = stdout
+  , __console_in_handle = stdin
+  , __console_out_handle = stdout
   , __http_error_inject = promote
   , __user_env = env
   }
@@ -449,6 +490,9 @@ data LogPrinter err log = LogPrinter {
   -- | Printer for `UnexpectedSuccess`.
   , __unexpected_success :: UTCTime -> String -> String
 
+  -- | Printer for `UnexpectedFailure`.
+  , __unexpected_failure :: UTCTime -> String -> String
+
   -- | Printer for `Assertion`s.
   , __assertion :: UTCTime -> Assertion -> String
 
@@ -474,6 +518,7 @@ printEntryWith printer (time, entry) = case entry of
   LogIOError err -> __io_error printer time err
   LogJsonError err -> __json_error printer time err
   LogUnexpectedSuccess msg -> __unexpected_success printer time msg
+  LogUnexpectedFailure msg -> __unexpected_failure printer time msg
   LogSession verb -> __session printer time verb
   LogAssertion x -> __assertion printer time x
   LogPause m -> __pause printer time m
@@ -524,7 +569,9 @@ basicLogPrinter color pE pL pA = LogPrinter
   , __json_error = \time err -> unwords
     [paint color red $ trunc time, show err]
   , __unexpected_success = \time msg -> unwords
-    [paint color red $ trunc time, "Unexpected Success:", msg]
+    [paint color red $ trunc time, "Unexpected Success: ", msg]
+  , __unexpected_failure = \time msg -> unwords
+    [paint color red $ trunc time, "Unexpected Failure: ", msg]
   , __session = \time verb -> unwords
     [paint color magenta $ trunc time, show verb]
   , __assertion = \time a -> unwords
