@@ -87,6 +87,7 @@ httpAssertionsToResult x =
     then TT.testFailed $ unlines $ map showAssertion $ failures x
     else TT.testPassed $ show (numSuccesses x) ++ " assertion(s)"
 
+-- | Simple `HttpSession` test case.
 testCase
   :: (Effectful m, Typeable m)
   => TT.TestName
@@ -96,6 +97,7 @@ testCase name test =
   testCaseWithSetup name (return ()) (return ()) test
 
 
+-- | -- | `HttpSession` test case with additional setup and teardown phases -- setup runs before the test (for e.g. logging in) and teardown runs after the test (for e.g. deleting temp files).
 testCaseWithSetup
   :: (Effectful m, Typeable m)
   => TT.TestName
