@@ -52,12 +52,15 @@ defaultWebDriverServer = MockServer
       [_,"session",session_id,"url"] ->
         get_session_id_url st session_id
 
+      {- Get Title -}
       [_,"session",session_id,"title"] ->
         get_session_id_title st session_id
 
+      {- Get Window Handle -}
       [_,"session",session_id,"window"] ->
         get_session_id_window st session_id
 
+      {- Get Window Handles -}
       [_,"session",session_id,"window","handles"] ->
         get_session_id_window_handles st session_id
 
@@ -118,15 +121,19 @@ defaultWebDriverServer = MockServer
       [_,"session",session_id,"timeouts"] ->
         post_session_id_timeouts st session_id payload
 
+      {- Navigate To -}
       [_,"session",session_id,"url"] ->
         post_session_id_url st session_id payload
 
+      {- Back -}
       [_,"session",session_id,"back"] ->
         post_session_id_back st session_id
 
+      {- Forward -}
       [_,"session",session_id,"forward"] ->
         post_session_id_forward st session_id
 
+      {- Refresh -}
       [_,"session",session_id,"refresh"] ->
         post_session_id_refresh st session_id
 
@@ -199,6 +206,7 @@ defaultWebDriverServer = MockServer
       [_,"session",session_id] ->
         delete_session_id st session_id
 
+      {- Close Window -}
       [_,"session",session_id,"window"] ->
         delete_session_id_window st session_id
 
@@ -288,6 +296,9 @@ post_session_id_timeouts st session_id !payload =
       Just (Object m) -> (Right _success_with_empty_object, st)
       Just _ -> (Left _err_invalid_argument, st)
 
+
+{- Navigate To -}
+
 post_session_id_url
   :: WebDriverServerState
   -> String
@@ -307,6 +318,9 @@ post_session_id_url !st !session_id !payload =
             in (Right _success_with_empty_object, _st)
       Just _ -> (Left _err_invalid_argument, st)
 
+
+{- Get Current Url -}
+
 get_session_id_url
   :: WebDriverServerState
   -> String
@@ -315,6 +329,9 @@ get_session_id_url st session_id =
   if not $ _is_active_session session_id st
     then (Left _err_invalid_session_id, st)
     else (Right $ _success_with_value $ String $ pack $ _get_current_url st, st)
+
+
+{- Back -}
 
 post_session_id_back
   :: WebDriverServerState
@@ -325,6 +342,9 @@ post_session_id_back !st !session_id =
     then (Left _err_invalid_session_id, st)
     else (Right _success_with_empty_object, st)
 
+
+{- Forward -}
+
 post_session_id_forward
   :: WebDriverServerState
   -> String
@@ -333,6 +353,9 @@ post_session_id_forward !st !session_id =
   if not $ _is_active_session session_id st
     then (Left _err_invalid_session_id, st)
     else (Right _success_with_empty_object, st)
+
+
+{- Refresh -}
 
 post_session_id_refresh
   :: WebDriverServerState
