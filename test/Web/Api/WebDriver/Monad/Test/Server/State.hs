@@ -6,6 +6,8 @@ module Web.Api.WebDriver.Monad.Test.Server.State (
   , _delete_session
   , _get_current_url
   , _set_current_url
+  , _get_last_selected_element
+  , _set_last_selected_element
   ) where
 
 import Data.List (delete)
@@ -19,6 +21,8 @@ data WebDriverServerState = WebDriverServerState
   , _max_active_sessions :: Int
 
   , _current_url :: String
+
+  , _last_selected_element :: Maybe String
   } deriving Show
 
 defaultWebDriverServerState :: WebDriverServerState
@@ -30,6 +34,8 @@ defaultWebDriverServerState = WebDriverServerState
   , _max_active_sessions = 1
 
   , _current_url = ""
+
+  , _last_selected_element = Nothing
   }
 
 _is_active_session
@@ -77,4 +83,18 @@ _set_current_url
   -> WebDriverServerState
 _set_current_url url st = st
   { _current_url = url
+  }
+
+_get_last_selected_element
+  :: WebDriverServerState
+  -> Maybe String
+_get_last_selected_element =
+  _last_selected_element
+
+_set_last_selected_element
+  :: String
+  -> WebDriverServerState
+  -> WebDriverServerState
+_set_last_selected_element elt st = st
+  { _last_selected_element = Just elt
   }

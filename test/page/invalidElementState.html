@@ -1,0 +1,44 @@
+<html>
+<head>
+ <title>Success Tests</title>
+</head>
+<body>
+<h1>Success Tests</h1>
+<p>A paragraph</p>
+<a href="https://example.com">A Link</a>
+<div class="test">A classy div</div>
+<form>
+ An input box: <input type="text" name="sometext"><br>
+ <input type="submit" value="Submit">
+</form>
+<p id="super-cool" style='text-decoration:none;'>Super Cool Text</p>
+
+<h2>Alerts</h2>
+<button id="alert-button" onclick="showAlert()">show alert</button>
+<button id="confirm-button" onclick="showConfirm()">show confirm</button>
+<button id="prompt-button" onclick="showPrompt()">show prompt</button>
+
+<script>
+function showAlert() {
+  alert("WOO!!");
+}
+
+function showConfirm() {
+  confirm("WOO!!");
+}
+
+function showPrompt() {
+  prompt("WOO!!");
+}
+</script>
+
+<h2>Cookies</h2>
+<button id="add-cookie-button" onclick="addCookie()">add cookie</button>
+
+<script>
+function addCookie() {
+  document.cookie = "fakeCookie=fakeValue";
+}
+</script>
+</body>
+</html>

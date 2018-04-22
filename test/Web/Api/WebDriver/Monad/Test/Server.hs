@@ -14,6 +14,8 @@ import qualified Data.ByteString as SB
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.Vector as V
 import Data.Aeson
+import Data.Aeson.Lens
+import Control.Lens
 import Data.HashMap.Strict
 import Network.HTTP.Client (HttpException)
 import Network.HTTP.Client.Internal
@@ -483,11 +485,18 @@ post_session_id_element
   -> LB.ByteString
   -> (Either HttpException HttpResponse, WebDriverServerState)
 post_session_id_element st session_id payload =
-  if not $ _is_active_session session_id st
-    then (Left _err_invalid_session_id, st)
-    else (Right $ _success_with_value $ object
-      [ ("element-6066-11e4-a52e-4f735466cecf", String "element-id")
-      ], st)
+  let
+    value = payload ^? key "value" . _String
+    using = payload ^? key "using" . _String
+  in
+    case value of
+      Nothing -> (Left _err_invalid_argument, st)
+      Just val -> do
+        if not $ _is_active_session session_id st
+          then (Left _err_invalid_session_id, st)
+          else (Right $ _success_with_value $ object
+            [ ("element-6066-11e4-a52e-4f735466cecf", String "element-id")
+            ], _set_last_selected_element (unpack val) st)
 
 post_session_id_elements
   :: WebDriverServerState
@@ -627,15 +636,32 @@ post_session_id_element_id_click st session_id element_id =
     then (Left _err_invalid_session_id, st)
     else (Right _success_with_empty_object, st)
 
+
+{- Element Clear -}
+
 post_session_id_element_id_clear
   :: WebDriverServerState
   -> String
   -> String
   -> (Either HttpException HttpResponse, WebDriverServerState)
 post_session_id_element_id_clear st session_id element_id =
-  if not $ _is_active_session session_id st
-    then (Left _err_invalid_session_id, st)
-    else (Right _success_with_empty_object, st)
+  let
+    elt = _get_last_selected_element st
+  in
+    case elt of
+      Nothing -> do
+        if not $ _is_active_session session_id st
+          then (Left _err_invalid_session_id, st)
+          else (Right _success_with_empty_object, st)
+      Just e -> do
+        if e == "body"
+          then (Left _err_invalid_element_state, st)
+          else if not $ _is_active_session session_id st
+            then (Left _err_invalid_session_id, st)
+            else (Right _success_with_empty_object, st)
+
+
+{- Element Send Keys -}
 
 post_session_id_element_id_value
   :: WebDriverServerState
@@ -856,6 +882,12 @@ _err_invalid_argument =
   HttpExceptionRequest undefined $ StatusCodeException
     (emptyResponse { responseStatus = badRequest400 })
     (errorObject "invalid argument" "" "" Nothing)
+
+_err_invalid_element_state :: HttpException
+_err_invalid_element_state =
+  HttpExceptionRequest undefined $ StatusCodeException
+    (emptyResponse { responseStatus = badRequest400 })
+    (errorObject "invalid element state" "" "" Nothing)
 
 _err_invalid_session_id :: HttpException
 _err_invalid_session_id =
