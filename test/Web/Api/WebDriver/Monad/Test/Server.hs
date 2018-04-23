@@ -43,12 +43,15 @@ instance Effectful (MockIO WebDriverServerState) where
 defaultWebDriverServer :: MockServer WebDriverServerState
 defaultWebDriverServer = MockServer
   { __http_get = \st !url -> case splitUrl $ stripScheme url of
+      {- Status -}
       [_,"status"] ->
         get_session_id_status st
 
+      {- Get Timeouts -}
       [_,"session",session_id,"timeouts"] ->
         get_session_id_timeouts st session_id
 
+      {- Get Current Url -}
       [_,"session",session_id,"url"] ->
         get_session_id_url st session_id
 
@@ -64,6 +67,7 @@ defaultWebDriverServer = MockServer
       [_,"session",session_id,"window","handles"] ->
         get_session_id_window_handles st session_id
 
+      {- Get Window Rect -}
       [_,"session",session_id,"window","rect"] ->
         get_session_id_window_rect st session_id
 
@@ -146,30 +150,39 @@ defaultWebDriverServer = MockServer
       [_,"session",session_id,"frame","parent"] ->
         post_session_id_frame_parent st session_id
 
+      {- Set Window Rect -}
       [_,"session",session_id,"window","rect"] ->
         post_session_id_window_rect st session_id payload
 
+      {- Maximize Window -}
       [_,"session",session_id,"window","maximize"] ->
         post_session_id_window_maximize st session_id
 
+      {- Minimize Window -}
       [_,"session",session_id,"window","minimize"] ->
         post_session_id_window_minimize st session_id
 
+      {- Fullscreen Window -}
       [_,"session",session_id,"window","fullscreen"] ->
         post_session_id_window_fullscreen st session_id
 
+      {- Find Element -}
       [_,"session",session_id,"element"] ->
         post_session_id_element st session_id payload
 
+      {- Find Elements -}
       [_,"session",session_id,"elements"] ->
         post_session_id_elements st session_id payload
 
+      {- Find Element From Element -}
       [_,"session",session_id,"element",element_id,"element"] ->
         post_session_id_element_id_element st session_id element_id payload
 
+      {- Find Elements From Element -}
       [_,"session",session_id,"element",element_id,"elements"] ->
         post_session_id_element_id_elements st session_id element_id payload
 
+      {- Element Click -}
       [_,"session",session_id,"element",element_id,"click"] ->
         post_session_id_element_id_click st session_id element_id
 
