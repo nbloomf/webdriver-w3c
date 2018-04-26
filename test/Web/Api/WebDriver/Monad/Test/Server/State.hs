@@ -4,13 +4,16 @@ module Web.Api.WebDriver.Monad.Test.Server.State (
   , _is_active_session
   , _create_session
   , _delete_session
+  , _load_page
+  , _go_back
+  , _go_forward
   , _get_current_url
-  , _set_current_url
   , _get_last_selected_element
   , _set_last_selected_element
   ) where
 
 import Data.List (delete)
+import Web.Api.WebDriver.Monad.Test.Server.Page
 
 -- | Models the internal state of a WebDriver remote end.
 data WebDriverServerState = WebDriverServerState
@@ -20,9 +23,13 @@ data WebDriverServerState = WebDriverServerState
   , _active_sessions :: [String]
   , _max_active_sessions :: Int
 
-  , _current_url :: String
+  , _history :: [Page]
+  , _future :: [Page]
 
   , _last_selected_element :: Maybe String
+
+  , _current_page :: Page
+  , _internets :: [Page]
   } deriving Show
 
 defaultWebDriverServerState :: WebDriverServerState
@@ -33,9 +40,13 @@ defaultWebDriverServerState = WebDriverServerState
   , _active_sessions = []
   , _max_active_sessions = 1
 
-  , _current_url = ""
+  , _history = []
+  , _future = []
 
   , _last_selected_element = Nothing
+
+  , _current_page = _default_page
+  , _internets = []
   }
 
 _is_active_session
@@ -68,22 +79,53 @@ _delete_session
   :: String
   -> WebDriverServerState
   -> WebDriverServerState
-_delete_session str st =
-  st { _active_sessions = delete str $ _active_sessions st }
+_delete_session str st = st
+  { _active_sessions = delete str $ _active_sessions st
+  }
 
 _get_current_url
   :: WebDriverServerState
   -> String
 _get_current_url =
-  _current_url
+  url . _current_page
 
-_set_current_url
+_load_page
   :: String
   -> WebDriverServerState
+  -> Maybe WebDriverServerState
+_load_page path st = do
+  let file = fileOnly path
+  p <- if file == "success.html"
+    then return _success_page
+    else if file == "invalidElementState.html"
+      then return _invalidElementState_page
+      else requestPage path (_internets st)
+  return $ st
+    { _current_page = p
+    , _history = (_current_page st) : _history st
+    }
+
+_go_back
+  :: WebDriverServerState
   -> WebDriverServerState
-_set_current_url url st = st
-  { _current_url = url
-  }
+_go_back st = case _history st of
+  [] -> st
+  p:ps -> st
+    { _current_page = p
+    , _future = (_current_page st) : _future st
+    , _history = ps
+    }
+
+_go_forward
+  :: WebDriverServerState
+  -> WebDriverServerState
+_go_forward st = case _future st of
+  [] -> st
+  p:ps -> st
+    { _current_page = p
+    , _history = (_current_page st) : _history st
+    , _future = ps
+    }
 
 _get_last_selected_element
   :: WebDriverServerState
@@ -98,3 +140,27 @@ _set_last_selected_element
 _set_last_selected_element elt st = st
   { _last_selected_element = Just elt
   }
+
+_default_page :: Page
+_default_page = buildPage "localhost" $
+  node Html []
+    [ node Head []
+        [ node Title []
+            [ Text "localhost"
+            ]
+        ]
+    , node Body []
+        [
+        ]
+    ]
+
+_success_page :: Page
+_success_page = buildPage "success.html" $
+  node Html [] []
+
+_invalidElementState_page :: Page
+_invalidElementState_page = buildPage "invalidElementState.html" $
+  node Html [] []
+
+fileOnly :: String -> String
+fileOnly = reverse . takeWhile (/= '/') . reverse

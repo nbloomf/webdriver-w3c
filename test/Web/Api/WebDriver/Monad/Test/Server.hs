@@ -324,11 +324,9 @@ post_session_id_url !st !session_id !payload =
       Nothing -> (Left _err_invalid_argument, st)
       Just (Object m) -> case HMS.lookup "url" m of
         Nothing -> (Left _err_invalid_argument, st)
-        Just (String url) -> case url of
-          "https://fake.example" -> (Left _err_unknown_error, st)
-          _ -> 
-            let _st = _set_current_url (unpack url) st
-            in (Right _success_with_empty_object, _st)
+        Just (String url) -> case _load_page (unpack url) st of
+          Nothing -> (Left _err_unknown_error, st)
+          Just _st -> (Right _success_with_empty_object, _st)
       Just _ -> (Left _err_invalid_argument, st)
 
 
@@ -353,7 +351,7 @@ post_session_id_back
 post_session_id_back !st !session_id =
   if not $ _is_active_session session_id st
     then (Left _err_invalid_session_id, st)
-    else (Right _success_with_empty_object, st)
+    else (Right _success_with_empty_object, _go_back st)
 
 
 {- Forward -}
@@ -365,7 +363,7 @@ post_session_id_forward
 post_session_id_forward !st !session_id =
   if not $ _is_active_session session_id st
     then (Left _err_invalid_session_id, st)
-    else (Right _success_with_empty_object, st)
+    else (Right _success_with_empty_object, _go_forward st)
 
 
 {- Refresh -}

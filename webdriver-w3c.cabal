@@ -106,6 +106,7 @@ test-suite webdriver-w3c-test
     , JuicyPixels           >=3.2.9.4    && <3.3
     , lens                  >=4.16       && <4.17
     , lens-aeson            >=1.0.2      && <1.1
+    , parsec                >=3.1.13.0   && <4
     , QuickCheck            >=2.10.1     && <2.11
     , random                >=1.1        && <1.2
     , unordered-containers  >=0.2.9.0    && <0.3
@@ -125,6 +126,7 @@ test-suite webdriver-w3c-test
     Web.Api.Http.Effects.Test.Server
     Web.Api.WebDriver.Monad.Test
     Web.Api.WebDriver.Monad.Test.Server
+    Web.Api.WebDriver.Monad.Test.Server.Page
     Web.Api.WebDriver.Monad.Test.Server.State
     Web.Api.WebDriver.Monad.Test.Session.Success
     Web.Api.WebDriver.Monad.Test.Session.InvalidElementState
