@@ -54,7 +54,7 @@ instance Effectful (MockIO ()) where
 
 defaultHttpSessionServer :: MockServer ()
 defaultHttpSessionServer = MockServer
-  { __http_get = \st !url -> undefined
+  { __http_get = \url -> undefined
 
   , __http_post = \st !url !payload -> undefined
 

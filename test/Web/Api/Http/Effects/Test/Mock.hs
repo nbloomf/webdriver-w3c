@@ -9,6 +9,7 @@ module Web.Api.Http.Effects.Test.Mock (
   , getMockException
 
   , MockResponse()
+  , getMockResponseState
   , mutateMockResponseState
   , checkMockResponseState
   ) where
@@ -103,6 +104,9 @@ instance Monad (MockResponse st) where
       Left err -> (Left err, st')
       Right a -> unMockResponse (f a) st'
 
+getMockResponseState :: MockResponse st st
+getMockResponseState = MockResponse $ \st -> (Right st, st)
+
 mutateMockResponseState :: (st -> st) -> MockResponse st ()
 mutateMockResponseState f = MockResponse $ \st -> (Right (), f st)
 
@@ -112,9 +116,8 @@ checkMockResponseState f err = MockResponse $ \st ->
 
 data MockServer st = MockServer
   { __http_get
-      :: st
-      -> String
-      -> (Either HttpException HttpResponse, st)
+      :: String
+      -> MockResponse st HttpResponse
 
   , __http_post
       :: st
@@ -122,12 +125,9 @@ data MockServer st = MockServer
       -> ByteString
       -> (Either HttpException HttpResponse, st)
 
-  , __http_delete :: String -> MockResponse st HttpResponse
-
-  -- , __http_delete
-  --     :: st
-  --     -> String
-  --     -> (Either HttpException HttpResponse, st)
+  , __http_delete
+      :: String
+      -> MockResponse st HttpResponse
   }
 
 instance Show (MockServer st) where
@@ -267,7 +267,7 @@ instance EffectRandom (MockIO st) where
 instance EffectHttp (MockIO st) where
   mGetWith _ _ url = do
     st <- getMockSt
-    let (r, update) = __http_get (__server st) (__local st) url
+    let (r, update) = unMockResponse (__http_get (__server st) url) (__local st)
     putLocalState update
     return r 
 
