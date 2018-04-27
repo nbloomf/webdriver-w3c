@@ -7,6 +7,10 @@ module Web.Api.Http.Effects.Test.Mock (
   , getMockSt
   , putMockSt
   , getMockException
+
+  , MockResponse()
+  , mutateMockResponseState
+  , checkMockResponseState
   ) where
 
 import Data.Time (UTCTime(..), Day(..))
@@ -67,6 +71,45 @@ mockSt server session st = MockSt
   , __local = st
   }
 
+data MockResponse st a = MockResponse
+  { unMockResponse :: st -> (Either HttpException a, st) }
+
+instance Functor (MockResponse st) where
+  fmap f x = MockResponse $ \st ->
+    let (result, st') = unMockResponse x st in
+    case result of
+      Left err -> (Left err, st')
+      Right a -> (Right (f a), st')
+
+instance Applicative (MockResponse st) where
+  pure a = MockResponse $ \st -> (Right a, st)
+
+  f <*> x = MockResponse $ \st ->
+    let (f_result, st') = unMockResponse f st in
+    case f_result of
+      Left err -> (Left err, st')
+      Right g ->
+        let (x_result, st'') = unMockResponse x st' in
+        case x_result of
+          Left err -> (Left err, st'')
+          Right y -> (Right (g y), st'')
+
+instance Monad (MockResponse st) where
+  return = pure
+
+  x >>= f = MockResponse $ \st ->
+    let (x_result, st') = unMockResponse x st in
+    case x_result of
+      Left err -> (Left err, st')
+      Right a -> unMockResponse (f a) st'
+
+mutateMockResponseState :: (st -> st) -> MockResponse st ()
+mutateMockResponseState f = MockResponse $ \st -> (Right (), f st)
+
+checkMockResponseState :: (st -> Bool) -> HttpException -> MockResponse st ()
+checkMockResponseState f err = MockResponse $ \st ->
+  (if f st then Right () else Left err, st)
+
 data MockServer st = MockServer
   { __http_get
       :: st
@@ -79,10 +122,12 @@ data MockServer st = MockServer
       -> ByteString
       -> (Either HttpException HttpResponse, st)
 
-  , __http_delete
-      :: st
-      -> String
-      -> (Either HttpException HttpResponse, st)
+  , __http_delete :: String -> MockResponse st HttpResponse
+
+  -- , __http_delete
+  --     :: st
+  --     -> String
+  --     -> (Either HttpException HttpResponse, st)
   }
 
 instance Show (MockServer st) where
@@ -234,7 +279,7 @@ instance EffectHttp (MockIO st) where
 
   mDeleteWith _ _ url = do
     st <- getMockSt
-    let (r, update) = __http_delete (__server st) (__local st) url
+    let (r, update) = unMockResponse (__http_delete (__server st) url) (__local st)
     putLocalState update
     return r
 

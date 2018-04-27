@@ -58,7 +58,7 @@ defaultHttpSessionServer = MockServer
 
   , __http_post = \st !url !payload -> undefined
 
-  , __http_delete = \st !url -> undefined
+  , __http_delete = \url -> undefined
   }
 
 unexpectedError

@@ -244,26 +244,26 @@ defaultWebDriverServer = MockServer
 
       _ -> error $ "defaultWebDriverServer: post url: " ++ stripScheme url
 
-  , __http_delete = \st !url -> case splitUrl $ stripScheme url of
+  , __http_delete = \url -> case splitUrl $ stripScheme url of
       {- Delete Session -}
       [_,"session",session_id] ->
-        delete_session_id st session_id
+        delete_session_id session_id
 
       {- Close Window -}
       [_,"session",session_id,"window"] ->
-        delete_session_id_window st session_id
+        delete_session_id_window session_id
 
       {- Delete Cookie -}
       [_,"session",session_id,"cookie",name] ->
-        delete_session_id_cookie_name st session_id name
+        delete_session_id_cookie_name session_id name
 
       {- Delete All Cookies -}
       [_,"session",session_id,"cookie"] ->
-        delete_session_id_cookie st session_id
+        delete_session_id_cookie session_id
 
       {- Release Actions -}
       [_,"session",session_id,"actions"] ->
-        delete_session_id_actions st session_id
+        delete_session_id_actions session_id
 
       _ -> error $ "defaultWebDriverServer: delete url: " ++ url
   }
@@ -304,13 +304,12 @@ post_session st =
 {- Delete Session -}
 
 delete_session_id
-  :: WebDriverServerState
-  -> String
-  -> (Either HttpException HttpResponse, WebDriverServerState)
-delete_session_id st session_id =
-  if not $ _is_active_session session_id st
-    then (Left _err_invalid_session_id, st)
-    else (Right _success_with_empty_object, _delete_session session_id st)
+  :: String
+  -> MockResponse WebDriverServerState HttpResponse
+delete_session_id session_id = do
+  checkMockResponseState (_is_active_session session_id) _err_invalid_session_id
+  mutateMockResponseState (_delete_session session_id)
+  return _success_with_empty_object
 
 
 {- Status -}
@@ -452,13 +451,11 @@ get_session_id_window st session_id =
 {- Close Window -}
 
 delete_session_id_window
-  :: WebDriverServerState
-  -> String
-  -> (Either HttpException HttpResponse, WebDriverServerState)
-delete_session_id_window st session_id =
-  if not $ _is_active_session session_id st
-    then (Left _err_invalid_session_id, st)
-    else (Right $ _success_with_value $ toJSONList [String "window-1"], st)
+  :: String
+  -> MockResponse WebDriverServerState HttpResponse
+delete_session_id_window session_id = do
+  checkMockResponseState (_is_active_session session_id) _err_invalid_session_id
+  return $ _success_with_value $ toJSONList [String "window-1"]
 
 
 {- Switch To Window -}
@@ -857,23 +854,19 @@ post_session_id_cookie st session_id payload =
     else (Right _success_with_empty_object, st)
 
 delete_session_id_cookie_name
-  :: WebDriverServerState
+  :: String
   -> String
-  -> String
-  -> (Either HttpException HttpResponse, WebDriverServerState)
-delete_session_id_cookie_name st session_id name =
-  if not $ _is_active_session session_id st
-    then (Left _err_invalid_session_id, st)
-    else (Right _success_with_empty_object, st)
+  -> MockResponse WebDriverServerState HttpResponse
+delete_session_id_cookie_name session_id name = do
+  checkMockResponseState (_is_active_session session_id) _err_invalid_session_id
+  return _success_with_empty_object
 
 delete_session_id_cookie
-  :: WebDriverServerState
-  -> String
-  -> (Either HttpException HttpResponse, WebDriverServerState)
-delete_session_id_cookie st session_id =
-  if not $ _is_active_session session_id st
-    then (Left _err_invalid_session_id, st)
-    else (Right _success_with_empty_object, st)
+  :: String
+  -> MockResponse WebDriverServerState HttpResponse
+delete_session_id_cookie session_id = do
+  checkMockResponseState (_is_active_session session_id) _err_invalid_session_id
+  return _success_with_empty_object
 
 post_session_id_actions
   :: WebDriverServerState
@@ -886,13 +879,11 @@ post_session_id_actions !st !session_id payload =
     else (Right _success_with_empty_object, st)
 
 delete_session_id_actions
-  :: WebDriverServerState
-  -> String
-  -> (Either HttpException HttpResponse, WebDriverServerState)
-delete_session_id_actions !st !session_id =
-  if not $ _is_active_session session_id st
-    then (Left _err_invalid_session_id, st)
-    else (Right _success_with_empty_object, st)
+  :: String
+  -> MockResponse WebDriverServerState HttpResponse
+delete_session_id_actions !session_id = do
+  checkMockResponseState (_is_active_session session_id) _err_invalid_session_id
+  return _success_with_empty_object
 
 post_session_id_alert_dismiss
   :: WebDriverServerState
@@ -1044,3 +1035,7 @@ _err_unknown_error =
   HttpExceptionRequest undefined $ StatusCodeException
     (emptyResponse { responseStatus = internalServerError500 })
     (errorObject "unknown error" "" "" Nothing)
+
+
+
+
