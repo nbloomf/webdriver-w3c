@@ -56,7 +56,7 @@ defaultHttpSessionServer :: MockServer ()
 defaultHttpSessionServer = MockServer
   { __http_get = \url -> undefined
 
-  , __http_post = \st !url !payload -> undefined
+  , __http_post = \url payload -> undefined
 
   , __http_delete = \url -> undefined
   }

@@ -10,6 +10,7 @@ module Web.Api.Http.Effects.Test.Mock (
 
   , MockResponse()
   , getMockResponseState
+  , errorMockResponseState
   , mutateMockResponseState
   , checkMockResponseState
   ) where
@@ -107,6 +108,9 @@ instance Monad (MockResponse st) where
 getMockResponseState :: MockResponse st st
 getMockResponseState = MockResponse $ \st -> (Right st, st)
 
+errorMockResponseState :: HttpException -> MockResponse st a
+errorMockResponseState err = MockResponse $ \st -> (Left err, st)
+
 mutateMockResponseState :: (st -> st) -> MockResponse st ()
 mutateMockResponseState f = MockResponse $ \st -> (Right (), f st)
 
@@ -120,10 +124,9 @@ data MockServer st = MockServer
       -> MockResponse st HttpResponse
 
   , __http_post
-      :: st
-      -> String
+      :: String
       -> ByteString
-      -> (Either HttpException HttpResponse, st)
+      -> MockResponse st HttpResponse
 
   , __http_delete
       :: String
@@ -273,7 +276,7 @@ instance EffectHttp (MockIO st) where
 
   mPostWith _ _ url payload = do
     st <- getMockSt
-    let (r, update) = __http_post (__server st) (__local st) url payload
+    let (r, update) = unMockResponse (__http_post (__server st) url payload) (__local st)
     putLocalState update
     return r
 

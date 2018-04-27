@@ -133,86 +133,86 @@ defaultWebDriverServer = MockServer
 
       _ -> error $ "defaultWebDriverServer: get url: " ++ url
 
-  , __http_post = \st !url !payload -> case splitUrl $ stripScheme url of
+  , __http_post = \url payload -> case splitUrl $ stripScheme url of
       {- New Session -}
       [_,"session"] ->
-        post_session st
+        post_session
 
       {- Set Timeouts -}
       [_,"session",session_id,"timeouts"] ->
-        post_session_id_timeouts st session_id payload
+        post_session_id_timeouts session_id payload
 
       {- Navigate To -}
       [_,"session",session_id,"url"] ->
-        post_session_id_url st session_id payload
+        post_session_id_url session_id payload
 
       {- Back -}
       [_,"session",session_id,"back"] ->
-        post_session_id_back st session_id
+        post_session_id_back session_id
 
       {- Forward -}
       [_,"session",session_id,"forward"] ->
-        post_session_id_forward st session_id
+        post_session_id_forward session_id
 
       {- Refresh -}
       [_,"session",session_id,"refresh"] ->
-        post_session_id_refresh st session_id
+        post_session_id_refresh session_id
 
       {- Switch To Window -}
       [_,"session",session_id,"window"] ->
-        post_session_id_window st session_id payload
+        post_session_id_window session_id payload
 
       {- Switch To Frame -}
       [_,"session",session_id,"frame"] ->
-        post_session_id_frame st session_id payload
+        post_session_id_frame session_id payload
 
       {- Switch To Parent Frame -}
       [_,"session",session_id,"frame","parent"] ->
-        post_session_id_frame_parent st session_id
+        post_session_id_frame_parent session_id
 
       {- Set Window Rect -}
       [_,"session",session_id,"window","rect"] ->
-        post_session_id_window_rect st session_id payload
+        post_session_id_window_rect session_id payload
 
       {- Maximize Window -}
       [_,"session",session_id,"window","maximize"] ->
-        post_session_id_window_maximize st session_id
+        post_session_id_window_maximize session_id
 
       {- Minimize Window -}
       [_,"session",session_id,"window","minimize"] ->
-        post_session_id_window_minimize st session_id
+        post_session_id_window_minimize session_id
 
       {- Fullscreen Window -}
       [_,"session",session_id,"window","fullscreen"] ->
-        post_session_id_window_fullscreen st session_id
+        post_session_id_window_fullscreen session_id
 
       {- Find Element -}
       [_,"session",session_id,"element"] ->
-        post_session_id_element st session_id payload
+        post_session_id_element session_id payload
 
       {- Find Elements -}
       [_,"session",session_id,"elements"] ->
-        post_session_id_elements st session_id payload
+        post_session_id_elements session_id payload
 
       {- Find Element From Element -}
       [_,"session",session_id,"element",element_id,"element"] ->
-        post_session_id_element_id_element st session_id element_id payload
+        post_session_id_element_id_element session_id element_id payload
 
       {- Find Elements From Element -}
       [_,"session",session_id,"element",element_id,"elements"] ->
-        post_session_id_element_id_elements st session_id element_id payload
+        post_session_id_element_id_elements session_id element_id payload
 
       {- Element Click -}
       [_,"session",session_id,"element",element_id,"click"] ->
-        post_session_id_element_id_click st session_id element_id
+        post_session_id_element_id_click session_id element_id
 
       {- Element Clear -}
       [_,"session",session_id,"element",element_id,"clear"] ->
-        post_session_id_element_id_clear st session_id element_id
+        post_session_id_element_id_clear session_id element_id
 
       {- Element Send Keys -}
       [_,"session",session_id,"element",element_id,"value"] ->
-        post_session_id_element_id_value st session_id element_id payload
+        post_session_id_element_id_value session_id element_id payload
  
       {- Execute Script -}
       [_,"session",session_id,"execute","sync"] ->
@@ -224,23 +224,23 @@ defaultWebDriverServer = MockServer
 
       {- Add Cookie -}
       [_,"session",session_id,"cookie"] ->
-        post_session_id_cookie st session_id payload
+        post_session_id_cookie session_id payload
 
       {- Perform Actions -}
       [_,"session",session_id,"actions"] ->
-        post_session_id_actions st session_id payload
+        post_session_id_actions session_id payload
 
       {- Dismiss Alert -}
       [_,"session",session_id,"alert","dismiss"] ->
-        post_session_id_alert_dismiss st session_id
+        post_session_id_alert_dismiss session_id
 
       {- Accept Alert -}
       [_,"session",session_id,"alert","accept"] ->
-        post_session_id_alert_accept st session_id
+        post_session_id_alert_accept session_id
 
       {- Send Alert Text -}
       [_,"session",session_id,"alert","text"] ->
-        post_session_id_alert_text st session_id
+        post_session_id_alert_text session_id
 
       _ -> error $ "defaultWebDriverServer: post url: " ++ stripScheme url
 
@@ -291,14 +291,16 @@ splitUrl = unfoldr foo
 {- New Session -}
 
 post_session
-  :: WebDriverServerState
-  -> (Either HttpException HttpResponse, WebDriverServerState)
-post_session st =
+  :: MockResponse WebDriverServerState HttpResponse
+post_session = do
+  st <- getMockResponseState
   case _create_session st of
-    Nothing -> (Left _err_session_not_created, st)
-    Just (_id, _st) -> (Right $ _success_with_value $ object
-      [ ("sessionId", String $ pack _id)
-      ], _st)
+    Nothing -> errorMockResponseState _err_session_not_created
+    Just (_id, _st) -> do
+      mutateMockResponseState (const _st)
+      return $ _success_with_value $ object
+        [ ("sessionId", String $ pack _id)
+        ]
 
 
 {- Delete Session -}
@@ -340,37 +342,32 @@ get_session_id_timeouts session_id = do
 {- Set Timeouts -}
 
 post_session_id_timeouts
-  :: WebDriverServerState
-  -> String
+  :: String
   -> LB.ByteString
-  -> (Either HttpException HttpResponse, WebDriverServerState)
-post_session_id_timeouts st session_id !payload =
-  if not $ _is_active_session session_id st
-    then (Left _err_invalid_session_id, st)
-    else case decode payload of
-      Nothing -> (Left _err_invalid_argument, st)
-      Just (Object m) -> (Right _success_with_empty_object, st)
-      Just _ -> (Left _err_invalid_argument, st)
+  -> MockResponse WebDriverServerState HttpResponse
+post_session_id_timeouts session_id !payload = do
+  verifyIsActiveSession session_id
+  case decode payload of
+    Nothing -> errorMockResponseState _err_invalid_argument
+    Just (Object m) -> return _success_with_empty_object
+    Just _ -> errorMockResponseState _err_invalid_argument
 
 
 {- Navigate To -}
 
 post_session_id_url
-  :: WebDriverServerState
-  -> String
+  :: String
   -> LB.ByteString
-  -> (Either HttpException HttpResponse, WebDriverServerState)
-post_session_id_url !st !session_id !payload =
-  if not $ _is_active_session session_id st
-    then (Left _err_invalid_session_id, st)
-    else case decode payload of
-      Nothing -> (Left _err_invalid_argument, st)
-      Just (Object m) -> case HMS.lookup "url" m of
-        Nothing -> (Left _err_invalid_argument, st)
-        Just (String url) -> case _load_page (unpack url) st of
-          Nothing -> (Left _err_unknown_error, st)
-          Just _st -> (Right _success_with_empty_object, _st)
-      Just _ -> (Left _err_invalid_argument, st)
+  -> MockResponse WebDriverServerState HttpResponse
+post_session_id_url !session_id !payload = do
+  verifyIsActiveSession session_id
+  url <- getAProperty "url" payload
+  st <- getMockResponseState
+  case _load_page url st of
+    Nothing -> errorMockResponseState _err_unknown_error
+    Just _st -> do
+      mutateMockResponseState (const _st)
+      return _success_with_empty_object
 
 
 {- Get Current Url -}
@@ -387,37 +384,33 @@ get_session_id_url session_id = do
 {- Back -}
 
 post_session_id_back
-  :: WebDriverServerState
-  -> String
-  -> (Either HttpException HttpResponse, WebDriverServerState)
-post_session_id_back !st !session_id =
-  if not $ _is_active_session session_id st
-    then (Left _err_invalid_session_id, st)
-    else (Right _success_with_empty_object, _go_back st)
+  :: String
+  -> MockResponse WebDriverServerState HttpResponse
+post_session_id_back !session_id = do
+  verifyIsActiveSession session_id
+  mutateMockResponseState _go_back
+  return _success_with_empty_object
 
 
 {- Forward -}
 
 post_session_id_forward
-  :: WebDriverServerState
-  -> String
-  -> (Either HttpException HttpResponse, WebDriverServerState)
-post_session_id_forward !st !session_id =
-  if not $ _is_active_session session_id st
-    then (Left _err_invalid_session_id, st)
-    else (Right _success_with_empty_object, _go_forward st)
+  :: String
+  -> MockResponse WebDriverServerState HttpResponse
+post_session_id_forward !session_id = do
+  verifyIsActiveSession session_id
+  mutateMockResponseState _go_forward
+  return _success_with_empty_object
 
 
 {- Refresh -}
 
 post_session_id_refresh
-  :: WebDriverServerState
-  -> String
-  -> (Either HttpException HttpResponse, WebDriverServerState)
-post_session_id_refresh !st !session_id =
-  if not $ _is_active_session session_id st
-    then (Left _err_invalid_session_id, st)
-    else (Right _success_with_empty_object, st)
+  :: String
+  -> MockResponse WebDriverServerState HttpResponse
+post_session_id_refresh !session_id = do
+  verifyIsActiveSession session_id
+  return _success_with_empty_object
 
 
 {- Get Title -}
@@ -453,14 +446,12 @@ delete_session_id_window session_id = do
 {- Switch To Window -}
 
 post_session_id_window
-  :: WebDriverServerState
-  -> String
+  :: String
   -> LB.ByteString
-  -> (Either HttpException HttpResponse, WebDriverServerState)
-post_session_id_window st session_id payload =
-  if not $ _is_active_session session_id st
-    then (Left _err_invalid_session_id, st)
-    else (Right $ _success_with_empty_object, st)
+  -> MockResponse WebDriverServerState HttpResponse
+post_session_id_window session_id payload = do
+  verifyIsActiveSession session_id
+  return _success_with_empty_object
 
 
 {- Get Window Handles -}
@@ -476,26 +467,22 @@ get_session_id_window_handles session_id = do
 {- Switch To Frame -}
 
 post_session_id_frame
-  :: WebDriverServerState
-  -> String
+  :: String
   -> LB.ByteString
-  -> (Either HttpException HttpResponse, WebDriverServerState)
-post_session_id_frame st session_id !payload =
-  if not $ _is_active_session session_id st
-    then (Left _err_invalid_session_id, st)
-    else (Right _success_with_empty_object, st)
+  -> MockResponse WebDriverServerState HttpResponse
+post_session_id_frame session_id !payload = do
+  verifyIsActiveSession session_id
+  return _success_with_empty_object
 
 
 {- Switch To Parent Frame -}
 
 post_session_id_frame_parent
-  :: WebDriverServerState
-  -> String
-  -> (Either HttpException HttpResponse, WebDriverServerState)
-post_session_id_frame_parent st session_id =
-  if not $ _is_active_session session_id st
-    then (Left _err_invalid_session_id, st)
-    else (Right _success_with_empty_object, st)
+  :: String
+  -> MockResponse WebDriverServerState HttpResponse
+post_session_id_frame_parent session_id = do
+  verifyIsActiveSession session_id
+  return _success_with_empty_object
 
 
 {- Get Window Rect -}
@@ -516,139 +503,118 @@ get_session_id_window_rect session_id = do
 {- Set Window Rect -}
 
 post_session_id_window_rect
-  :: WebDriverServerState
-  -> String
+  :: String
   -> LB.ByteString
-  -> (Either HttpException HttpResponse, WebDriverServerState)
-post_session_id_window_rect st session_id payload =
-  if not $ _is_active_session session_id st
-    then (Left _err_invalid_session_id, st)
-    else (Right $ _success_with_value $ object
-      [ ("x", Number 0)
-      , ("y", Number 0)
-      , ("height", Number 480)
-      , ("width", Number 640)
-      ], st)
+  -> MockResponse WebDriverServerState HttpResponse
+post_session_id_window_rect session_id payload = do
+  verifyIsActiveSession session_id
+  return $ _success_with_value $ object
+    [ ("x", Number 0)
+    , ("y", Number 0)
+    , ("height", Number 480)
+    , ("width", Number 640)
+    ]
 
 
 {- Maximize Window -}
 
 post_session_id_window_maximize
-  :: WebDriverServerState
-  -> String
-  -> (Either HttpException HttpResponse, WebDriverServerState)
-post_session_id_window_maximize !st !session_id =
-  if not $ _is_active_session session_id st
-    then (Left _err_invalid_session_id, st)
-    else (Right $ _success_with_value $ object
-      [ ("x", Number 0)
-      , ("y", Number 0)
-      , ("height", Number 480)
-      , ("width", Number 640)
-      ], st)
+  :: String
+  -> MockResponse WebDriverServerState HttpResponse
+post_session_id_window_maximize !session_id = do
+  verifyIsActiveSession session_id
+  return $ _success_with_value $ object
+    [ ("x", Number 0)
+    , ("y", Number 0)
+    , ("height", Number 480)
+    , ("width", Number 640)
+    ]
 
 
 {- Minimize Window -}
 
 post_session_id_window_minimize
-  :: WebDriverServerState
-  -> String
-  -> (Either HttpException HttpResponse, WebDriverServerState)
-post_session_id_window_minimize !st !session_id =
-  if not $ _is_active_session session_id st
-    then (Left _err_invalid_session_id, st)
-    else (Right $ _success_with_value $ object
-      [ ("x", Number 0)
-      , ("y", Number 0)
-      , ("height", Number 0)
-      , ("width", Number 0)
-      ], st)
+  :: String
+  -> MockResponse WebDriverServerState HttpResponse
+post_session_id_window_minimize !session_id = do
+  verifyIsActiveSession session_id
+  return $ _success_with_value $ object
+    [ ("x", Number 0)
+    , ("y", Number 0)
+    , ("height", Number 0)
+    , ("width", Number 0)
+    ]
 
 
 {- Fullscreen Window -}
 
 post_session_id_window_fullscreen
-  :: WebDriverServerState
-  -> String
-  -> (Either HttpException HttpResponse, WebDriverServerState)
-post_session_id_window_fullscreen !st !session_id =
-  if not $ _is_active_session session_id st
-    then (Left _err_invalid_session_id, st)
-    else (Right $ _success_with_value $ object
-      [ ("x", Number 0)
-      , ("y", Number 0)
-      , ("height", Number 480)
-      , ("width", Number 640)
-      ], st)
+  :: String
+  -> MockResponse WebDriverServerState HttpResponse
+post_session_id_window_fullscreen !session_id = do
+  verifyIsActiveSession session_id
+  return $ _success_with_value $ object
+    [ ("x", Number 0)
+    , ("y", Number 0)
+    , ("height", Number 480)
+    , ("width", Number 640)
+    ]
 
 
 {- Find Element -}
 
 post_session_id_element
-  :: WebDriverServerState
-  -> String
+  :: String
   -> LB.ByteString
-  -> (Either HttpException HttpResponse, WebDriverServerState)
-post_session_id_element st session_id payload =
-  let
-    value = payload ^? key "value" . _String
-    using = payload ^? key "using" . _String
-  in
-    case value of
-      Nothing -> (Left _err_invalid_argument, st)
-      Just val -> do
-        if not $ _is_active_session session_id st
-          then (Left _err_invalid_session_id, st)
-          else (Right $ _success_with_value $ object
-            [ ("element-6066-11e4-a52e-4f735466cecf", String "element-id")
-            ], _set_last_selected_element (unpack val) st)
+  -> MockResponse WebDriverServerState HttpResponse
+post_session_id_element session_id payload = do
+  verifyIsActiveSession session_id
+  val <- getAProperty "value" payload
+  mutateMockResponseState $ _set_last_selected_element val
+  return $ _success_with_value $ object
+    [ ("element-6066-11e4-a52e-4f735466cecf", String "element-id")
+    ]
 
 
 {- Find Elements -}
 
 post_session_id_elements
-  :: WebDriverServerState
-  -> String
+  :: String
   -> LB.ByteString
-  -> (Either HttpException HttpResponse, WebDriverServerState)
-post_session_id_elements st session_id payload =
-  if not $ _is_active_session session_id st
-    then (Left _err_invalid_session_id, st)
-    else (Right $ _success_with_value $ toJSONList [object
-      [ ("element-6066-11e4-a52e-4f735466cecf", String "element-id")
-      ]], st)
+  -> MockResponse WebDriverServerState HttpResponse
+post_session_id_elements session_id payload = do
+  verifyIsActiveSession session_id
+  return $ _success_with_value $ toJSONList [object
+    [ ("element-6066-11e4-a52e-4f735466cecf", String "element-id")
+    ]]
 
 
 {- Find Element From Element -}
 
 post_session_id_element_id_element
-  :: WebDriverServerState
-  -> String
+  :: String
   -> String
   -> LB.ByteString
-  -> (Either HttpException HttpResponse, WebDriverServerState)
-post_session_id_element_id_element st session_id element_id payload =
-  if not $ _is_active_session session_id st
-    then (Left _err_invalid_session_id, st)
-    else (Right $ _success_with_value $ object
+  -> MockResponse WebDriverServerState HttpResponse
+post_session_id_element_id_element session_id element_id payload = do
+  verifyIsActiveSession session_id
+  return $ _success_with_value $ object
       [ ("element-6066-11e4-a52e-4f735466cecf", String "element-id")
-      ], st)
+      ]
 
 
 {- Find Elements From Element -}
 
 post_session_id_element_id_elements
-  :: WebDriverServerState
-  -> String
+  :: String
   -> String
   -> LB.ByteString
-  -> (Either HttpException HttpResponse, WebDriverServerState)
-post_session_id_element_id_elements st session_id element_id payload =
-  if not $ _is_active_session session_id st
-    then (Left _err_invalid_session_id, st)
-    else (Right $ _success_with_value $ toJSONList [object
-      [ ("element-6066-11e4-a52e-4f735466cecf", String "element-id")
-      ]], st)
+  -> MockResponse WebDriverServerState HttpResponse
+post_session_id_element_id_elements session_id element_id payload = do
+  verifyIsActiveSession session_id
+  return $ _success_with_value $ toJSONList [object
+    [ ("element-6066-11e4-a52e-4f735466cecf", String "element-id")
+    ]]
 
 
 {- Get Active Element -}
@@ -737,52 +703,35 @@ get_session_id_element_id_enabled session_id element_id = do
   return $ _success_with_value $ Bool True
 
 post_session_id_element_id_click
-  :: WebDriverServerState
+  :: String
   -> String
-  -> String
-  -> (Either HttpException HttpResponse, WebDriverServerState)
-post_session_id_element_id_click st session_id element_id =
-  if not $ _is_active_session session_id st
-    then (Left _err_invalid_session_id, st)
-    else (Right _success_with_empty_object, st)
+  -> MockResponse WebDriverServerState HttpResponse
+post_session_id_element_id_click session_id element_id = do
+  verifyIsActiveSession session_id
+  return _success_with_empty_object
 
 
 {- Element Clear -}
 
 post_session_id_element_id_clear
-  :: WebDriverServerState
+  :: String
   -> String
-  -> String
-  -> (Either HttpException HttpResponse, WebDriverServerState)
-post_session_id_element_id_clear st session_id element_id =
-  let
-    elt = _get_last_selected_element st
-  in
-    case elt of
-      Nothing -> do
-        if not $ _is_active_session session_id st
-          then (Left _err_invalid_session_id, st)
-          else (Right _success_with_empty_object, st)
-      Just e -> do
-        if e == "body"
-          then (Left _err_invalid_element_state, st)
-          else if not $ _is_active_session session_id st
-            then (Left _err_invalid_session_id, st)
-            else (Right _success_with_empty_object, st)
+  -> MockResponse WebDriverServerState HttpResponse
+post_session_id_element_id_clear session_id element_id = do
+  verifyIsActiveSession session_id
+  return _success_with_empty_object
 
 
 {- Element Send Keys -}
 
 post_session_id_element_id_value
-  :: WebDriverServerState
-  -> String
+  :: String
   -> String
   -> LB.ByteString
-  -> (Either HttpException HttpResponse, WebDriverServerState)
-post_session_id_element_id_value st session_id element_id payload =
-  if not $ _is_active_session session_id st
-    then (Left _err_invalid_session_id, st)
-    else (Right _success_with_empty_object, st)
+  -> MockResponse WebDriverServerState HttpResponse
+post_session_id_element_id_value session_id element_id payload = do
+  verifyIsActiveSession session_id
+  return _success_with_empty_object
 
 
 {- Get Page Source -}
@@ -822,14 +771,12 @@ get_session_id_cookie_name session_id = do
       }
 
 post_session_id_cookie
-  :: WebDriverServerState
-  -> String
+  :: String
   -> LB.ByteString
-  -> (Either HttpException HttpResponse, WebDriverServerState)
-post_session_id_cookie st session_id payload =
-  if not $ _is_active_session session_id st
-    then (Left _err_invalid_session_id, st)
-    else (Right _success_with_empty_object, st)
+  -> MockResponse WebDriverServerState HttpResponse
+post_session_id_cookie session_id payload = do
+  verifyIsActiveSession session_id
+  return _success_with_empty_object
 
 delete_session_id_cookie_name
   :: String
@@ -847,14 +794,12 @@ delete_session_id_cookie session_id = do
   return _success_with_empty_object
 
 post_session_id_actions
-  :: WebDriverServerState
-  -> String
+  :: String
   -> LB.ByteString
-  -> (Either HttpException HttpResponse, WebDriverServerState)
-post_session_id_actions !st !session_id payload =
-  if not $ _is_active_session session_id st
-    then (Left _err_invalid_session_id, st)
-    else (Right _success_with_empty_object, st)
+  -> MockResponse WebDriverServerState HttpResponse
+post_session_id_actions !session_id payload = do
+  verifyIsActiveSession session_id
+  return _success_with_empty_object
 
 delete_session_id_actions
   :: String
@@ -864,22 +809,18 @@ delete_session_id_actions !session_id = do
   return _success_with_empty_object
 
 post_session_id_alert_dismiss
-  :: WebDriverServerState
-  -> String
-  -> (Either HttpException HttpResponse, WebDriverServerState)
-post_session_id_alert_dismiss st session_id =
-  if not $ _is_active_session session_id st
-    then (Left _err_invalid_session_id, st)
-    else (Right _success_with_empty_object, st)
+  :: String
+  -> MockResponse WebDriverServerState HttpResponse
+post_session_id_alert_dismiss session_id = do
+  verifyIsActiveSession session_id
+  return _success_with_empty_object
 
 post_session_id_alert_accept
-  :: WebDriverServerState
-  -> String
-  -> (Either HttpException HttpResponse, WebDriverServerState)
-post_session_id_alert_accept st session_id =
-  if not $ _is_active_session session_id st
-    then (Left _err_invalid_session_id, st)
-    else (Right _success_with_empty_object, st)
+  :: String
+  -> MockResponse WebDriverServerState HttpResponse
+post_session_id_alert_accept session_id = do
+  verifyIsActiveSession session_id
+  return _success_with_empty_object
 
 
 {- Get Alert Text -}
@@ -895,13 +836,11 @@ get_session_id_alert_text session_id = do
 {- Send Alert Text -}
 
 post_session_id_alert_text
-  :: WebDriverServerState
-  -> String
-  -> (Either HttpException HttpResponse, WebDriverServerState)
-post_session_id_alert_text st session_id =
-  if not $ _is_active_session session_id st
-    then (Left _err_invalid_session_id, st)
-    else (Right _success_with_empty_object, st)
+  :: String
+  -> MockResponse WebDriverServerState HttpResponse
+post_session_id_alert_text session_id = do
+  verifyIsActiveSession session_id
+  return _success_with_empty_object
 
 
 {- Take Screenshot -}
@@ -1030,3 +969,9 @@ closeTheSession :: String -> MockResponse WebDriverServerState ()
 closeTheSession session_id =
   mutateMockResponseState (_delete_session session_id)
 
+getAProperty :: String -> LB.ByteString -> MockResponse WebDriverServerState String
+getAProperty k payload = do
+  let v = payload ^? key (pack k) . _String
+  case v of
+    Nothing -> errorMockResponseState _err_invalid_argument
+    Just value -> return $ unpack value
