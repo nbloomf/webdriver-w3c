@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, BangPatterns, FlexibleInstances #-}
+{-# LANGUAGE OverloadedStrings, BangPatterns, FlexibleInstances, RecordWildCards #-}
 module Web.Api.WebDriver.Monad.Test.Server (
     WebDriverServerState(..)
   , defaultWebDriverServerState
@@ -29,6 +29,7 @@ import Web.Api.Http.Effects.Test.Mock
 import Web.Api.Http.Effects.Test.Server
 import Web.Api.WebDriver
 import Web.Api.WebDriver.Monad.Test.Server.State
+import Web.Api.WebDriver.Monad.Test.Server.Page
 
 instance Effectful (MockIO WebDriverServerState) where
   toIO x = do
@@ -348,9 +349,9 @@ post_session_id_timeouts
 post_session_id_timeouts session_id !payload = do
   verifyIsActiveSession session_id
   case decode payload of
-    Nothing -> errorMockResponseState _err_invalid_argument
+    Nothing -> errorMockResponseState (_err_invalid_argument "Timeouts did not parse")
     Just (Object m) -> return _success_with_empty_object
-    Just _ -> errorMockResponseState _err_invalid_argument
+    Just _ -> errorMockResponseState (_err_invalid_argument "Timeouts must be an object")
 
 
 {- Navigate To -}
@@ -569,11 +570,22 @@ post_session_id_element
   -> MockResponse WebDriverServerState HttpResponse
 post_session_id_element session_id payload = do
   verifyIsActiveSession session_id
-  val <- getAProperty "value" payload
-  mutateMockResponseState $ _set_last_selected_element val
-  return $ _success_with_value $ object
-    [ ("element-6066-11e4-a52e-4f735466cecf", String "element-id")
-    ]
+  strategy <- getAProperty "using" payload
+  case strategy of
+    "css selector" -> do
+      val <- getAProperty "value" payload
+      sel <- parseCssSelector val
+      doc <- fmap (contents . _current_page) getMockResponseState
+      case cssMatchDocument sel doc of
+        [] -> errorMockResponseState _err_no_such_element
+        (d:_) -> do
+          return $ _success_with_value $ object
+            [ ("element-6066-11e4-a52e-4f735466cecf", String (pack $ elementId d))
+            ]
+    _ -> do
+      return $ _success_with_value $ object
+        [ ("element-6066-11e4-a52e-4f735466cecf", String "element-id")
+        ]
 
 
 {- Find Elements -}
@@ -662,6 +674,9 @@ get_session_id_element_id_css_name session_id element_id name = do
   verifyIsActiveSession session_id
   return $ _success_with_value $ String "none"
 
+
+{- Get Element Text -}
+
 get_session_id_element_id_text
   :: String
   -> String
@@ -670,13 +685,17 @@ get_session_id_element_id_text session_id element_id = do
   verifyIsActiveSession session_id
   return $ _success_with_value $ String "foo"
 
+
+{- Get Element Tag Name -}
+
 get_session_id_element_id_name
   :: String
   -> String
   -> MockResponse WebDriverServerState HttpResponse
 get_session_id_element_id_name session_id element_id = do
   verifyIsActiveSession session_id
-  return $ _success_with_value $ String "div"
+  doc <- getElementFromId element_id
+  return $ _success_with_value $ String (pack $ show $ tag doc)
 
 
 {- Get Element Rect -}
@@ -719,7 +738,12 @@ post_session_id_element_id_clear
   -> MockResponse WebDriverServerState HttpResponse
 post_session_id_element_id_clear session_id element_id = do
   verifyIsActiveSession session_id
-  return _success_with_empty_object
+  doc <- getElementFromId element_id
+  case doc of
+    Text _ -> errorMockResponseState _err_invalid_element_state
+    d -> if tagIsClearable (tag d)
+      then return _success_with_empty_object
+      else errorMockResponseState _err_invalid_element_state
 
 
 {- Element Send Keys -}
@@ -793,6 +817,9 @@ delete_session_id_cookie session_id = do
   verifyIsActiveSession session_id
   return _success_with_empty_object
 
+
+{- Perform Actions -}
+
 post_session_id_actions
   :: String
   -> LB.ByteString
@@ -808,12 +835,18 @@ delete_session_id_actions !session_id = do
   verifyIsActiveSession session_id
   return _success_with_empty_object
 
+
+{- Dismiss Alert -}
+
 post_session_id_alert_dismiss
   :: String
   -> MockResponse WebDriverServerState HttpResponse
 post_session_id_alert_dismiss session_id = do
   verifyIsActiveSession session_id
   return _success_with_empty_object
+
+
+{- Accept Alert -}
 
 post_session_id_alert_accept
   :: String
@@ -929,17 +962,23 @@ emptyResponse = Response
   , responseClose' = ResponseClose $ return ()
   }
 
-_err_invalid_argument :: HttpException
-_err_invalid_argument =
+_err_invalid_argument :: String -> HttpException
+_err_invalid_argument msg =
   HttpExceptionRequest undefined $ StatusCodeException
     (emptyResponse { responseStatus = badRequest400 })
-    (errorObject "invalid argument" "" "" Nothing)
+    (errorObject "invalid argument" msg "" Nothing)
 
 _err_invalid_element_state :: HttpException
 _err_invalid_element_state =
   HttpExceptionRequest undefined $ StatusCodeException
     (emptyResponse { responseStatus = badRequest400 })
     (errorObject "invalid element state" "" "" Nothing)
+
+_err_no_such_element :: HttpException
+_err_no_such_element =
+  HttpExceptionRequest undefined $ StatusCodeException
+    (emptyResponse { responseStatus = notFound404 })
+    (errorObject "no such element" "" "" Nothing)
 
 _err_invalid_session_id :: HttpException
 _err_invalid_session_id =
@@ -961,9 +1000,21 @@ _err_unknown_error =
 
 
 
+parseCssSelector :: String -> MockResponse WebDriverServerState CssSelector
+parseCssSelector str = case parseCss str of
+  Left err -> errorMockResponseState (_err_invalid_argument $ show err)
+  Right x -> return x
+
 verifyIsActiveSession :: String -> MockResponse WebDriverServerState ()
 verifyIsActiveSession session_id =
   checkMockResponseState (_is_active_session session_id) _err_invalid_session_id
+
+getElementFromId :: String -> MockResponse WebDriverServerState Document
+getElementFromId element_id = do
+  p <- fmap _current_page getMockResponseState
+  case getElementById element_id p of
+    Nothing -> errorMockResponseState _err_no_such_element
+    Just doc -> return doc
 
 closeTheSession :: String -> MockResponse WebDriverServerState ()
 closeTheSession session_id =
@@ -973,5 +1024,5 @@ getAProperty :: String -> LB.ByteString -> MockResponse WebDriverServerState Str
 getAProperty k payload = do
   let v = payload ^? key (pack k) . _String
   case v of
-    Nothing -> errorMockResponseState _err_invalid_argument
+    Nothing -> errorMockResponseState $ _err_invalid_argument (show payload)
     Just value -> return $ unpack value

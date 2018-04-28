@@ -517,7 +517,7 @@ _test_getElementCssValue_success page _ =
   let
     session = do
       navigateTo page
-      !element <- findElement CssSelector "#super-cool"
+      !element <- findElement CssSelector "p#super-cool"
       !text <- getElementCssValue element "text-decoration"
       case text of
         "none" -> assertSuccess "yay"
@@ -534,11 +534,9 @@ _test_getElementText_success page _ =
   let
     session = do
       navigateTo page
-      !element <- findElement CssSelector ".test"
-      !text <- getElementTagName element
-      case text of
-        "div" -> assertSuccess "yay"
-        _ -> assertFailure $ "expected 'div', got '" ++ text ++ "'"
+      !element <- getActiveElement
+      !text <- getElementText element
+      assertSuccess "yay"
       return ()
 
   in catchError session unexpectedError
@@ -551,9 +549,11 @@ _test_getElementTagName_success page _ =
   let
     session = do
       navigateTo page
-      !element <- getActiveElement
-      !text <- getElementText element
-      assertSuccess "yay"
+      !element <- findElement CssSelector "div.test"
+      !text <- getElementTagName element
+      case text of
+        "div" -> assertSuccess "yay"
+        _ -> assertFailure $ "expected 'div', got '" ++ text ++ "'"
       return ()
 
   in catchError session unexpectedError
@@ -611,7 +611,7 @@ _test_elementClear_success page _ =
   let
     session = do
       navigateTo page
-      !element <- findElement CssSelector "input[name=\"sometext\"]"
+      !element <- findElement CssSelector "input[name='sometext']"
       () <- elementClear element
       assertSuccess "yay"
       return ()
@@ -626,7 +626,7 @@ _test_elementSendKeys_success page _ =
   let
     session = do
       navigateTo page
-      !element <- findElement CssSelector "input[name=\"sometext\"]"
+      !element <- findElement CssSelector "input[name='sometext']"
       () <- elementSendKeys element "foo"
       assertSuccess "yay"
       return ()
@@ -693,7 +693,7 @@ _test_getNamedCookie_success page _ =
   let
     session = do
       navigateTo page
-      findElement CssSelector "#add-cookie-button" >>= elementClick
+      findElement CssSelector "button#add-cookie-button" >>= elementClick
       !cookie <- getNamedCookie "fakeCookie"
       assertEqual (_cookie_name cookie) (Just "fakeCookie") "cookie name"
       assertEqual (_cookie_value cookie) (Just "fakeValue") "cookie name"
@@ -714,7 +714,7 @@ _test_deleteCookie_success page _ =
   let
     session = do
       navigateTo page
-      findElement CssSelector "#add-cookie-button" >>= elementClick
+      findElement CssSelector "button#add-cookie-button" >>= elementClick
       () <- deleteCookie "fakeCookie"
       assertSuccess "yay"
       return ()
@@ -817,13 +817,13 @@ _test_dismissAlert_success page _ =
   let
     session = do
       navigateTo page
-      findElement CssSelector "#alert-button" >>= elementClick
+      findElement CssSelector "button#alert-button" >>= elementClick
       () <- dismissAlert
       assertSuccess "yay alert"
-      findElement CssSelector "#confirm-button" >>= elementClick
+      findElement CssSelector "button#confirm-button" >>= elementClick
       () <- dismissAlert
       assertSuccess "yay confirm"
-      findElement CssSelector "#prompt-button" >>= elementClick
+      findElement CssSelector "button#prompt-button" >>= elementClick
       () <- dismissAlert
       assertSuccess "yay prompt"
       return ()
@@ -838,13 +838,13 @@ _test_acceptAlert_success page _ =
   let
     session = do
       navigateTo page
-      findElement CssSelector "#alert-button" >>= elementClick
+      findElement CssSelector "button#alert-button" >>= elementClick
       () <- acceptAlert
       assertSuccess "yay alert"
-      findElement CssSelector "#confirm-button" >>= elementClick
+      findElement CssSelector "button#confirm-button" >>= elementClick
       () <- acceptAlert
       assertSuccess "yay confirm"
-      findElement CssSelector "#prompt-button" >>= elementClick
+      findElement CssSelector "button#prompt-button" >>= elementClick
       () <- acceptAlert
       assertSuccess "yay prompt"
       return ()
@@ -859,19 +859,19 @@ _test_getAlertText_success page _ =
   let
     session = do
       navigateTo page
-      findElement CssSelector "#alert-button" >>= elementClick
+      findElement CssSelector "button#alert-button" >>= elementClick
       !box <- getAlertText
       case box of
         Nothing -> assertFailure "oh no alert"
         Just msg -> assertEqual msg "WOO!!" "alert text"
       acceptAlert
-      findElement CssSelector "#confirm-button" >>= elementClick
+      findElement CssSelector "button#confirm-button" >>= elementClick
       !box <- getAlertText
       case box of
         Nothing -> assertFailure "oh no confirm"
         Just msg -> assertEqual msg "WOO!!" "confirm text"
       acceptAlert
-      findElement CssSelector "#prompt-button" >>= elementClick
+      findElement CssSelector "button#prompt-button" >>= elementClick
       !box <- getAlertText
       case box of
         Nothing -> assertFailure "oh no prompt"
@@ -889,7 +889,7 @@ _test_sendAlertText_success page _ =
   let
     session = do
       navigateTo page
-      findElement CssSelector "#prompt-button" >>= elementClick
+      findElement CssSelector "button#prompt-button" >>= elementClick
       () <- sendAlertText "wut"
       assertSuccess "yay prompt"
       return ()

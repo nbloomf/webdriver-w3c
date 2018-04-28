@@ -19,13 +19,13 @@ invalidElementState
   -> WebDriver m ()
 invalidElementState e = case e of
   Err (ResponseError InvalidElementState _ _ _ _) -> assertSuccess "yay!"
-  _ -> assertFailure "Expecting 'invalid element state'"
+  err -> assertFailure $ "Expecting 'invalid element state' but got: " ++ show err
 
 
 invalidElementStateExit :: (Effectful m, Typeable m) => FilePath -> m () -> T.TestTree
 invalidElementStateExit dir x =
   let path = dir ++ "/invalidElementState.html" in
-  T.testGroup "Unknown Error"
+  T.testGroup "Invalid Element State"
     [ testCase "elementClear" (_test_elementClear_invalid_element_state path x)
     ]
 

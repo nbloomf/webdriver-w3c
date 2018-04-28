@@ -5,6 +5,7 @@ module Web.Api.WebDriver.Monad.Test.Server.State (
   , _create_session
   , _delete_session
   , _load_page
+  , _current_page
   , _go_back
   , _go_forward
   , _get_current_url
@@ -156,11 +157,35 @@ _default_page = buildPage "localhost" $
 
 _success_page :: Page
 _success_page = buildPage "success.html" $
-  node Html [] []
+  node Html []
+    [ node Head []
+        [ node Title []
+            [ Text "successes"
+            ]
+        ]
+    , node Body []
+        [ node Form []
+            [ node P [(Id, Just "super-cool")] []
+            , node Button [(Id, Just "alert-button")] []
+            , node Button [(Id, Just "confirm-button")] []
+            , node Button [(Id, Just "prompt-button")] []
+            , node Button [(Id, Just "add-cookie-button")] []
+            , node Input [(Name, Just "sometext")] []
+            ]
+        , node Div [(Class, Just "test")] []
+        ]
+    ]
 
 _invalidElementState_page :: Page
 _invalidElementState_page = buildPage "invalidElementState.html" $
-  node Html [] []
+  node Html []
+    [ node Head []
+        [ node Title []
+            [ Text "successes"
+            ]
+        ]
+    , node Body [] []
+    ]
 
 fileOnly :: String -> String
 fileOnly = reverse . takeWhile (/= '/') . reverse

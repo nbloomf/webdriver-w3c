@@ -2,13 +2,16 @@
 module Web.Api.WebDriver.Monad.Test.Server.Page (
     HtmlTag(..)
   , Attr(..)
-  , Document(Text, tag, attrs, children)
+  , Document(Text, tag, attrs, children, elementId)
   , Page(url, contents)
   , buildPage
   , node
   , requestPage
-
+  , CssSelector()
+  , getElementById
+  , cssMatchDocument
   , parseCss
+  , tagIsClearable
   ) where
 
 import Text.ParserCombinators.Parsec
@@ -28,11 +31,25 @@ data HtmlTag
   | Ol
   | Ul
   | Li
-  deriving (Eq, Show)
+  | Form
+  | Input
+  | Button
+  deriving Eq
+
+instance Show HtmlTag where
+  show t = case t of
+    Html -> "html"; Head -> "head"; Title -> "title"; Body -> "body"
+    Div -> "div"; P -> "p"; Ol -> "ol"; Ul -> "ul"; _ -> error "Show HtmlTag"
+
+tagIsClearable :: HtmlTag -> Bool
+tagIsClearable t = case t of
+  Input -> True
+  _ -> False
 
 data Attr
   = Id
   | Class
+  | Name
   deriving (Eq, Show)
 
 data Document
@@ -104,10 +121,19 @@ data CssSelector
   deriving Show
 
 pHtmlTag :: Parser HtmlTag
-pHtmlTag = choice
+pHtmlTag = choice $ map try
   [ string "html" >> return Html
   , string "head" >> return Head
+  , string "title" >> return Title
   , string "body" >> return Body
+  , string "div" >> return Div
+  , string "p" >> return P
+  , string "ol" >> return Ol
+  , string "ul" >> return Ul
+  , string "li" >> return Li
+  , string "form" >> return Form
+  , string "input" >> return Input
+  , string "button" >> return Button
   ]
 
 pAttr :: Parser Attr
@@ -116,23 +142,22 @@ pAttr = choice
   , string "id" >> return Id
   ]
 
-token :: Parser String
-token = many1 $ oneOf $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9']
+tokenchar :: Parser String
+tokenchar = many1 $ oneOf $ ['a'..'z'] ++ ['A'..'Z'] ++ ['0'..'9'] ++ ['-','_']
 
 pCssSelector :: Parser CssSelector
-pCssSelector = do
-  let token = many1 (oneOf ['a'..'z'])
+pCssSelector =
   choice
     [ try $ do
         tag <- pHtmlTag
         char '.'
-        classname <- token
+        classname <- tokenchar
         return (CssClass tag classname)
 
     , try $ do
         tag <- pHtmlTag
         char '#'
-        name <- token
+        name <- tokenchar
         return (CssHash tag name)
 
     , try $ do
@@ -140,7 +165,9 @@ pCssSelector = do
         char '['
         attr <- pAttr
         char '='
-        value <- token
+        char '\''
+        value <- tokenchar
+        char '\''
         char ']'
         return (CssAttr tag attr value)
 
