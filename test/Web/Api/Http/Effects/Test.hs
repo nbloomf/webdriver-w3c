@@ -19,21 +19,27 @@ import Test.Tasty.HttpSession
 
 
 
-tests :: TestTree
-tests = testGroup "Web.Api.Http.Effects"
+tests :: FilePath -> TestTree
+tests path = testGroup "Web.Api.Http.Effects"
   [ testGroup "MockServer"
       (effectTests (return () :: MockIO () ()))
 
   ,   localOption (LogHandle $ Path "/dev/null")
     $ localOption (AssertionLogHandle $ Path "/dev/null")
     $ localOption (ConsoleOutHandle $ Path "/dev/null")
+    $ localOption (ConsoleInHandle $ Path (path ++ "/stdin.txt"))
     $ testGroup "Real Server" (effectTests (return () :: IO ()))
   ]
 
 effectTests :: (Effectful m, Typeable m) => m () -> [TestTree]
 effectTests x =
   [ testCase "mPauseInSeconds" (_test_mPauseInSeconds_success x)
+  , testCase "mGetChar" (_test_mGetChar_success x)
+  , testCase "mGetLine" (_test_mGetLine_success x)
+  , testCase "mGetLineNoEcho" (_test_mGetLineNoEcho_success x)
+  , testCase "mPutChar" (_test_mPutChar_success x)
   , testCase "mPutStr" (_test_mPutStr_success x)
+  , testCase "mPutStrLn" (_test_mPutStrLn_success x)
   , testCase "mRandomDecimalDigit" (_test_mRandomDecimalDigit_success x)
   , testCase "mRandomLowerCaseLetter" (_test_mRandomLowerCaseLetter_success x)
   , testCase "mRandomUpperCaseLetter" (_test_mRandomUpperCaseLetter_success x)
@@ -67,6 +73,7 @@ unexpectedError
   -> HttpSession m () () () () ()
 unexpectedError e = assertFailure $ "Unexpected error:\n" ++ show e
 
+
 _test_mPauseInSeconds_success
   :: (Effectful m, Typeable m) => m () -> HttpSession m () () () () ()
 _test_mPauseInSeconds_success _ =
@@ -79,12 +86,72 @@ _test_mPauseInSeconds_success _ =
   in catchError session unexpectedError
 
 
+_test_mGetChar_success
+  :: (Effectful m, Typeable m) => m () -> HttpSession m () () () () ()
+_test_mGetChar_success _ =
+  let
+    session = do
+      !c <- mGetChar
+      assertSuccess "yay"
+      return ()
+
+  in catchError session unexpectedError
+
+
+_test_mGetLine_success
+  :: (Effectful m, Typeable m) => m () -> HttpSession m () () () () ()
+_test_mGetLine_success _ =
+  let
+    session = do
+      !str <- mGetLine
+      assertSuccess "yay"
+      return ()
+
+  in catchError session unexpectedError
+
+
+_test_mGetLineNoEcho_success
+  :: (Effectful m, Typeable m) => m () -> HttpSession m () () () () ()
+_test_mGetLineNoEcho_success _ =
+  let
+    session = do
+      !str <- mGetLineNoEcho
+      assertSuccess "yay"
+      return ()
+
+  in catchError session unexpectedError
+
+
+_test_mPutChar_success
+  :: (Effectful m, Typeable m) => m () -> HttpSession m () () () () ()
+_test_mPutChar_success _ =
+  let
+    session = do
+      () <- mPutChar 'z'
+      assertSuccess "yay"
+      return ()
+
+  in catchError session unexpectedError
+
+
 _test_mPutStr_success
   :: (Effectful m, Typeable m) => m () -> HttpSession m () () () () ()
 _test_mPutStr_success _ =
   let
     session = do
       () <- mPutStr "some text"
+      assertSuccess "yay"
+      return ()
+
+  in catchError session unexpectedError
+
+
+_test_mPutStrLn_success
+  :: (Effectful m, Typeable m) => m () -> HttpSession m () () () () ()
+_test_mPutStrLn_success _ =
+  let
+    session = do
+      () <- mPutStrLn "some text"
       assertSuccess "yay"
       return ()
 

@@ -143,18 +143,16 @@ mGetChar
   :: (Monad m, EffectConsole m)
   => m Char
 mGetChar = do
-  hin <- mStdIn
-  mhFlush hin
-  mhGetChar hin
+  mStdOut >>= mhFlush
+  mStdIn >>= mhGetChar
 
 -- | Acts like `getLine`.
 mGetLine
   :: (Monad m, EffectConsole m)
   => m String
 mGetLine = do
-  hin <- mStdIn
-  mhFlush hin
-  mhGetLine hin
+  mStdOut >>= mhFlush
+  mStdIn >>= mhGetLine
 
 -- | Acts like `hGetLine`, but do not echo input characters to the console.
 mhGetLineNoEcho
@@ -173,10 +171,9 @@ mGetLineNoEcho
   :: (Monad m, EffectConsole m)
   => m String
 mGetLineNoEcho = do
-  hin <- mStdIn
   hout <- mStdOut
   mhFlush hout
-  secret <- mhGetLineNoEcho hin
+  secret <- mStdIn >>= mhGetLineNoEcho
   mhPutChar hout '\n'
   return secret
 

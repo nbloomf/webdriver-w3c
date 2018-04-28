@@ -20,11 +20,11 @@ main = do
   putStrLn "\x1b[1;34m                                                                                 \x1b[0;39;49m"
 
   setEnv "TASTY_NUM_THREADS" "1" -- needed for live tests
-  testPagePath <- fmap (\path -> "file://" ++ path ++ "/test/page") getCurrentDirectory
+  testPagePath <- fmap (\path -> path ++ "/test/page") getCurrentDirectory
 
   defaultMain $ testGroup "All Tests"
     [ Web.Api.Http.Assert.Test.tests
     , Web.Api.WebDriver.Types.Test.tests
-    , Web.Api.Http.Effects.Test.tests
-    , Web.Api.WebDriver.Monad.Test.tests testPagePath
+    , Web.Api.Http.Effects.Test.tests testPagePath
+    , Web.Api.WebDriver.Monad.Test.tests ("file://" ++ testPagePath)
     ]
