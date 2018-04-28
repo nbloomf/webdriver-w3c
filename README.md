@@ -1,9 +1,11 @@
-# webdriver-w3c
+webdriver-w3c
+=============
+
 Haskell bindings for the W3C WebDriver API
 
 Disclaimer: It's very early days for this code. You're welcome to play with it and find bugs. :)
 
-If you're determined to try it out, the [tutorial](https://github.com/nbloomf/webdriver-w3c/blob/master/doc/Tutorial.md) is a good place to start.
+If you're determined to try it out, the [tutorial](https://github.com/nbloomf/webdriver-w3c/blob/master/doc/Tutorial.md) is a good place to start. There is also some documentation about the [test suite](https://github.com/nbloomf/webdriver-w3c/blob/master/doc/Tests.md).
 
 Stack tips:
 
