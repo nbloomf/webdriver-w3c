@@ -652,9 +652,9 @@ isElementSelected
   => t
   -> WebDriver m Bool
 isElementSelected element = do
-  let element_id = elementRefOf element
+  let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
-  httpGet (baseUrl ++ "/element/" ++ show element_id ++ "/selected")
+  httpGet (baseUrl ++ "/element/" ++ elementRef ++ "/selected")
     >>= (return . __response_body)
     >>= mParseJson
     >>= lookupKey "value"
@@ -668,9 +668,9 @@ getElementAttribute
   -> AttributeName
   -> WebDriver m (Either Bool String)
 getElementAttribute element name = do
-  let element_id = elementRefOf element
+  let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
-  x <- httpGet (baseUrl ++ "/element/" ++ show element_id ++ "/attribute/" ++ E.encode name)
+  x <- httpGet (baseUrl ++ "/element/" ++ elementRef ++ "/attribute/" ++ E.encode name)
     >>= (return . __response_body)
     >>= mParseJson
     >>= lookupKey "value"
@@ -688,9 +688,9 @@ getElementProperty
   -> PropertyName
   -> WebDriver m Value
 getElementProperty element name = do
-  let element_id = elementRefOf element
+  let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
-  httpGet (baseUrl ++ "/element/" ++ show element_id ++ "/property/" ++ E.encode name)
+  httpGet (baseUrl ++ "/element/" ++ elementRef ++ "/property/" ++ E.encode name)
     >>= (return . __response_body)
     >>= mParseJson
     >>= lookupKey "value"
@@ -703,9 +703,9 @@ getElementCssValue
   -> CssPropertyName
   -> WebDriver m String
 getElementCssValue element name = do
-  let element_id = elementRefOf element
+  let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
-  httpGet (baseUrl ++ "/element/" ++ show element_id ++ "/css/" ++ name)
+  httpGet (baseUrl ++ "/element/" ++ elementRef ++ "/css/" ++ name)
     >>= (return . __response_body)
     >>= mParseJson
     >>= lookupKey "value"
@@ -718,9 +718,9 @@ getElementText
   => t
   -> WebDriver m String
 getElementText element = do
-  let element_id = elementRefOf element
+  let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
-  httpGet (baseUrl ++ "/element/" ++ show element_id ++ "/text")
+  httpGet (baseUrl ++ "/element/" ++ elementRef ++ "/text")
     >>= (return . __response_body)
     >>= mParseJson
     >>= lookupKey "value"
@@ -733,9 +733,9 @@ getElementTagName
   => t
   -> WebDriver m String
 getElementTagName element = do
-  let element_id = elementRefOf element
+  let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
-  httpGet (baseUrl ++ "/element/" ++ show element_id ++ "/name")
+  httpGet (baseUrl ++ "/element/" ++ elementRef ++ "/name")
     >>= (return . __response_body)
     >>= mParseJson
     >>= lookupKey "value"
@@ -748,9 +748,9 @@ getElementRect
   => t
   -> WebDriver m Rect
 getElementRect element = do
-  let element_id = elementRefOf element
+  let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
-  httpGet (baseUrl ++ "/element/" ++ show element_id ++ "/rect")
+  httpGet (baseUrl ++ "/element/" ++ elementRef ++ "/rect")
     >>= (return . __response_body)
     >>= mParseJson
     >>= lookupKey "value"
@@ -763,9 +763,9 @@ isElementEnabled
   => t
   -> WebDriver m Bool
 isElementEnabled element = do
-  let element_id = elementRefOf element
+  let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
-  httpGet (baseUrl ++ "/element/" ++ show element_id ++ "/enabled")
+  httpGet (baseUrl ++ "/element/" ++ elementRef ++ "/enabled")
     >>= (return . __response_body)
     >>= mParseJson
     >>= lookupKey "value"
@@ -778,10 +778,10 @@ elementClick
   => t
   -> WebDriver m ()
 elementClick element = do
-  let element_id = elementRefOf element
+  let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
   let !payload = encode $ object []
-  httpPost (baseUrl ++ "/element/" ++ show element_id ++ "/click") payload
+  httpPost (baseUrl ++ "/element/" ++ elementRef ++ "/click") payload
     >>= (return . __response_body)
     >>= mParseJson
     >>= lookupKey "value"
@@ -795,10 +795,10 @@ elementClear
   => t
   -> WebDriver m ()
 elementClear element = do
-  let element_id = elementRefOf element
+  let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
   let !payload = encode $ object []
-  httpPost (baseUrl ++ "/element/" ++ show element_id ++ "/clear") payload
+  httpPost (baseUrl ++ "/element/" ++ elementRef ++ "/clear") payload
     >>= (return . __response_body)
     >>= mParseJson
     >>= lookupKey "value"
@@ -813,10 +813,10 @@ elementSendKeys
   -> String
   -> WebDriver m ()
 elementSendKeys element text = do
-  let element_id = elementRefOf element
+  let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
   let !payload = encode $ object [ "text" .= text ]
-  httpPost (baseUrl ++ "/element/" ++ show element_id ++ "/value") payload
+  httpPost (baseUrl ++ "/element/" ++ elementRef ++ "/value") payload
     >>= (return . __response_body)
     >>= mParseJson
     >>= lookupKey "value"
@@ -1083,9 +1083,9 @@ takeElementScreenshot
   => t
   -> WebDriver m SB.ByteString
 takeElementScreenshot element = do
-  let element_id = elementRefOf element
+  let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
-  result <- httpGet (baseUrl ++ "/element/" ++ show element_id ++ "/screenshot")
+  result <- httpGet (baseUrl ++ "/element/" ++ elementRef ++ "/screenshot")
     >>= (return . __response_body)
     >>= mParseJson
     >>= lookupKey "value"
