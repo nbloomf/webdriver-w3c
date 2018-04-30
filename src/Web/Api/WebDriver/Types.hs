@@ -16,7 +16,7 @@ Note that while the WebDriver spec defines some JSON objects, in general a given
 module Web.Api.WebDriver.Types (
   -- * Stringy Types
     SessionId
-  , ElementRef
+  , ElementRef(..)
   , ContextId
   , Selector
   , AttributeName
@@ -76,6 +76,8 @@ import Data.Maybe
   ( catMaybes )
 import Data.Char
   ( toLower )
+import Data.String
+  ( IsString(..) )
 import Data.Text
   ( Text, pack, unpack )
 import Data.Scientific
@@ -118,7 +120,14 @@ object_ = object . filter (\(_, v) -> v /= Null) . catMaybes
 type SessionId = String
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#dfn-web-element-reference>.
-type ElementRef = String
+data ElementRef = ElementRef String
+  deriving Eq
+
+instance Show ElementRef where
+  show (ElementRef str) = str
+
+instance IsString ElementRef where
+  fromString = ElementRef
 
 -- | Identifier for a /browsing context/; see <https://w3c.github.io/webdriver/webdriver-spec.html#dfn-current-browsing-context>.
 type ContextId = String

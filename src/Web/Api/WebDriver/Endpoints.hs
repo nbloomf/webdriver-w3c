@@ -169,6 +169,7 @@ import qualified Network.URI.Encode as E
 
 import Web.Api.Http
 import Web.Api.WebDriver.Types
+import Web.Api.WebDriver.Classes
 import Web.Api.WebDriver.Monad
 
 
@@ -451,7 +452,7 @@ switchToFrame ref = do
     !frame = case ref of
       TopLevelFrame -> Null
       FrameNumber k -> Number $ fromIntegral k
-      FrameContainingElement element_id -> String $ pack element_id
+      FrameContainingElement element_id -> String $ pack $ show element_id
 
     !payload = encode $ object
       [ "id" .= toJSON frame ]
@@ -567,7 +568,7 @@ findElement strategy selector = do
           SpecFormat -> lookupKey _WEB_ELEMENT_ID
           ChromeFormat -> lookupKey "ELEMENT"
     >>= constructFromJSON
-    >>= (return . unpack)
+    >>= (return . ElementRef . unpack)
 
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#find-elements>.
@@ -586,46 +587,48 @@ findElements strategy selector = do
     >>= constructFromJSON
     >>= mapM (lookupKey _WEB_ELEMENT_ID)
     >>= mapM constructFromJSON
-    >>= (return . map unpack)
+    >>= (return . map (ElementRef . unpack))
 
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#find-element-from-element>.
 findElementFromElement
-  :: (Effectful m)
+  :: (Effectful m, HasElementRef t)
   => LocationStrategy
   -> Selector
-  -> ElementRef
+  -> t
   -> WebDriver m ElementRef
-findElementFromElement strategy selector root_id = do
+findElementFromElement strategy selector root = do
+  let root_id = elementRefOf root
   baseUrl <- theRemoteUrlWithSession
   let !payload = encode $ object [ "value" .= selector, "using" .= toJSON strategy ]
-  httpPost (baseUrl ++ "/element/" ++ root_id ++ "/element") payload
+  httpPost (baseUrl ++ "/element/" ++ show root_id ++ "/element") payload
     >>= (return . __response_body)
     >>= mParseJson
     >>= lookupKey "value"
     >>= lookupKey _WEB_ELEMENT_ID
     >>= constructFromJSON
-    >>= (return . unpack)
+    >>= (return . ElementRef . unpack)
 
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#find-elements-from-element>.
 findElementsFromElement
-  :: (Effectful m)
+  :: (Effectful m, HasElementRef t)
   => LocationStrategy
   -> Selector
-  -> ElementRef
+  -> t
   -> WebDriver m [ElementRef]
-findElementsFromElement strategy selector root_id = do
+findElementsFromElement strategy selector root = do
+  let root_id = elementRefOf root
   baseUrl <- theRemoteUrlWithSession
   let !payload = encode $ object [ "value" .= selector, "using" .= toJSON strategy ]
-  httpPost (baseUrl ++ "/element/" ++ root_id ++ "/elements") payload
+  httpPost (baseUrl ++ "/element/" ++ show root_id ++ "/elements") payload
     >>= (return . __response_body)
     >>= mParseJson
     >>= lookupKey "value"
     >>= constructFromJSON
     >>= mapM (lookupKey _WEB_ELEMENT_ID)
     >>= mapM constructFromJSON
-    >>= (return . map unpack)
+    >>= (return . map (ElementRef . unpack))
 
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-active-element>.
@@ -640,17 +643,18 @@ getActiveElement = do
     >>= lookupKey "value"
     >>= lookupKey _WEB_ELEMENT_ID
     >>= constructFromJSON
-    >>= (return . unpack)
+    >>= (return . ElementRef . unpack)
 
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#is-element-selected>.
 isElementSelected
-  :: (Effectful m)
-  => ElementRef
+  :: (Effectful m, HasElementRef t)
+  => t
   -> WebDriver m Bool
-isElementSelected element_id = do
+isElementSelected element = do
+  let element_id = elementRefOf element
   baseUrl <- theRemoteUrlWithSession
-  httpGet (baseUrl ++ "/element/" ++ element_id ++ "/selected")
+  httpGet (baseUrl ++ "/element/" ++ show element_id ++ "/selected")
     >>= (return . __response_body)
     >>= mParseJson
     >>= lookupKey "value"
@@ -659,13 +663,14 @@ isElementSelected element_id = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-element-attribute>.
 getElementAttribute
-  :: (Effectful m)
-  => ElementRef
+  :: (Effectful m, HasElementRef t)
+  => t
   -> AttributeName
   -> WebDriver m (Either Bool String)
-getElementAttribute element_id name = do
+getElementAttribute element name = do
+  let element_id = elementRefOf element
   baseUrl <- theRemoteUrlWithSession
-  x <- httpGet (baseUrl ++ "/element/" ++ element_id ++ "/attribute/" ++ E.encode name)
+  x <- httpGet (baseUrl ++ "/element/" ++ show element_id ++ "/attribute/" ++ E.encode name)
     >>= (return . __response_body)
     >>= mParseJson
     >>= lookupKey "value"
@@ -678,13 +683,14 @@ getElementAttribute element_id name = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-element-property>.
 getElementProperty
-  :: (Effectful m)
-  => ElementRef
+  :: (Effectful m, HasElementRef t)
+  => t
   -> PropertyName
   -> WebDriver m Value
-getElementProperty element_id name = do
+getElementProperty element name = do
+  let element_id = elementRefOf element
   baseUrl <- theRemoteUrlWithSession
-  httpGet (baseUrl ++ "/element/" ++ element_id ++ "/property/" ++ E.encode name)
+  httpGet (baseUrl ++ "/element/" ++ show element_id ++ "/property/" ++ E.encode name)
     >>= (return . __response_body)
     >>= mParseJson
     >>= lookupKey "value"
@@ -692,13 +698,14 @@ getElementProperty element_id name = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-element-css-value>.
 getElementCssValue
-  :: (Effectful m)
-  => ElementRef
+  :: (Effectful m, HasElementRef t)
+  => t
   -> CssPropertyName
   -> WebDriver m String
-getElementCssValue element_id name = do
+getElementCssValue element name = do
+  let element_id = elementRefOf element
   baseUrl <- theRemoteUrlWithSession
-  httpGet (baseUrl ++ "/element/" ++ element_id ++ "/css/" ++ name)
+  httpGet (baseUrl ++ "/element/" ++ show element_id ++ "/css/" ++ name)
     >>= (return . __response_body)
     >>= mParseJson
     >>= lookupKey "value"
@@ -707,12 +714,13 @@ getElementCssValue element_id name = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-element-text>.
 getElementText
-  :: (Effectful m)
-  => ElementRef
+  :: (Effectful m, HasElementRef t)
+  => t
   -> WebDriver m String
-getElementText element_id = do
+getElementText element = do
+  let element_id = elementRefOf element
   baseUrl <- theRemoteUrlWithSession
-  httpGet (baseUrl ++ "/element/" ++ element_id ++ "/text")
+  httpGet (baseUrl ++ "/element/" ++ show element_id ++ "/text")
     >>= (return . __response_body)
     >>= mParseJson
     >>= lookupKey "value"
@@ -721,12 +729,13 @@ getElementText element_id = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-element-tag-name>.
 getElementTagName
-  :: (Effectful m)
-  => ElementRef
+  :: (Effectful m, HasElementRef t)
+  => t
   -> WebDriver m String
-getElementTagName element_id = do
+getElementTagName element = do
+  let element_id = elementRefOf element
   baseUrl <- theRemoteUrlWithSession
-  httpGet (baseUrl ++ "/element/" ++ element_id ++ "/name")
+  httpGet (baseUrl ++ "/element/" ++ show element_id ++ "/name")
     >>= (return . __response_body)
     >>= mParseJson
     >>= lookupKey "value"
@@ -735,12 +744,13 @@ getElementTagName element_id = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-element-rect>.
 getElementRect
-  :: (Effectful m)
-  => ElementRef
+  :: (Effectful m, HasElementRef t)
+  => t
   -> WebDriver m Rect
-getElementRect element_id = do
+getElementRect element = do
+  let element_id = elementRefOf element
   baseUrl <- theRemoteUrlWithSession
-  httpGet (baseUrl ++ "/element/" ++ element_id ++ "/rect")
+  httpGet (baseUrl ++ "/element/" ++ show element_id ++ "/rect")
     >>= (return . __response_body)
     >>= mParseJson
     >>= lookupKey "value"
@@ -749,12 +759,13 @@ getElementRect element_id = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#is-element-enabled>.
 isElementEnabled
-  :: (Effectful m)
-  => ElementRef
+  :: (Effectful m, HasElementRef t)
+  => t
   -> WebDriver m Bool
-isElementEnabled element_id = do
+isElementEnabled element = do
+  let element_id = elementRefOf element
   baseUrl <- theRemoteUrlWithSession
-  httpGet (baseUrl ++ "/element/" ++ element_id ++ "/enabled")
+  httpGet (baseUrl ++ "/element/" ++ show element_id ++ "/enabled")
     >>= (return . __response_body)
     >>= mParseJson
     >>= lookupKey "value"
@@ -763,13 +774,14 @@ isElementEnabled element_id = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#element-click>.
 elementClick
-  :: (Effectful m)
-  => ElementRef
+  :: (Effectful m, HasElementRef t)
+  => t
   -> WebDriver m ()
-elementClick element_id = do
+elementClick element = do
+  let element_id = elementRefOf element
   baseUrl <- theRemoteUrlWithSession
   let !payload = encode $ object []
-  httpPost (baseUrl ++ "/element/" ++ element_id ++ "/click") payload
+  httpPost (baseUrl ++ "/element/" ++ show element_id ++ "/click") payload
     >>= (return . __response_body)
     >>= mParseJson
     >>= lookupKey "value"
@@ -779,13 +791,14 @@ elementClick element_id = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#element-clear>.
 elementClear
-  :: (Effectful m)
-  => ElementRef
+  :: (Effectful m, HasElementRef t)
+  => t
   -> WebDriver m ()
-elementClear element_id = do
+elementClear element = do
+  let element_id = elementRefOf element
   baseUrl <- theRemoteUrlWithSession
   let !payload = encode $ object []
-  httpPost (baseUrl ++ "/element/" ++ element_id ++ "/clear") payload
+  httpPost (baseUrl ++ "/element/" ++ show element_id ++ "/clear") payload
     >>= (return . __response_body)
     >>= mParseJson
     >>= lookupKey "value"
@@ -795,14 +808,15 @@ elementClear element_id = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#element-send-keys>.
 elementSendKeys
-  :: (Effectful m)
-  => ElementRef
+  :: (Effectful m, HasElementRef t)
+  => t
   -> String
   -> WebDriver m ()
-elementSendKeys element_id text = do
+elementSendKeys element text = do
+  let element_id = elementRefOf element
   baseUrl <- theRemoteUrlWithSession
   let !payload = encode $ object [ "text" .= text ]
-  httpPost (baseUrl ++ "/element/" ++ element_id ++ "/value") payload
+  httpPost (baseUrl ++ "/element/" ++ show element_id ++ "/value") payload
     >>= (return . __response_body)
     >>= mParseJson
     >>= lookupKey "value"
@@ -1065,12 +1079,13 @@ takeScreenshot = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#take-element-screenshot>.
 takeElementScreenshot
-  :: (Effectful m)
-  => ElementRef
+  :: (Effectful m, HasElementRef t)
+  => t
   -> WebDriver m SB.ByteString
-takeElementScreenshot element_id = do
+takeElementScreenshot element = do
+  let element_id = elementRefOf element
   baseUrl <- theRemoteUrlWithSession
-  result <- httpGet (baseUrl ++ "/element/" ++ element_id ++ "/screenshot")
+  result <- httpGet (baseUrl ++ "/element/" ++ show element_id ++ "/screenshot")
     >>= (return . __response_body)
     >>= mParseJson
     >>= lookupKey "value"

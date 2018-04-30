@@ -65,6 +65,7 @@ library
     Web.Api.Http.Types
     Web.Api.Http.Uri
     Web.Api.WebDriver
+    Web.Api.WebDriver.Classes
     Web.Api.WebDriver.Endpoints
     Web.Api.WebDriver.Helpers
     Web.Api.WebDriver.Monad
