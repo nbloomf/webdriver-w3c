@@ -1,0 +1,2 @@
+* Chromedriver compatibility: Chromedriver's response format appears not to be spec compliant. The scaffolding exists to accomodate this, namely the response format state and CL options; we just need to edit the endpoint functions to do so. For an example see newSession'.
+* Stealth commands should not log request/response details. We should test that this is the case.
