@@ -14,6 +14,8 @@ module Test.Tasty.WebDriver (
     testCase
   , testCaseWithSetup
 
+  , ignoreChromedriver
+
   -- * Options
   , Driver(..)
   , DriverName(..)
@@ -38,8 +40,10 @@ import Data.List
   ( unlines )
 import System.IO
   ( Handle, stdout, stderr, stdin, openFile, IOMode(..) )
+import qualified Test.Tasty as T
 import qualified Test.Tasty.Providers as TT
 import qualified Test.Tasty.Options as TO
+import qualified Test.Tasty.ExpectedFailure as TE
 import qualified System.Environment as SE
   ( getEnv )
 
@@ -119,7 +123,7 @@ instance (Effectful m, Typeable m) => TT.IsTest (WebDriverTest m) where
         Geckodriver -> emptyCapabilities
           { _browser_name = Just Firefox
           , _firefox_options = Just $ defaultFirefoxOptions
-              { _firefox_args = if headless then Just ["--headless"] else Nothing
+              { _firefox_args = if headless then Just ["-headless"] else Nothing
               }
           }
 
@@ -354,8 +358,8 @@ writeModeHandle x = case x of
 readModeHandle :: FileHandle -> IO Handle
 readModeHandle x = case x of
   StdIn -> return stdin
-  StdOut ->  error "readModeHandle: Cannot open stdout in read mode."
-  StdErr ->  error "readModeHandle: Cannot open stderr in read mode."
+  StdOut -> error "readModeHandle: Cannot open stdout in read mode."
+  StdErr -> error "readModeHandle: Cannot open stderr in read mode."
   Path path -> openFile path ReadMode
 
 
@@ -365,3 +369,14 @@ data DriverName
   = Geckodriver
   | Chromedriver
   deriving Typeable
+
+
+
+-- | Ignore a test tree if the @Driver@ option is "chromedriver". Useful because chromedriver doesn't implement all endpoints.
+ignoreChromedriver :: TT.TestTree -> TT.TestTree
+ignoreChromedriver tree = T.askOption failure
+  where
+    failure :: Driver -> TT.TestTree
+    failure (Driver d) = case d of
+      Geckodriver -> tree
+      Chromedriver -> TE.ignoreTest tree

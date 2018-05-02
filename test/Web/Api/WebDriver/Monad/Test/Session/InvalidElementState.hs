@@ -26,7 +26,7 @@ invalidElementStateExit :: (Effectful m, Typeable m) => FilePath -> m () -> T.Te
 invalidElementStateExit dir x =
   let path = dir ++ "/invalidElementState.html" in
   T.testGroup "Invalid Element State"
-    [ testCase "elementClear" (_test_elementClear_invalid_element_state path x)
+    [ ignoreChromedriver $ testCase "elementClear" (_test_elementClear_invalid_element_state path x)
     ]
 
 

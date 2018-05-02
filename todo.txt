@@ -1,2 +1,3 @@
-* Chromedriver compatibility: Chromedriver's response format appears not to be spec compliant. The scaffolding exists to accomodate this, namely the response format state and CL options; we just need to edit the endpoint functions to do so. For an example see newSession'.
+* Chromedriver compatibility: several tests are ignored for chromedriver due to spec-noncompliance. Some of these can be fixed -- notably the findElement tests -- by figuring out how to interpret chromedriver's responses.
 * Stealth commands should not log request/response details. We should test that this is the case.
+* Proxy executable for juggling multiple sessions, to run tests in parallel

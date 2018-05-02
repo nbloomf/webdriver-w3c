@@ -24,7 +24,7 @@ unknownError e = case e of
 
 unknownErrorExit :: (Effectful m, Typeable m) => FilePath -> m () -> T.TestTree
 unknownErrorExit path x = T.testGroup "Unknown Error"
-  [ testCase "navigateTo" (_test_navigateTo_unknown_error x)
+  [ ignoreChromedriver $ testCase "navigateTo" (_test_navigateTo_unknown_error x)
   ]
 
 

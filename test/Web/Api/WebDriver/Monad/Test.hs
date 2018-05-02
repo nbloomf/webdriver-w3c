@@ -3,12 +3,8 @@ module Web.Api.WebDriver.Monad.Test (
     tests
   ) where
 
-import Data.Time.Clock.System
-  ( getSystemTime, systemToUTCTime )
 import Data.Typeable
   ( Typeable )
-import qualified Network.Wreq.Session as WreqS
-  ( newSession )
 import System.IO
 
 import Test.Tasty (TestTree(), testGroup, localOption)
@@ -26,12 +22,22 @@ import Web.Api.WebDriver.Monad.Test.Session.InvalidElementState
 
 tests :: FilePath -> TestTree
 tests path = testGroup "Web.Api.WebDriver.Monad"
-  [ testGroup "Mock Server"
+  [ testGroup "Mock Driver"
       (endpointTests path (return () :: MockIO WebDriverServerState ()))
 
-  ,   localOption (LogHandle $ Path "/dev/null")
+  ,   localOption (Driver Geckodriver)
+    $ localOption (ApiResponseFormat SpecFormat)
+    $ localOption (RemotePort 4444)
+    $ localOption (LogHandle $ Path "/dev/null")
     $ localOption (AssertionLogHandle $ Path "/dev/null")
-    $ testGroup "Real Server" (endpointTests path (return () :: IO ()))
+    $ testGroup "Geckodriver" (endpointTests path (return () :: IO ()))
+
+  ,   localOption (Driver Chromedriver)
+    $ localOption (ApiResponseFormat ChromeFormat)
+    $ localOption (RemotePort 9515)
+    $ localOption (LogHandle $ Path "/dev/null")
+    $ localOption (AssertionLogHandle $ Path "/dev/null")
+    $ testGroup "Chromedriver" (endpointTests path (return () :: IO ()))
   ]
 
 
