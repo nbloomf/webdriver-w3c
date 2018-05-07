@@ -678,11 +678,14 @@ getActiveElement
   => WebDriver m ElementRef
 getActiveElement = do
   baseUrl <- theRemoteUrlWithSession
+  format <- readResponseFormat
   httpGet (baseUrl ++ "/element/active")
     >>= (return . __response_body)
     >>= mParseJson
     >>= lookupKey "value"
-    >>= lookupKey _WEB_ELEMENT_ID
+    >>= case format of
+          SpecFormat -> lookupKey _WEB_ELEMENT_ID
+          ChromeFormat -> lookupKey "ELEMENT"
     >>= constructFromJSON
     >>= (return . ElementRef . unpack)
 

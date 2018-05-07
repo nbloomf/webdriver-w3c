@@ -48,7 +48,7 @@ successfulExit dir x =
     , testCase "findElements" (_test_findElements_success path x)
     , testCase "findElementFromElement" (_test_findElementFromElement_success path x)
     , testCase "findElementsFromElement" (_test_findElementsFromElement_success path x)
-    , ignoreChromedriver $ testCase "getActiveElement" (_test_getActiveElement_success x)
+    , testCase "getActiveElement" (_test_getActiveElement_success x)
     , ignoreChromedriver $ testCase "isElementSelected" (_test_isElementSelected_success path x)
     , ignoreChromedriver $ testCase "getElementAttribute" (_test_getElementAttribute_success path x)
     , ignoreChromedriver $ testCase "getElementCssValue" (_test_getElementCssValue_success path x)
