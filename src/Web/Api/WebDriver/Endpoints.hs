@@ -611,13 +611,16 @@ findElements
   -> WebDriver m [ElementRef]
 findElements strategy selector = do
   baseUrl <- theRemoteUrlWithSession
+  format <- readResponseFormat
   let !payload = encode $ object [ "value" .= selector, "using" .= toJSON strategy ]
   httpPost (baseUrl ++ "/elements") payload
     >>= (return . __response_body)
     >>= mParseJson
     >>= lookupKey "value"
     >>= constructFromJSON
-    >>= mapM (lookupKey _WEB_ELEMENT_ID)
+    >>= case format of
+          SpecFormat -> mapM (lookupKey _WEB_ELEMENT_ID)
+          ChromeFormat -> mapM (lookupKey "ELEMENT")
     >>= mapM constructFromJSON
     >>= (return . map (ElementRef . unpack))
 
@@ -631,13 +634,16 @@ findElementFromElement
   -> WebDriver m ElementRef
 findElementFromElement strategy selector root = do
   let root_id = elementRefOf root
+  format <- readResponseFormat
   baseUrl <- theRemoteUrlWithSession
   let !payload = encode $ object [ "value" .= selector, "using" .= toJSON strategy ]
   httpPost (baseUrl ++ "/element/" ++ show root_id ++ "/element") payload
     >>= (return . __response_body)
     >>= mParseJson
     >>= lookupKey "value"
-    >>= lookupKey _WEB_ELEMENT_ID
+    >>= case format of
+          SpecFormat -> lookupKey _WEB_ELEMENT_ID
+          ChromeFormat -> lookupKey "ELEMENT"
     >>= constructFromJSON
     >>= (return . ElementRef . unpack)
 
@@ -652,13 +658,16 @@ findElementsFromElement
 findElementsFromElement strategy selector root = do
   let root_id = elementRefOf root
   baseUrl <- theRemoteUrlWithSession
+  format <- readResponseFormat
   let !payload = encode $ object [ "value" .= selector, "using" .= toJSON strategy ]
   httpPost (baseUrl ++ "/element/" ++ show root_id ++ "/elements") payload
     >>= (return . __response_body)
     >>= mParseJson
     >>= lookupKey "value"
     >>= constructFromJSON
-    >>= mapM (lookupKey _WEB_ELEMENT_ID)
+    >>= case format of
+          SpecFormat -> mapM (lookupKey _WEB_ELEMENT_ID)
+          ChromeFormat -> mapM (lookupKey "ELEMENT")
     >>= mapM constructFromJSON
     >>= (return . map (ElementRef . unpack))
 

@@ -10,7 +10,7 @@ import Web.Api.Http
 import Web.Api.WebDriver
 import Test.Tasty.WebDriver
 
-import qualified Test.Tasty as T (TestTree, testGroup)
+import qualified Test.Tasty as T
 
 
 unexpectedError
@@ -44,17 +44,17 @@ successfulExit dir x =
     , ignoreChromedriver $ testCase "maximizeWindow" (_test_maximizeWindow_success x)
     , ignoreChromedriver $ testCase "minimizeWindow" (_test_minimizeWindow_success x)
     , ignoreChromedriver $ testCase "fullscreenWindow" (_test_fullscreenWindow_success x)
-    , ignoreChromedriver $ testCase "findElement" (_test_findElement_success path x)
-    , ignoreChromedriver $ testCase "findElements" (_test_findElements_success path x)
-    , ignoreChromedriver $ testCase "findElementFromElement" (_test_findElementFromElement_success path x)
-    , ignoreChromedriver $ testCase "findElementsFromElement" (_test_findElementsFromElement_success path x)
+    , testCase "findElement" (_test_findElement_success path x)
+    , testCase "findElements" (_test_findElements_success path x)
+    , testCase "findElementFromElement" (_test_findElementFromElement_success path x)
+    , testCase "findElementsFromElement" (_test_findElementsFromElement_success path x)
     , ignoreChromedriver $ testCase "getActiveElement" (_test_getActiveElement_success x)
     , ignoreChromedriver $ testCase "isElementSelected" (_test_isElementSelected_success path x)
     , ignoreChromedriver $ testCase "getElementAttribute" (_test_getElementAttribute_success path x)
     , ignoreChromedriver $ testCase "getElementCssValue" (_test_getElementCssValue_success path x)
     , ignoreChromedriver $ testCase "getElementText" (_test_getElementText_success path x)
     , ignoreChromedriver $ testCase "getElementTagName" (_test_getElementTagName_success path x)
-    ,ignoreChromedriver $  testCase "getElementRect" (_test_getElementRect_success path x)
+    , ignoreChromedriver $  testCase "getElementRect" (_test_getElementRect_success path x)
     , ignoreChromedriver $ testCase "isElementEnabled" (_test_isElementEnabled_success path x)
     , ignoreChromedriver $ testCase "elementClick" (_test_elementClick_success path x)
     , ignoreChromedriver $ testCase "elementClear" (_test_elementClear_success path x)

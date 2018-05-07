@@ -1,3 +1,4 @@
 * Chromedriver compatibility: several tests are ignored for chromedriver due to spec-noncompliance. Some of these can be fixed -- notably the findElement tests -- by figuring out how to interpret chromedriver's responses.
 * Stealth commands should not log request/response details. We should test that this is the case.
 * Proxy executable for juggling multiple sessions, to run tests in parallel
+* /session/{session id}/element/{element id}/displayed

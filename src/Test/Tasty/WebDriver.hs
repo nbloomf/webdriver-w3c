@@ -15,6 +15,7 @@ module Test.Tasty.WebDriver (
   , testCaseWithSetup
 
   , ignoreChromedriver
+  , logChromedriver
 
   -- * Options
   , Driver(..)
@@ -380,3 +381,11 @@ ignoreChromedriver tree = T.askOption failure
     failure (Driver d) = case d of
       Geckodriver -> tree
       Chromedriver -> TE.ignoreTest tree
+
+logChromedriver :: TT.TestTree -> TT.TestTree
+logChromedriver tree = T.askOption check
+  where
+    check :: Driver -> TT.TestTree
+    check (Driver d) = case d of
+      Geckodriver -> tree
+      Chromedriver -> T.localOption (LogHandle StdOut) tree
