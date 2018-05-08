@@ -825,12 +825,15 @@ elementClick
 elementClick element = do
   let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
+  format <- readResponseFormat
   let !payload = encode $ object []
   httpPost (baseUrl ++ "/element/" ++ elementRef ++ "/click") payload
     >>= (return . __response_body)
     >>= mParseJson
     >>= lookupKey "value"
-    >>= expect (object [])
+    >>= case format of
+          SpecFormat -> expect (object [])
+          ChromeFormat -> expect Null
   return ()
 
 
@@ -842,12 +845,15 @@ elementClear
 elementClear element = do
   let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
+  format <- readResponseFormat
   let !payload = encode $ object []
   httpPost (baseUrl ++ "/element/" ++ elementRef ++ "/clear") payload
     >>= (return . __response_body)
     >>= mParseJson
     >>= lookupKey "value"
-    >>= expect (object [])
+    >>= case format of
+          SpecFormat -> expect (object [])
+          ChromeFormat -> expect Null
   return ()
 
 
