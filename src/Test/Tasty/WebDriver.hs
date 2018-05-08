@@ -382,6 +382,7 @@ ignoreChromedriver tree = T.askOption failure
       Geckodriver -> tree
       Chromedriver -> TE.ignoreTest tree
 
+-- | Write logs to stdout if the driver is "chromedriver". Handy for debugging a single test.
 logChromedriver :: TT.TestTree -> TT.TestTree
 logChromedriver tree = T.askOption check
   where

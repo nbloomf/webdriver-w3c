@@ -422,7 +422,7 @@ getWindowHandle = do
     >>= mParseJson
     >>= lookupKey "value"
     >>= constructFromJSON
-    >>= (return . unpack)
+    >>= (return . ContextId . unpack)
 
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#close-window>.
@@ -437,17 +437,18 @@ closeWindow = do
     >>= lookupKey "value"
     >>= constructFromJSON
     >>= (sequence . map constructFromJSON)
-    >>= (return . map unpack)
+    >>= (return . map (ContextId . unpack))
 
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#switch-to-window>.
 switchToWindow
-  :: (Effectful m)
-  => ContextId
+  :: (Effectful m, HasContextId t)
+  => t
   -> WebDriver m ()
-switchToWindow contextId = do
+switchToWindow t = do
+  let contextId = contextIdOf t
   baseUrl <- theRemoteUrlWithSession
-  let !payload = encode $ object [ "handle" .= contextId ]
+  let !payload = encode $ object [ "handle" .= show contextId ]
   httpPost (baseUrl ++ "/window") payload
   return ()
 
@@ -464,7 +465,7 @@ getWindowHandles = do
     >>= lookupKey "value"
     >>= constructFromJSON
     >>= (sequence . map constructFromJSON)
-    >>= (return . map unpack)
+    >>= (return . map (ContextId . unpack))
 
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#switch-to-frame>.

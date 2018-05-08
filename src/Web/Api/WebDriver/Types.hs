@@ -17,7 +17,7 @@ module Web.Api.WebDriver.Types (
   -- * Stringy Types
     SessionId
   , ElementRef(..)
-  , ContextId
+  , ContextId(..)
   , Selector
   , AttributeName
   , PropertyName
@@ -130,7 +130,14 @@ instance IsString ElementRef where
   fromString = ElementRef
 
 -- | Identifier for a /browsing context/; see <https://w3c.github.io/webdriver/webdriver-spec.html#dfn-current-browsing-context>.
-type ContextId = String
+data ContextId = ContextId String
+  deriving Eq
+
+instance Show ContextId where
+  show (ContextId str) = str
+
+instance IsString ContextId where
+  fromString = ContextId
 
 -- | For use with a /Locator Strategy/. See <https://w3c.github.io/webdriver/webdriver-spec.html#locator-strategies>.
 type Selector = String
