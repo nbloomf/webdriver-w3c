@@ -10,6 +10,7 @@ Portability : POSIX
 `HttpSession` is a stack of monads dealing with errors, state, environment, and logs. This module defines the auxiliary types used to represent this information.
 -}
 
+{-# LANGUAGE RecordWildCards #-}
 module Web.Api.Http.Types (
   -- * Errors
     Err(..)
@@ -36,6 +37,8 @@ module Web.Api.Http.Types (
   , Env()
   , theLogPrinter
   , setLogPrinter
+  , theLogVerbosity
+  , setLogVerbosity
   , theLogHandle
   , setLogHandle
   , theAssertionLogHandle
@@ -63,6 +66,9 @@ module Web.Api.Http.Types (
   , printEntryWith
   , basicLogPrinter
   , jsonLogPrinter
+  , LogVerbosity()
+  , noisyLog
+  , silentLog
   ) where
 
 import Data.Aeson
@@ -273,6 +279,9 @@ data Env err log env = Env {
   -- | Used for making the appearance of logs configurable.
     __log_printer :: LogPrinter err log
 
+  -- | Used to control the verbosity of the logs.
+  , __log_verbosity :: LogVerbosity err log
+
   -- | The handle of the session log file.
   , __log_handle :: Handle
 
@@ -301,6 +310,16 @@ theLogPrinter = return . __log_printer
 setLogPrinter
   :: LogPrinter err log -> Env err log env -> Env err log env
 setLogPrinter printer env = env { __log_printer = printer }
+
+-- | Retrieve the `LogVerbosity` in a monadic context.
+theLogVerbosity
+  :: (Monad m) => Env err log env -> m (LogVerbosity err log)
+theLogVerbosity = return . __log_verbosity
+
+-- | Set the `LogVerbosity` of an `Env`.
+setLogVerbosity
+  :: LogVerbosity err log -> Env err log env -> Env err log env
+setLogVerbosity verbosity env = env { __log_verbosity = verbosity }
 
 -- | Retrieve the log handle in a monadic context.
 theLogHandle
@@ -372,6 +391,7 @@ basicEnv
   -> Env err log env
 basicEnv printErr printLog promote env = Env
   { __log_printer = basicLogPrinter True printErr printLog showAssertion
+  , __log_verbosity = noisyLog
   , __log_handle = stderr
   , __assertion_log_handle = stdout
   , __console_in_handle = stdin
@@ -389,6 +409,7 @@ jsonEnv
   -> Env err log env
 jsonEnv printErr printLog promote env = Env
   { __log_printer = jsonLogPrinter True printErr printLog showAssertion
+  , __log_verbosity = noisyLog
   , __log_handle = stderr
   , __assertion_log_handle = stdout
   , __console_in_handle = stdin
@@ -504,27 +525,119 @@ data LogPrinter err log = LogPrinter {
   }
 
 
+-- | Type representing fine-grained log verbosity options.
+data LogVerbosity err log = LogVerbosity
+  { _err_verbosity :: err -> Bool
+  , _comment_verbosity :: Bool
+  , _request_verbosity :: Bool
+  , _response_verbosity :: Bool
+  , _http_error_verbosity :: Bool
+  , _silent_request_verbosity :: Bool
+  , _silent_response_verbosity :: Bool
+  , _io_error_verbosity :: Bool
+  , _json_error_verbosity :: Bool
+  , _unexpected_success_verbosity :: Bool
+  , _unexpected_failure_verbosity :: Bool
+  , _session_verbosity :: Bool
+  , _assertion_verbosity :: Bool
+  , _pause_verbosity :: Bool
+  , _log_verbosity :: log -> Bool
+  }
+
+
+-- | Prints all logs.
+noisyLog :: LogVerbosity err log
+noisyLog = LogVerbosity
+  { _err_verbosity = const True
+  , _comment_verbosity = True
+  , _request_verbosity = True
+  , _response_verbosity = True
+  , _http_error_verbosity = True
+  , _silent_request_verbosity = True
+  , _silent_response_verbosity = True
+  , _io_error_verbosity = True
+  , _json_error_verbosity = True
+  , _unexpected_success_verbosity = True
+  , _unexpected_failure_verbosity = True
+  , _session_verbosity = True
+  , _assertion_verbosity = True
+  , _pause_verbosity = True
+  , _log_verbosity = const True
+  }
+
+
+-- | Suppresses all logs.
+silentLog :: LogVerbosity err log
+silentLog = LogVerbosity
+  { _err_verbosity = const False
+  , _comment_verbosity = False
+  , _request_verbosity = False
+  , _response_verbosity = False
+  , _http_error_verbosity = False
+  , _silent_request_verbosity = False
+  , _silent_response_verbosity = False
+  , _io_error_verbosity = False
+  , _json_error_verbosity = False
+  , _unexpected_success_verbosity = False
+  , _unexpected_failure_verbosity = False
+  , _session_verbosity = False
+  , _assertion_verbosity = False
+  , _pause_verbosity = False
+  , _log_verbosity = const False
+  }
+
+
 -- | Prints a log entry with the given `LogPrinter`.
+printEntryWith :: LogPrinter err log -> LogVerbosity err log -> (UTCTime, Entry err log) -> Maybe String
+printEntryWith printer LogVerbosity{..} (time, entry) = case entry of
+  LogError err -> if _err_verbosity err
+    then Just $ __error printer time err
+    else Nothing
+  LogComment msg -> if _comment_verbosity
+    then Just $ __comment printer time msg
+    else Nothing
+  LogRequest verb url opts payload -> if _request_verbosity
+    then Just $ __request printer time verb url opts payload
+    else Nothing
+  LogResponse str -> if _response_verbosity
+    then Just $ __response printer time str
+    else Nothing
+  LogHttpError err -> if _http_error_verbosity
+    then Just $ __http_error printer time err
+    else Nothing
+  LogSilentRequest -> if _silent_request_verbosity
+    then Just $ __silent_request printer time
+    else Nothing
+  LogSilentResponse -> if _silent_response_verbosity
+    then Just $ __silent_response printer time
+    else Nothing
+  LogIOError err -> if _io_error_verbosity
+    then Just $ __io_error printer time err
+    else Nothing
+  LogJsonError err -> if _json_error_verbosity
+    then Just $ __json_error printer time err
+    else Nothing
+  LogUnexpectedSuccess msg -> if _unexpected_success_verbosity
+    then Just $ __unexpected_success printer time msg
+    else Nothing
+  LogUnexpectedFailure msg -> if _unexpected_failure_verbosity
+    then Just $ __unexpected_failure printer time msg
+    else Nothing
+  LogSession verb -> if _session_verbosity
+    then Just $ __session printer time verb
+    else Nothing
+  LogAssertion x -> if _assertion_verbosity
+    then Just $ __assertion printer time x
+    else Nothing
+  LogPause m -> if _pause_verbosity
+    then Just $ __pause printer time m
+    else Nothing
+  LogItem x -> if _log_verbosity x
+    then Just $ __log printer time x
+    else Nothing
 
-printEntryWith :: LogPrinter err log -> (UTCTime, Entry err log) -> String
-printEntryWith printer (time, entry) = case entry of
-  LogError err -> __error printer time err
-  LogComment msg -> __comment printer time msg
-  LogRequest verb url opts payload -> __request printer time verb url opts payload
-  LogResponse str -> __response printer time str
-  LogHttpError err -> __http_error printer time err
-  LogSilentRequest -> __silent_request printer time
-  LogSilentResponse -> __silent_response printer time
-  LogIOError err -> __io_error printer time err
-  LogJsonError err -> __json_error printer time err
-  LogUnexpectedSuccess msg -> __unexpected_success printer time msg
-  LogUnexpectedFailure msg -> __unexpected_failure printer time msg
-  LogSession verb -> __session printer time verb
-  LogAssertion x -> __assertion printer time x
-  LogPause m -> __pause printer time m
-  LogItem x -> __log printer time x
 
--- Now for some default printers. We'll need some helpers for printing timestamps and coloring text.
+-- Helpers for printing timestamps and coloring text.
 
 trunc :: UTCTime -> String
 trunc = take 19 . show
@@ -537,6 +650,7 @@ blue str = "\x1b[1;34m" ++ str ++ "\x1b[0;39;49m"
 green str = "\x1b[1;32m" ++ str ++ "\x1b[0;39;49m"
 yellow str = "\x1b[1;33m" ++ str ++ "\x1b[0;39;49m"
 magenta str = "\x1b[1;35m" ++ str ++ "\x1b[0;39;49m"
+
 
 -- | A `LogPrinter` that treats all requests and responses as plain text.
 basicLogPrinter

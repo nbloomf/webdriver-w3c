@@ -11,6 +11,7 @@ import Web.Api.WebDriver
 import Test.Tasty.WebDriver
 
 import qualified Test.Tasty as T
+import qualified Test.Tasty.ExpectedFailure as TE
 
 
 invalidElementState
@@ -26,7 +27,8 @@ invalidElementStateExit :: (Effectful m, Typeable m) => FilePath -> m () -> T.Te
 invalidElementStateExit dir x =
   let path = dir ++ "/invalidElementState.html" in
   T.testGroup "Invalid Element State"
-    [ ignoreChromedriver $ testCase "elementClear" (_test_elementClear_invalid_element_state path x)
+    [ ifDriverIs Chromedriver TE.ignoreTest $
+        testCase "elementClear" (_test_elementClear_invalid_element_state path x)
     ]
 
 

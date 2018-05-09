@@ -11,6 +11,7 @@ import Web.Api.WebDriver
 import Test.Tasty.WebDriver
 
 import qualified Test.Tasty as T
+import qualified Test.Tasty.ExpectedFailure as TE
 
 
 unknownError
@@ -24,7 +25,8 @@ unknownError e = case e of
 
 unknownErrorExit :: (Effectful m, Typeable m) => FilePath -> m () -> T.TestTree
 unknownErrorExit path x = T.testGroup "Unknown Error"
-  [ ignoreChromedriver $ testCase "navigateTo" (_test_navigateTo_unknown_error x)
+  [ ifDriverIs Chromedriver TE.ignoreTest $
+      testCase "navigateTo" (_test_navigateTo_unknown_error x)
   ]
 
 

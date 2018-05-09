@@ -11,6 +11,7 @@ import Web.Api.WebDriver
 import Test.Tasty.WebDriver
 
 import qualified Test.Tasty as T
+import qualified Test.Tasty.ExpectedFailure as TE
 
 
 unexpectedError
@@ -41,9 +42,15 @@ successfulExit dir x =
     , testCase "switchToParentFrame" (_test_switchToParentFrame_success path x)
     , testCase "getWindowRect" (_test_getWindowRect_success x)
     , testCase "setWindowRect" (_test_setWindowRect_success x)
-    , ignoreChromedriver $ testCase "maximizeWindow" (_test_maximizeWindow_success x)
-    , ignoreChromedriver $ testCase "minimizeWindow" (_test_minimizeWindow_success x)
-    , ignoreChromedriver $ testCase "fullscreenWindow" (_test_fullscreenWindow_success x)
+    ,   ifTierIs TEST TE.ignoreTest
+      $ ifDriverIs Chromedriver TE.ignoreTest
+      $ testCase "maximizeWindow" (_test_maximizeWindow_success x)
+    ,   ifTierIs TEST TE.ignoreTest
+      $ ifDriverIs Chromedriver TE.ignoreTest
+      $ testCase "minimizeWindow" (_test_minimizeWindow_success x)
+    ,   ifTierIs TEST TE.ignoreTest
+      $ ifDriverIs Chromedriver TE.ignoreTest
+      $ testCase "fullscreenWindow" (_test_fullscreenWindow_success x)
     , testCase "findElement" (_test_findElement_success path x)
     , testCase "findElements" (_test_findElements_success path x)
     , testCase "findElementFromElement" (_test_findElementFromElement_success path x)
@@ -51,29 +58,42 @@ successfulExit dir x =
     , testCase "getActiveElement" (_test_getActiveElement_success x)
     , testCase "isElementSelected" (_test_isElementSelected_success path x)
     , testCase "getElementAttribute" (_test_getElementAttribute_success path x)
-    , ignoreChromedriver $ testCase "getElementCssValue" (_test_getElementCssValue_success path x)
+    , ifDriverIs Chromedriver TE.ignoreTest $
+        testCase "getElementCssValue" (_test_getElementCssValue_success path x)
     , testCase "getElementText" (_test_getElementText_success path x)
     , testCase "getElementTagName" (_test_getElementTagName_success path x)
-    , ignoreChromedriver $ testCase "getElementRect" (_test_getElementRect_success path x)
+    , ifDriverIs Chromedriver TE.ignoreTest $
+        testCase "getElementRect" (_test_getElementRect_success path x)
     , testCase "isElementEnabled" (_test_isElementEnabled_success path x)
     , testCase "elementClick" (_test_elementClick_success path x)
     , testCase "elementClear" (_test_elementClear_success path x)
-    , ignoreChromedriver $ testCase "elementSendKeys" (_test_elementSendKeys_success path x)
+    , ifDriverIs Chromedriver TE.ignoreTest $
+        testCase "elementSendKeys" (_test_elementSendKeys_success path x)
     , testCase "getPageSource" (_test_getPageSource_success path x)
     , testCase "getPageSourceStealth" (_test_getPageSourceStealth_success path x)
     , testCase "getAllCookies" (_test_getAllCookies_success path x)
-    , ignoreChromedriver $ testCase "getNamedCookie" (_test_getNamedCookie_success path x)
-    , ignoreChromedriver $ testCase "deleteCookie" (_test_deleteCookie_success path x)
+    , ifDriverIs Chromedriver TE.ignoreTest $
+        testCase "getNamedCookie" (_test_getNamedCookie_success path x)
+    , ifDriverIs Chromedriver TE.ignoreTest $
+        testCase "deleteCookie" (_test_deleteCookie_success path x)
     , testCase "deleteAllCookies" (_test_deleteAllCookies_success x)
-    , ignoreChromedriver $ testCase "performActions (keyboard)" (_test_performActions_keyboard_success x)
-    , ignoreChromedriver $ testCase "performActionsStealth (keyboard)" (_test_performActionsStealth_keyboard_success x)
-    , ignoreChromedriver $ testCase "releaseActions" (_test_releaseActions_success x)
-    , ignoreChromedriver $ testCase "dismissAlert" (_test_dismissAlert_success path x)
-    , ignoreChromedriver $ testCase "acceptAlert" (_test_acceptAlert_success path x)
-    , ignoreChromedriver $ testCase "getAlertText" (_test_getAlertText_success path x)
-    , ignoreChromedriver $ testCase "sendAlertText" (_test_sendAlertText_success path x)
+    , ifDriverIs Chromedriver TE.ignoreTest $
+        testCase "performActions (keyboard)" (_test_performActions_keyboard_success x)
+    , ifDriverIs Chromedriver TE.ignoreTest $
+        testCase "performActionsStealth (keyboard)" (_test_performActionsStealth_keyboard_success x)
+    , ifDriverIs Chromedriver TE.ignoreTest $
+        testCase "releaseActions" (_test_releaseActions_success x)
+    , ifDriverIs Chromedriver TE.ignoreTest $
+        testCase "dismissAlert" (_test_dismissAlert_success path x)
+    , ifDriverIs Chromedriver TE.ignoreTest $
+        testCase "acceptAlert" (_test_acceptAlert_success path x)
+    , ifDriverIs Chromedriver TE.ignoreTest $
+        testCase "getAlertText" (_test_getAlertText_success path x)
+    , ifDriverIs Chromedriver TE.ignoreTest $
+        testCase "sendAlertText" (_test_sendAlertText_success path x)
     , testCase "takeScreenshot" (_test_takeScreenshot_success path x)
-    , ignoreChromedriver $ testCase "takeElementScreenshot" (_test_takeElementScreenshot_success path x)
+    , ifDriverIs Chromedriver TE.ignoreTest $
+        testCase "takeElementScreenshot" (_test_takeElementScreenshot_success path x)
     ]
 
 

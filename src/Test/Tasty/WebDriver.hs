@@ -14,8 +14,8 @@ module Test.Tasty.WebDriver (
     testCase
   , testCaseWithSetup
 
-  , ignoreChromedriver
-  , logChromedriver
+  , ifDriverIs
+  , ifTierIs
 
   -- * Options
   , Driver(..)
@@ -24,13 +24,18 @@ module Test.Tasty.WebDriver (
   , RemotePort(..)
   , RemotePath(..)
   , SecretsPath(..)
+  , Deployment(..)
+  , DeploymentTier(..)
+  , BrowserPath(..)
   , ApiResponseFormat(..)
   , WebDriverApiVersion(..)
   , LogHandle(..)
+  , LogNoiseLevel(..)
   , AssertionLogHandle(..)
   , ConsoleInHandle(..)
   , ConsoleOutHandle(..)
   , FileHandle(..)
+  , Headless(..)
   ) where
 
 import Control.Monad.IO.Class
@@ -68,10 +73,13 @@ instance (Effectful m, Typeable m) => TT.IsTest (WebDriverTest m) where
     , TO.Option (Proxy :: Proxy ApiResponseFormat)
     , TO.Option (Proxy :: Proxy WebDriverApiVersion)
     , TO.Option (Proxy :: Proxy LogHandle)
+    , TO.Option (Proxy :: Proxy LogNoiseLevel)
     , TO.Option (Proxy :: Proxy AssertionLogHandle)
     , TO.Option (Proxy :: Proxy ConsoleInHandle)
     , TO.Option (Proxy :: Proxy ConsoleOutHandle)
+    , TO.Option (Proxy :: Proxy Deployment)
     , TO.Option (Proxy :: Proxy SecretsPath)
+    , TO.Option (Proxy :: Proxy BrowserPath)
     ]
 
   run opts WebDriverTest{..} _ = do
@@ -84,10 +92,12 @@ instance (Effectful m, Typeable m) => TT.IsTest (WebDriverTest m) where
       ApiResponseFormat format = TO.lookupOption opts
       WebDriverApiVersion version = TO.lookupOption opts
       LogHandle log = TO.lookupOption opts
+      logNoiseLevel = TO.lookupOption opts
       AssertionLogHandle alog = TO.lookupOption opts
       ConsoleInHandle cin = TO.lookupOption opts
       ConsoleOutHandle cout = TO.lookupOption opts
       SecretsPath secrets = TO.lookupOption opts
+      BrowserPath browserPath = TO.lookupOption opts
 
     logHandle <- writeModeHandle log
     alogHandle <- writeModeHandle alog
@@ -103,9 +113,14 @@ instance (Effectful m, Typeable m) => TT.IsTest (WebDriverTest m) where
         Nothing -> return ()
         Just str -> comment str
 
+      logNoise = case logNoiseLevel of
+        NoisyLog -> noisyLog
+        SilentLog -> silentLog
+
       config =
         setEnv
           ( setLogHandle logHandle
+          . setLogVerbosity logNoise
           . setAssertionLogHandle alogHandle
           . setConsoleInHandle cinHandle
           . setConsoleOutHandle coutHandle
@@ -124,14 +139,16 @@ instance (Effectful m, Typeable m) => TT.IsTest (WebDriverTest m) where
         Geckodriver -> emptyCapabilities
           { _browser_name = Just Firefox
           , _firefox_options = Just $ defaultFirefoxOptions
-              { _firefox_args = if headless then Just ["-headless"] else Nothing
+              { _firefox_binary = browserPath
+              , _firefox_args = if headless then Just ["-headless"] else Nothing
               }
           }
 
         Chromedriver -> emptyCapabilities
           { _browser_name = Just Chrome
           , _chrome_options = Just $ defaultChromeOptions
-              { _chrome_args = if headless then Just ["--headless"] else Nothing
+              { _chrome_binary = browserPath
+              , _chrome_args = if headless then Just ["--headless"] else Nothing
               }
           }
 
@@ -162,6 +179,7 @@ testCase name test =
   testCaseWithSetup name (return ()) (return ()) test
 
 
+
 -- | WebDriver test case with additional setup and teardown phases -- setup runs before the test (for e.g. logging in) and teardown runs after the test (for e.g. deleting temp files).
 testCaseWithSetup
   :: (Effectful m, Typeable m)
@@ -189,8 +207,8 @@ instance TO.IsOption Driver where
     "geckodriver" -> Just $ Driver Geckodriver
     "chromedriver" -> Just $ Driver Chromedriver
     _ -> Nothing
-  optionName = return "driver name"
-  optionHelp = return "default: geckodriver"
+  optionName = return "driver"
+  optionHelp = return "remote end name: (geckodriver), chromedriver"
 
 
 
@@ -203,7 +221,7 @@ instance TO.IsOption Headless where
   defaultValue = Headless False
   parseValue = fmap Headless . TO.safeReadBool
   optionName = return "headless"
-  optionHelp = return "run in headless mode (default: false)"
+  optionHelp = return "run in headless mode: (false), true"
 
 
 
@@ -215,8 +233,8 @@ newtype RemoteHost
 instance TO.IsOption RemoteHost where
   defaultValue = RemoteHost "localhost"
   parseValue str = Just $ RemoteHost str
-  optionName = return "remote end hostname"
-  optionHelp = return "default: localhost"
+  optionName = return "remotehost"
+  optionHelp = return "remote end hostname: (localhost), STR"
 
 
 
@@ -228,8 +246,8 @@ newtype RemotePort
 instance TO.IsOption RemotePort where
   defaultValue = RemotePort 4444
   parseValue = fmap RemotePort . TO.safeRead
-  optionName = return "remote end port"
-  optionHelp = return "default: 4444"
+  optionName = return "remoteport"
+  optionHelp = return "remote end port: (4444), INT"
 
 
 
@@ -241,8 +259,8 @@ newtype RemotePath
 instance TO.IsOption RemotePath where
   defaultValue = RemotePath ""
   parseValue = Just . RemotePath
-  optionName = return "remote end path"
-  optionHelp = return "default: (empty)"
+  optionName = return "remotepath"
+  optionHelp = return "remote end path: (), STR"
 
 
 
@@ -254,8 +272,21 @@ newtype SecretsPath
 instance TO.IsOption SecretsPath where
   defaultValue = SecretsPath ""
   parseValue path = Just $ SecretsPath path
-  optionName = return "secrets path"
-  optionHelp = return "default: ~/.webdriver/secrets"
+  optionName = return "secrets"
+  optionHelp = return "secrets path: (~/.webdriver/secrets), PATH"
+
+
+
+-- | Path to browser binary.
+newtype BrowserPath
+  = BrowserPath { theBrowserPath :: Maybe FilePath }
+  deriving Typeable
+
+instance TO.IsOption BrowserPath where
+  defaultValue = BrowserPath Nothing
+  parseValue path = Just $ BrowserPath $ Just path
+  optionName = return "browserpath"
+  optionHelp = return "path to browser binary: (), PATH"
 
 
 
@@ -270,8 +301,8 @@ instance TO.IsOption ApiResponseFormat where
     "spec" -> Just $ ApiResponseFormat SpecFormat
     "chromedriver" -> Just $ ApiResponseFormat ChromeFormat
     _ -> Nothing
-  optionName = return "response format"
-  optionHelp = return "defaul: spec"
+  optionName = return "response-format"
+  optionHelp = return "JSON response format: (spec), chromedriver"
 
 
 
@@ -285,8 +316,8 @@ instance TO.IsOption WebDriverApiVersion where
   parseValue str = case str of
     "cr-2018-03-04" -> Just $ WebDriverApiVersion CR_2018_03_04
     _ -> Nothing
-  optionName = return "webdriver API version"
-  optionHelp = return "cr-2018-03-04"
+  optionName = return "api-version"
+  optionHelp = return "WebDriver API version: (cr-2018-03-04)"
 
 
 
@@ -297,9 +328,29 @@ newtype LogHandle
 
 instance TO.IsOption LogHandle where
   defaultValue = LogHandle StdErr
-  parseValue path = Just $ LogHandle $ Path path
-  optionName = return "log file name"
-  optionHelp = return "default: stderr"
+  parseValue path = case path of
+    "stdout" -> Just $ LogHandle StdOut
+    "stderr" -> Just $ LogHandle StdErr
+    _ -> Just $ LogHandle $ Path path
+  optionName = return "log"
+  optionHelp = return "log destination: (stderr), stdout, PATH"
+
+
+
+-- | Log Noise Level.
+data LogNoiseLevel
+  = NoisyLog
+  | SilentLog
+  deriving Typeable
+
+instance TO.IsOption LogNoiseLevel where
+  defaultValue = NoisyLog
+  parseValue str = case str of
+    "noisy" -> Just NoisyLog
+    "silent" -> Just SilentLog
+    _ -> Nothing
+  optionName = return "verbosity"
+  optionHelp = return "log verbosity: (noisy), silent"
 
 
 
@@ -310,35 +361,66 @@ newtype AssertionLogHandle
 
 instance TO.IsOption AssertionLogHandle where
   defaultValue = AssertionLogHandle StdOut
-  parseValue path = Just $ AssertionLogHandle $ Path path
-  optionName = return "assertion log file name"
-  optionHelp = return "default: stdout"
+  parseValue path = case path of
+    "stdout" -> Just $ AssertionLogHandle StdOut
+    "stderr" -> Just $ AssertionLogHandle StdErr
+    _ -> Just $ AssertionLogHandle $ Path path
+  optionName = return "assertion-log"
+  optionHelp = return "assertion log destination: (stdout), stderr, PATH"
 
 
 
--- | Console in location.
+-- | Console in location. Used to mock stdin for testing.
 newtype ConsoleInHandle
   = ConsoleInHandle { theConsoleInHandle :: FileHandle }
   deriving Typeable
 
 instance TO.IsOption ConsoleInHandle where
   defaultValue = ConsoleInHandle StdIn
-  parseValue path = Just $ ConsoleInHandle $ Path path
-  optionName = return "console input file name"
-  optionHelp = return "default: stdin"
+  parseValue path = case path of
+    "stdin" -> Just $ ConsoleInHandle StdIn
+    _ -> Just $ ConsoleInHandle $ Path path
+  optionName = return "console-in"
+  optionHelp = return "console input: (stdin), PATH"
 
 
 
--- | Console out location.
+-- | Console out location. Used to mock stdout for testing.
 newtype ConsoleOutHandle
   = ConsoleOutHandle { theConsoleOutHandle :: FileHandle }
   deriving Typeable
 
 instance TO.IsOption ConsoleOutHandle where
   defaultValue = ConsoleOutHandle StdOut
-  parseValue path = Just $ ConsoleOutHandle $ Path path
-  optionName = return "console out file name"
-  optionHelp = return "default: stdout"
+  parseValue path = case path of
+    "stdout" -> Just $ ConsoleOutHandle StdOut
+    "stderr" -> Just $ ConsoleOutHandle StdErr
+    _ -> Just $ ConsoleOutHandle $ Path path
+  optionName = return "console-out"
+  optionHelp = return "console output: (stdout), stderr, PATH"
+
+
+
+-- | Named deployment environment.
+newtype Deployment
+  = Deployment { theDeployment :: DeploymentTier }
+  deriving (Eq, Typeable)
+
+data DeploymentTier
+  = DEV
+  | TEST
+  | PROD
+  deriving (Eq, Show, Typeable)
+
+instance TO.IsOption Deployment where
+  defaultValue = Deployment DEV
+  parseValue str = case str of
+    "dev" -> Just $ Deployment DEV
+    "test" -> Just $ Deployment TEST
+    "prod" -> Just $ Deployment PROD
+    _ -> Nothing
+  optionName = return "deploy"
+  optionHelp = return "deployment environment: (dev), test, prod"
 
 
 
@@ -369,24 +451,26 @@ readModeHandle x = case x of
 data DriverName
   = Geckodriver
   | Chromedriver
-  deriving Typeable
+  deriving (Eq, Typeable)
 
 
 
--- | Ignore a test tree if the @Driver@ option is "chromedriver". Useful because chromedriver doesn't implement all endpoints.
-ignoreChromedriver :: TT.TestTree -> TT.TestTree
-ignoreChromedriver tree = T.askOption failure
+-- | Set local options if the @Driver@ option has a given value.
+ifDriverIs :: DriverName -> (TT.TestTree -> TT.TestTree) -> TT.TestTree -> TT.TestTree
+ifDriverIs driver f tree = T.askOption checkDriver
   where
-    failure :: Driver -> TT.TestTree
-    failure (Driver d) = case d of
-      Geckodriver -> tree
-      Chromedriver -> TE.ignoreTest tree
+    checkDriver :: Driver -> TT.TestTree
+    checkDriver (Driver d) = if d == driver
+      then f tree
+      else tree
 
--- | Write logs to stdout if the driver is "chromedriver". Handy for debugging a single test.
-logChromedriver :: TT.TestTree -> TT.TestTree
-logChromedriver tree = T.askOption check
+
+
+-- | Set local options if the @Deployment@ option has a given value.
+ifTierIs :: DeploymentTier -> (TT.TestTree -> TT.TestTree) -> TT.TestTree -> TT.TestTree
+ifTierIs tier f tree = T.askOption checkDeployment
   where
-    check :: Driver -> TT.TestTree
-    check (Driver d) = case d of
-      Geckodriver -> tree
-      Chromedriver -> T.localOption (LogHandle StdOut) tree
+    checkDeployment :: Deployment -> TT.TestTree
+    checkDeployment (Deployment t) = if t == tier
+      then f tree
+      else tree

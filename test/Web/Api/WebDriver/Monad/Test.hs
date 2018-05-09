@@ -28,14 +28,16 @@ tests path = testGroup "Web.Api.WebDriver.Monad"
   ,   localOption (Driver Geckodriver)
     $ localOption (ApiResponseFormat SpecFormat)
     $ localOption (RemotePort 4444)
-    $ localOption (LogHandle $ Path "/dev/null")
+    $ localOption (SilentLog)
     $ localOption (AssertionLogHandle $ Path "/dev/null")
     $ testGroup "Geckodriver" (endpointTests path (return () :: IO ()))
 
   ,   localOption (Driver Chromedriver)
     $ localOption (ApiResponseFormat ChromeFormat)
     $ localOption (RemotePort 9515)
-    $ localOption (LogHandle $ Path "/dev/null")
+    $ localOption (Headless True)
+    $ ifTierIs TEST (localOption (BrowserPath $ Just "/usr/bin/google-chrome"))
+    $ localOption (SilentLog)
     $ localOption (AssertionLogHandle $ Path "/dev/null")
     $ testGroup "Chromedriver" (endpointTests path (return () :: IO ()))
   ]

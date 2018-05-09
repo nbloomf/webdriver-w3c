@@ -1,9 +1,10 @@
 module Main where
 
-import System.Environment (setEnv)
+import System.Environment (setEnv, lookupEnv)
 import System.Directory (getCurrentDirectory)
 
 import Test.Tasty
+import Test.Tasty.WebDriver
 
 import Web.Api.Http.Assert.Test
 import Web.Api.Http.Effects.Test
@@ -22,9 +23,22 @@ main = do
   setEnv "TASTY_NUM_THREADS" "1" -- needed for live tests
   testPagePath <- fmap (\path -> path ++ "/test/page") getCurrentDirectory
 
-  defaultMain $ testGroup "All Tests"
+  deploy <- determineDeploymentTier
+
+  defaultMain $ localOption (Deployment deploy) $ testGroup "All Tests"
     [ Web.Api.Http.Assert.Test.tests
     , Web.Api.WebDriver.Types.Test.tests
     , Web.Api.Http.Effects.Test.tests testPagePath
     , Web.Api.WebDriver.Monad.Test.tests ("file://" ++ testPagePath)
     ]
+
+determineDeploymentTier :: IO DeploymentTier
+determineDeploymentTier = do
+  putStrLn "Determining deployment environment..."
+  deploy <- do
+    var <- lookupEnv "CI"
+    case var of
+      Just "true" -> return TEST
+      _ -> return DEV
+  putStrLn $ "Deployment environment is " ++ show deploy
+  return deploy
