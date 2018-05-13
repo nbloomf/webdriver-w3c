@@ -1,6 +1,8 @@
 webdriver-w3c
 =============
 
+[![Build Status](https://travis-ci.org/nbloomf/webdriver-w3c.svg?branch=master)](https://travis-ci.org/nbloomf/webdriver-w3c)
+
 Haskell bindings for the W3C WebDriver API
 
 Disclaimer: It's very early days for this code. You're welcome to play with it and find bugs. :)
