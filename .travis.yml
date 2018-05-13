@@ -60,4 +60,4 @@ before_script:
 
 
 script:
-- stack --no-terminal test --haddock
+- stack --no-terminal test --haddock --no-haddock-deps
