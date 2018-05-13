@@ -447,7 +447,7 @@ instance Arbitrary PlatformName where
 
 -- | See <https://sites.google.com/a/chromium.org/chromedriver/capabilities>.
 data ChromeOptions = ChromeOptions
-  { _chrome_binary :: Maybe String -- ^ @binary@
+  { _chrome_binary :: Maybe FilePath -- ^ @binary@
   , _chrome_args :: Maybe [String] -- ^ @args@
   } deriving (Eq, Show)
 
@@ -479,7 +479,7 @@ defaultChromeOptions = ChromeOptions
 
 -- | See <https://github.com/mozilla/geckodriver#firefox-capabilities>.
 data FirefoxOptions = FirefoxOptions
-  { _firefox_binary :: Maybe String -- ^ @binary@
+  { _firefox_binary :: Maybe FilePath -- ^ @binary@
   , _firefox_args :: Maybe [String] -- ^ @args@
   } deriving (Eq, Show)
 

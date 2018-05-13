@@ -1,0 +1,63 @@
+# Use new container infrastructure to enable caching
+sudo: false
+
+
+# Do not choose a language; we provide our own build tools.
+language: generic
+
+
+# Caching so the next build will be fast too.
+cache:
+  directories:
+  - $HOME/.stack
+  - $HOME/.stack-work
+
+
+# Ensure necessary system libraries are present
+addons:
+  apt:
+    sources:
+      - google-chrome
+    packages:
+      - google-chrome-stable
+      - libgmp-dev
+      - unzip
+      - xvfb
+
+
+before_install:
+- mkdir -p ~/.local/bin
+- export PATH=$HOME/.local/bin:$PATH
+-
+- # install stack
+- travis_retry curl -L https://get.haskellstack.org/stable/linux-x86_64.tar.gz | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
+-
+- # install geckodriver
+- travis_retry curl -L https://github.com/mozilla/geckodriver/releases/download/v0.20.1/geckodriver-v0.20.1-linux64.tar.gz | tar xz -C ~/.local/bin
+-
+- # install chromedriver
+- wget -O /tmp/chromedriver.zip https://chromedriver.storage.googleapis.com/2.38/chromedriver_linux64.zip
+- unzip /tmp/chromedriver.zip chromedriver -d ~/.local/bin
+-
+- # install firefox
+- wget -L -O firefox.tar.bz2 'https://download.mozilla.org/?product=firefox-latest-ssl&os=linux64&lang=en-US'
+- tar xvf firefox.tar.bz2 -C ~/.local/bin
+- export PATH=$HOME/.local/bin/firefox:$PATH
+-
+- # start remote ends
+- xvfb-run geckodriver --binary $HOME/.local/bin/firefox/firefox --port 4444 >\dev\null 2>\dev\null & chromedriver --port=9515 &
+- sleep 3
+
+
+install:
+- stack --no-terminal --install-ghc test --only-dependencies
+
+
+before_script:
+- # root needs permission to run chrome-sandbox; else chromedriver will error out
+- sudo chown root /opt/google/chrome/chrome-sandbox
+- sudo chmod 4755 /opt/google/chrome/chrome-sandbox
+
+
+script:
+- stack --no-terminal test --haddock

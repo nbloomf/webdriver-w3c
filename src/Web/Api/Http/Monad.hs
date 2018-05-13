@@ -178,8 +178,12 @@ logNow msg = do
   time <- mGetSystemTime
   printer <- getEnvironment >>= theLogPrinter
   handle <- getEnvironment >>= theLogHandle
-  mhPutStrLn handle $ printEntryWith printer (time, msg)
-  mhFlush handle
+  verbosity <- getEnvironment >>= theLogVerbosity
+  case printEntryWith printer verbosity (time, msg) of
+    Nothing -> return ()
+    Just msg -> do
+      mhPutStrLn handle msg
+      mhFlush handle
   appendLog $ Log [(time, msg)] []
 
 -- | Write a comment to the log.
@@ -209,8 +213,12 @@ assertNow a = do
     else do
       printer <- getEnvironment >>= theLogPrinter
       handle <- getEnvironment >>= theAssertionLogHandle
-      mhPutStrLn handle $ printEntryWith printer (time, LogAssertion a)
-      mhFlush handle
+      verbosity <- getEnvironment >>= theLogVerbosity
+      case printEntryWith printer verbosity (time, LogAssertion a) of
+        Just msg -> do
+          mhPutStrLn handle msg
+          mhFlush handle
+        Nothing -> return ()
   appendLog $ Log [] [(time, a)]
 
 
