@@ -75,7 +75,7 @@ library
 
 
 
-executable webdriver-w3c-demo
+executable webdriver-w3c-intro
   default-language: Haskell2010
   main-is: Main.lhs
   hs-source-dirs: app
