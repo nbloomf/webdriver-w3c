@@ -15,7 +15,9 @@ module Test.Tasty.WebDriver (
   , testCaseWithSetup
 
   , ifDriverIs
+  , unlessDriverIs
   , ifTierIs
+  , unlessTierIs
 
   -- * Options
   , Driver(..)
@@ -455,7 +457,7 @@ data DriverName
 
 
 
--- | Set local options if the @Driver@ option has a given value.
+-- | Set local options if the @Driver@ option is a given value.
 ifDriverIs :: DriverName -> (TT.TestTree -> TT.TestTree) -> TT.TestTree -> TT.TestTree
 ifDriverIs driver f tree = T.askOption checkDriver
   where
@@ -466,11 +468,33 @@ ifDriverIs driver f tree = T.askOption checkDriver
 
 
 
--- | Set local options if the @Deployment@ option has a given value.
+-- | Set local options if the @Driver@ option is not a given value.
+unlessDriverIs :: DriverName -> (TT.TestTree -> TT.TestTree) -> TT.TestTree -> TT.TestTree
+unlessDriverIs driver f tree = T.askOption checkDriver
+  where
+    checkDriver :: Driver -> TT.TestTree
+    checkDriver (Driver d) = if d /= driver
+      then f tree
+      else tree
+
+
+
+-- | Set local options if the @Deployment@ option is a given value.
 ifTierIs :: DeploymentTier -> (TT.TestTree -> TT.TestTree) -> TT.TestTree -> TT.TestTree
 ifTierIs tier f tree = T.askOption checkDeployment
   where
     checkDeployment :: Deployment -> TT.TestTree
     checkDeployment (Deployment t) = if t == tier
+      then f tree
+      else tree
+
+
+
+-- | Set local options if the @Deployment@ option is not a given value.
+unlessTierIs :: DeploymentTier -> (TT.TestTree -> TT.TestTree) -> TT.TestTree -> TT.TestTree
+unlessTierIs tier f tree = T.askOption checkDeployment
+  where
+    checkDeployment :: Deployment -> TT.TestTree
+    checkDeployment (Deployment t) = if t /= tier
       then f tree
       else tree
