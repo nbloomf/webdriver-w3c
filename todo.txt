@@ -3,3 +3,4 @@
 * Be able to run tests in parallel out of the box
 * /session/{session id}/element/{element id}/displayed
 * Need a ci test matrix, but have to think about how to prevent combinatorial blowup; dependencies are geckodriver+firefox+chromedriver+chrome, so matrix will get big fast. Compromise: only support one version of the drivers at a time?
+* Revisit the tasty test helpers. Does the if/unless style make sense? Do we need helpers for other options?
