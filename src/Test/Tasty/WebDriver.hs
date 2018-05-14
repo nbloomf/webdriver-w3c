@@ -144,7 +144,7 @@ instance (Effectful m, Typeable m) => TT.IsTest (WebDriverTest m) where
         SilentLog -> silentLog
 
       config =
-        setEnv
+        setEnvironment
           ( setLogHandle logHandle
           . setLogVerbosity logNoise
           . setAssertionLogHandle alogHandle
@@ -550,9 +550,7 @@ getRemoteEndRef = do
     (Just x,  Just y)  -> newIORef $ combineRemoteEndPools x y
     (Nothing, Just y)  -> newIORef y
     (Just x,  Nothing) -> newIORef x
-    (Nothing, Nothing) -> do
-      putStrLn $ "Either --wd-remote-ends or --wd-remote-ends-config is required."
-      exitFailure
+    (Nothing, Nothing) -> newIORef emptyRemoteEndPool
 
 
 getRemoteEndConfigPath :: IO (Maybe RemoteEndPool)

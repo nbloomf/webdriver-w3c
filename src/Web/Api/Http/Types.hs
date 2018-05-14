@@ -58,8 +58,8 @@ module Web.Api.Http.Types (
   , HttpSessionConfig(..)
   , basicHttpSessionConfig
   , jsonHttpSessionConfig
-  , setEnv
-  , setSt
+  , setEnvironment
+  , setState
 
   -- * Pretty Printing
   , LogPrinter(..)
@@ -459,19 +459,19 @@ jsonHttpSessionConfig printErr printLog promote st env =
     }
 
 -- | Mutate the environment data of an `HttpSessionConfig`.
-setEnv
+setEnvironment
   :: (Env err log env -> Env err log env)
   -> HttpSessionConfig err st log env
   -> HttpSessionConfig err st log env
-setEnv f config = config
+setEnvironment f config = config
   { __environment = f $ __environment config }
 
 -- | Mutate the initial state of an `HttpSessionConfig`.
-setSt
+setState
   :: (St st -> St st)
   -> HttpSessionConfig err st log env
   -> HttpSessionConfig err st log env
-setSt f config = config
+setState f config = config
   { __initial_state = f $ __initial_state config }
 
 
