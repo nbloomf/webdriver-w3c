@@ -2,5 +2,4 @@
 * Stealth commands should not log request/response details. We should test that this is the case.
 * Be able to run tests in parallel out of the box
 * /session/{session id}/element/{element id}/displayed
-* Once travis-ci is working, the ignored window tests should be conditionally included based on environment variable (they should run locally)
 * Need a ci test matrix, but have to think about how to prevent combinatorial blowup; dependencies are geckodriver+firefox+chromedriver+chrome, so matrix will get big fast. Compromise: only support one version of the drivers at a time?
