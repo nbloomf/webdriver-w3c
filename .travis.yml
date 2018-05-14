@@ -45,7 +45,7 @@ before_install:
 - export PATH=$HOME/.local/bin/firefox:$PATH
 -
 - # start remote ends
-- xvfb-run geckodriver --binary $HOME/.local/bin/firefox/firefox --port 4444 >\dev\null 2>\dev\null & chromedriver --port=9515 &
+- xvfb-run geckodriver --binary $HOME/.local/bin/firefox/firefox --port 4444 >/dev/null 2>/dev/null & chromedriver --port=9515 &
 - sleep 3
 
 
