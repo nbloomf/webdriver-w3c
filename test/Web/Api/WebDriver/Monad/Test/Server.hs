@@ -132,7 +132,8 @@ defaultWebDriverServer = MockServer
       [_,"session",session_id,"element",element_id,"screenshot"] ->
         get_session_id_element_id_screenshot session_id element_id
 
-      _ -> error $ "defaultWebDriverServer: get url: " ++ url
+      _ -> error $ "defaultWebDriverServer: get url: " ++ url ++
+        "' parsed as " ++ (show $ splitUrl $ stripScheme url)
 
   , __http_post = \url payload -> case splitUrl $ stripScheme url of
       {- New Session -}
@@ -243,7 +244,8 @@ defaultWebDriverServer = MockServer
       [_,"session",session_id,"alert","text"] ->
         post_session_id_alert_text session_id
 
-      _ -> error $ "defaultWebDriverServer: post url: " ++ stripScheme url
+      _ -> error $ "defaultWebDriverServer: post url: '" ++ url ++
+        "' parsed as " ++ (show $ splitUrl $ stripScheme url)
 
   , __http_delete = \url -> case splitUrl $ stripScheme url of
       {- Delete Session -}
@@ -266,11 +268,12 @@ defaultWebDriverServer = MockServer
       [_,"session",session_id,"actions"] ->
         delete_session_id_actions session_id
 
-      _ -> error $ "defaultWebDriverServer: delete url: " ++ url
+      _ -> error $ "defaultWebDriverServer: delete url: " ++ url ++
+        "' parsed as " ++ (show $ splitUrl $ stripScheme url)
   }
 
 stripScheme :: String -> String
-stripScheme str = case str of
+stripScheme str = case dropWhile (== ' ') str of
   ('h':'t':'t':'p':':':'/':'/':rest) -> rest
   ('h':'t':'t':'p':'s':':':'/':'/':rest) -> rest
   _ -> str

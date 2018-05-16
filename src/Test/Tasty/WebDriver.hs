@@ -10,21 +10,21 @@ Portability : POSIX
 
 {-# LANGUAGE DeriveDataTypeable, RecordWildCards #-}
 module Test.Tasty.WebDriver (
+    defaultWebDriverMain
+
   -- * Test Case Constructors
-    testCase
+  , testCase
   , testCaseWithSetup
 
+  -- * Branching
   , ifDriverIs
-  , unlessDriverIs
   , ifTierIs
+  , unlessDriverIs
   , unlessTierIs
 
   -- * Options
   , Driver(..)
   , DriverName(..)
-  , RemoteHost(..)
-  , RemotePort(..)
-  , RemotePath(..)
   , SecretsPath(..)
   , Deployment(..)
   , DeploymentTier(..)
@@ -32,13 +32,18 @@ module Test.Tasty.WebDriver (
   , ApiResponseFormat(..)
   , WebDriverApiVersion(..)
   , LogHandle(..)
+  , TestDelay(..)
   , LogNoiseLevel(..)
   , AssertionLogHandle(..)
   , ConsoleInHandle(..)
   , ConsoleOutHandle(..)
+  , RemoteEndRef(..)
   , FileHandle(..)
   , Headless(..)
+
+  , module Test.Tasty.WebDriver.Config
   ) where
+
 
 import Control.Monad.IO.Class
   ( MonadIO, liftIO )
@@ -48,15 +53,27 @@ import Data.List
   ( unlines )
 import System.IO
   ( Handle, stdout, stderr, stdin, openFile, IOMode(..) )
+import Data.IORef
+  ( IORef, newIORef, atomicModifyIORef' )
+import System.Exit
+  ( exitFailure )
+import Control.Concurrent
+  ( threadDelay )
+import Text.Read
+  ( readMaybe )
+import qualified Data.Map.Strict as MS
 import qualified Test.Tasty as T
 import qualified Test.Tasty.Providers as TT
 import qualified Test.Tasty.Options as TO
 import qualified Test.Tasty.ExpectedFailure as TE
 import qualified System.Environment as SE
-  ( getEnv )
+  ( getEnv, getArgs, lookupEnv )
+
 
 import Web.Api.Http
 import Web.Api.WebDriver
+
+import Test.Tasty.WebDriver.Config
 
 
 data WebDriverTest m = WebDriverTest
@@ -69,9 +86,6 @@ instance (Effectful m, Typeable m) => TT.IsTest (WebDriverTest m) where
   testOptions = return
     [ TO.Option (Proxy :: Proxy Driver)
     , TO.Option (Proxy :: Proxy Headless)
-    , TO.Option (Proxy :: Proxy RemoteHost)
-    , TO.Option (Proxy :: Proxy RemotePort)
-    , TO.Option (Proxy :: Proxy RemotePath)
     , TO.Option (Proxy :: Proxy ApiResponseFormat)
     , TO.Option (Proxy :: Proxy WebDriverApiVersion)
     , TO.Option (Proxy :: Proxy LogHandle)
@@ -82,24 +96,26 @@ instance (Effectful m, Typeable m) => TT.IsTest (WebDriverTest m) where
     , TO.Option (Proxy :: Proxy Deployment)
     , TO.Option (Proxy :: Proxy SecretsPath)
     , TO.Option (Proxy :: Proxy BrowserPath)
+    , TO.Option (Proxy :: Proxy TestDelay)
+    , TO.Option (Proxy :: Proxy RemoteEndRef)
+    , TO.Option (Proxy :: Proxy RemoteEndOpt)
     ]
 
   run opts WebDriverTest{..} _ = do
     let
       Driver driver = TO.lookupOption opts
       Headless headless = TO.lookupOption opts
-      RemoteHost host = TO.lookupOption opts
-      RemotePort port = TO.lookupOption opts
-      RemotePath path = TO.lookupOption opts
       ApiResponseFormat format = TO.lookupOption opts
       WebDriverApiVersion version = TO.lookupOption opts
       LogHandle log = TO.lookupOption opts
       logNoiseLevel = TO.lookupOption opts
       AssertionLogHandle alog = TO.lookupOption opts
       ConsoleInHandle cin = TO.lookupOption opts
+      TestDelay delay = TO.lookupOption opts
       ConsoleOutHandle cout = TO.lookupOption opts
       SecretsPath secrets = TO.lookupOption opts
       BrowserPath browserPath = TO.lookupOption opts
+      RemoteEndRef remotes = TO.lookupOption opts
 
     logHandle <- writeModeHandle log
     alogHandle <- writeModeHandle alog
@@ -109,6 +125,14 @@ instance (Effectful m, Typeable m) => TT.IsTest (WebDriverTest m) where
     secretsPath <- case secrets of
       "" -> fmap (++ "/.webdriver/secrets") $ SE.getEnv "HOME"
       spath -> return spath
+
+    remotesRef <- case remotes of
+      Just ref -> return ref
+      Nothing -> do
+        putStrLn "Error: no remote ends specified."
+        exitFailure
+
+    remote <- acquireRemoteEnd delay remotesRef driver
 
     let
       title = case _test_name of
@@ -127,9 +151,9 @@ instance (Effectful m, Typeable m) => TT.IsTest (WebDriverTest m) where
           . setConsoleInHandle cinHandle
           . setConsoleOutHandle coutHandle
           . setClientEnvironment
-              ( setRemoteHostname host
-              . setRemotePort port
-              . setRemotePath path
+              ( setRemoteHostname (remoteEndHost remote)
+              . setRemotePort (remoteEndPort remote)
+              . setRemotePath (remoteEndPath remote)
               . setResponseFormat format
               . setApiVersion version
               . setSecretsPath secretsPath
@@ -156,6 +180,8 @@ instance (Effectful m, Typeable m) => TT.IsTest (WebDriverTest m) where
 
     (result, assertions) <- toIO $
       debugSession config $ title >> runIsolated caps _test_session
+
+    releaseRemoteEnd remotesRef driver remote
 
     return $ case result of
       Right _ -> webDriverAssertionsToResult $ summarize assertions
@@ -224,45 +250,6 @@ instance TO.IsOption Headless where
   parseValue = fmap Headless . TO.safeReadBool
   optionName = return "headless"
   optionHelp = return "run in headless mode: (false), true"
-
-
-
--- | Hostname of the remote end.
-newtype RemoteHost
-  = RemoteHost { theRemoteHost :: String }
-  deriving Typeable
-
-instance TO.IsOption RemoteHost where
-  defaultValue = RemoteHost "localhost"
-  parseValue str = Just $ RemoteHost str
-  optionName = return "remotehost"
-  optionHelp = return "remote end hostname: (localhost), STR"
-
-
-
--- | Port of the remote end.
-newtype RemotePort
-  = RemotePort { theRemotePort :: Int }
-  deriving Typeable
-
-instance TO.IsOption RemotePort where
-  defaultValue = RemotePort 4444
-  parseValue = fmap RemotePort . TO.safeRead
-  optionName = return "remoteport"
-  optionHelp = return "remote end port: (4444), INT"
-
-
-
--- | Additional path of the remote end URL.
-newtype RemotePath
-  = RemotePath { theRemotePath :: String }
-  deriving Typeable
-
-instance TO.IsOption RemotePath where
-  defaultValue = RemotePath ""
-  parseValue = Just . RemotePath
-  optionName = return "remotepath"
-  optionHelp = return "remote end path: (), STR"
 
 
 
@@ -403,14 +390,28 @@ instance TO.IsOption ConsoleOutHandle where
 
 
 
+-- | Delay between test attempts.
+newtype TestDelay = TestDelay
+  { theTestDelay :: Int
+  } deriving (Eq, Show, Typeable)
+
+instance TO.IsOption TestDelay where
+  defaultValue = TestDelay 500000
+  parseValue = fmap TestDelay . readMaybe
+  optionName = return "delay"
+  optionHelp = return "delay between test attempts in ms: (500000), INT"
+
+
+
 -- | Named deployment environment.
 newtype Deployment
   = Deployment { theDeployment :: DeploymentTier }
   deriving (Eq, Typeable)
 
+-- | Representation of the deployment environment.
 data DeploymentTier
-  = DEV
-  | TEST
+  = DEV -- ^ Local environment
+  | TEST -- ^ CI server (for testing the library)
   | PROD
   deriving (Eq, Show, Typeable)
 
@@ -449,11 +450,27 @@ readModeHandle x = case x of
 
 
 
--- | Remote end name.
-data DriverName
-  = Geckodriver
-  | Chromedriver
-  deriving (Eq, Typeable)
+-- | Mutable remote end pool
+newtype RemoteEndRef = RemoteEndRef
+  { theRemoteEndRef :: Maybe (IORef RemoteEndPool)
+  } deriving (Typeable)
+
+instance TO.IsOption RemoteEndRef where
+  defaultValue = RemoteEndRef Nothing
+  parseValue _ = Just $ RemoteEndRef Nothing
+  optionName = return "remote-ends-config"
+  optionHelp = return "path to remote end config"
+
+
+
+data RemoteEndOpt = RemoteEndOpt
+  deriving Typeable
+
+instance TO.IsOption RemoteEndOpt where
+  defaultValue = RemoteEndOpt
+  parseValue _ = Just RemoteEndOpt
+  optionName = return "remote-ends"
+  optionHelp = return "remote end uris"
 
 
 
@@ -498,3 +515,115 @@ unlessTierIs tier f tree = T.askOption checkDeployment
     checkDeployment (Deployment t) = if t /= tier
       then f tree
       else tree
+
+
+
+defaultWebDriverMain :: TT.TestTree -> IO ()
+defaultWebDriverMain tree = do
+
+  deploy <- determineDeploymentTier
+  pool <- getRemoteEndRef
+
+  T.defaultMain
+    $ T.localOption (Deployment deploy)
+    $ T.localOption (RemoteEndRef $ Just pool)
+    $ tree
+
+
+determineDeploymentTier :: IO DeploymentTier
+determineDeploymentTier = do
+  putStrLn "Determining deployment environment..."
+  deploy <- do
+    var <- SE.lookupEnv "CI"
+    case var of
+      Just "true" -> return TEST
+      _ -> return DEV
+  putStrLn $ "Deployment environment is " ++ show deploy
+  return deploy
+
+
+getRemoteEndRef :: IO (IORef RemoteEndPool)
+getRemoteEndRef = do
+  configPool <- getRemoteEndConfigPath
+  optionPool <- getRemoteEndOptionString
+  case (configPool, optionPool) of
+    (Just x,  Just y)  -> newIORef $ combineRemoteEndPools x y
+    (Nothing, Just y)  -> newIORef y
+    (Just x,  Nothing) -> newIORef x
+    (Nothing, Nothing) -> do
+      putStrLn $ "Either --remote-ends or --remote-ends-config is required."
+      exitFailure
+
+
+getRemoteEndConfigPath :: IO (Maybe RemoteEndPool)
+getRemoteEndConfigPath = do
+  args <- SE.getArgs
+  let
+    foo :: [String] -> Maybe (Maybe String)
+    foo as = case as of
+      ("--remote-ends-config":('-':_):_) -> Nothing
+      ("--remote-ends-config":path:_) -> Just $ Just path
+      (_:y:xs) -> foo (y:xs)
+      _ -> Just Nothing
+  case foo args of
+    Just Nothing -> return Nothing
+    Just (Just path) -> do
+      str <- readFile path
+      case parseRemoteEndConfig str of
+        Left err -> do
+          putStrLn err
+          exitFailure
+        Right x -> return (Just x)
+    Nothing -> do
+      putStrLn "option --remote-ends-config missing required path argument"
+      exitFailure
+
+
+getRemoteEndOptionString :: IO (Maybe RemoteEndPool)
+getRemoteEndOptionString = do
+  args <- SE.getArgs
+  let
+    foo :: [String] -> Maybe (Maybe String)
+    foo as = case as of
+      ("--remote-ends":('-':_):_) -> Nothing
+      ("--remote-ends":path:_) -> Just $ Just path
+      (_:y:xs) -> foo (y:xs)
+      _ -> Just Nothing
+  case foo args of
+    Just Nothing -> return Nothing
+    Just (Just str) -> do
+      case parseRemoteEndOption str of
+        Left err -> do
+          putStrLn err
+          exitFailure
+        Right x -> return (Just x)
+    Nothing -> do
+      putStrLn "option --remote-ends missing required argument"
+      exitFailure
+
+
+acquireRemoteEnd :: Int -> IORef RemoteEndPool -> DriverName -> IO RemoteEnd
+acquireRemoteEnd delay ref driver = do
+  let
+    update :: RemoteEndPool -> (RemoteEndPool, Maybe (Maybe RemoteEnd))
+    update = getRemoteEndForDriver driver
+
+  result <- atomicModifyIORef' ref update
+
+  case result of
+    Nothing -> do
+      putStrLn $ "Error: no remotes defined for " ++ show driver
+      exitFailure
+    Just Nothing -> do
+      threadDelay delay
+      acquireRemoteEnd delay ref driver
+    Just (Just x) -> return x
+
+
+releaseRemoteEnd :: IORef RemoteEndPool -> DriverName -> RemoteEnd -> IO ()
+releaseRemoteEnd ref driver remote = do
+  let
+    update :: RemoteEndPool -> (RemoteEndPool, ())
+    update pool = (addRemoteEndForDriver driver remote pool, ())
+
+  atomicModifyIORef' ref update
