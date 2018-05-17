@@ -551,7 +551,7 @@ getRemoteEndRef = do
     (Nothing, Just y)  -> newIORef y
     (Just x,  Nothing) -> newIORef x
     (Nothing, Nothing) -> do
-      putStrLn $ "Either --remote-ends or --remote-ends-config is required."
+      putStrLn $ "Either --wd-remote-ends or --wd-remote-ends-config is required."
       exitFailure
 
 
@@ -561,8 +561,8 @@ getRemoteEndConfigPath = do
   let
     foo :: [String] -> Maybe (Maybe String)
     foo as = case as of
-      ("--remote-ends-config":('-':_):_) -> Nothing
-      ("--remote-ends-config":path:_) -> Just $ Just path
+      ("--wd-remote-ends-config":('-':_):_) -> Nothing
+      ("--wd-remote-ends-config":path:_) -> Just $ Just path
       (_:y:xs) -> foo (y:xs)
       _ -> Just Nothing
   case foo args of
@@ -575,7 +575,7 @@ getRemoteEndConfigPath = do
           exitFailure
         Right x -> return (Just x)
     Nothing -> do
-      putStrLn "option --remote-ends-config missing required path argument"
+      putStrLn "option --wd-remote-ends-config missing required path argument"
       exitFailure
 
 
@@ -585,8 +585,8 @@ getRemoteEndOptionString = do
   let
     foo :: [String] -> Maybe (Maybe String)
     foo as = case as of
-      ("--remote-ends":('-':_):_) -> Nothing
-      ("--remote-ends":path:_) -> Just $ Just path
+      ("--wd-remote-ends":('-':_):_) -> Nothing
+      ("--wd-remote-ends":path:_) -> Just $ Just path
       (_:y:xs) -> foo (y:xs)
       _ -> Just Nothing
   case foo args of
@@ -598,7 +598,7 @@ getRemoteEndOptionString = do
           exitFailure
         Right x -> return (Just x)
     Nothing -> do
-      putStrLn "option --remote-ends missing required argument"
+      putStrLn "option --wd-remote-ends missing required argument"
       exitFailure
 
 
