@@ -235,7 +235,7 @@ instance TO.IsOption Driver where
     "geckodriver" -> Just $ Driver Geckodriver
     "chromedriver" -> Just $ Driver Chromedriver
     _ -> Nothing
-  optionName = return "driver"
+  optionName = return "wd-driver"
   optionHelp = return "remote end name: (geckodriver), chromedriver"
 
 
@@ -248,7 +248,7 @@ newtype Headless
 instance TO.IsOption Headless where
   defaultValue = Headless False
   parseValue = fmap Headless . TO.safeReadBool
-  optionName = return "headless"
+  optionName = return "wd-headless"
   optionHelp = return "run in headless mode: (false), true"
 
 
@@ -261,7 +261,7 @@ newtype SecretsPath
 instance TO.IsOption SecretsPath where
   defaultValue = SecretsPath ""
   parseValue path = Just $ SecretsPath path
-  optionName = return "secrets"
+  optionName = return "wd-secrets"
   optionHelp = return "secrets path: (~/.webdriver/secrets), PATH"
 
 
@@ -274,7 +274,7 @@ newtype BrowserPath
 instance TO.IsOption BrowserPath where
   defaultValue = BrowserPath Nothing
   parseValue path = Just $ BrowserPath $ Just path
-  optionName = return "browserpath"
+  optionName = return "wd-browserpath"
   optionHelp = return "path to browser binary: (), PATH"
 
 
@@ -290,7 +290,7 @@ instance TO.IsOption ApiResponseFormat where
     "spec" -> Just $ ApiResponseFormat SpecFormat
     "chromedriver" -> Just $ ApiResponseFormat ChromeFormat
     _ -> Nothing
-  optionName = return "response-format"
+  optionName = return "wd-response-format"
   optionHelp = return "JSON response format: (spec), chromedriver"
 
 
@@ -305,7 +305,7 @@ instance TO.IsOption WebDriverApiVersion where
   parseValue str = case str of
     "cr-2018-03-04" -> Just $ WebDriverApiVersion CR_2018_03_04
     _ -> Nothing
-  optionName = return "api-version"
+  optionName = return "wd-api-version"
   optionHelp = return "WebDriver API version: (cr-2018-03-04)"
 
 
@@ -321,7 +321,7 @@ instance TO.IsOption LogHandle where
     "stdout" -> Just $ LogHandle StdOut
     "stderr" -> Just $ LogHandle StdErr
     _ -> Just $ LogHandle $ Path path
-  optionName = return "log"
+  optionName = return "wd-log"
   optionHelp = return "log destination: (stderr), stdout, PATH"
 
 
@@ -338,7 +338,7 @@ instance TO.IsOption LogNoiseLevel where
     "noisy" -> Just NoisyLog
     "silent" -> Just SilentLog
     _ -> Nothing
-  optionName = return "verbosity"
+  optionName = return "wd-verbosity"
   optionHelp = return "log verbosity: (noisy), silent"
 
 
@@ -354,7 +354,7 @@ instance TO.IsOption AssertionLogHandle where
     "stdout" -> Just $ AssertionLogHandle StdOut
     "stderr" -> Just $ AssertionLogHandle StdErr
     _ -> Just $ AssertionLogHandle $ Path path
-  optionName = return "assertion-log"
+  optionName = return "wd-assertion-log"
   optionHelp = return "assertion log destination: (stdout), stderr, PATH"
 
 
@@ -369,7 +369,7 @@ instance TO.IsOption ConsoleInHandle where
   parseValue path = case path of
     "stdin" -> Just $ ConsoleInHandle StdIn
     _ -> Just $ ConsoleInHandle $ Path path
-  optionName = return "console-in"
+  optionName = return "wd-console-in"
   optionHelp = return "console input: (stdin), PATH"
 
 
@@ -385,7 +385,7 @@ instance TO.IsOption ConsoleOutHandle where
     "stdout" -> Just $ ConsoleOutHandle StdOut
     "stderr" -> Just $ ConsoleOutHandle StdErr
     _ -> Just $ ConsoleOutHandle $ Path path
-  optionName = return "console-out"
+  optionName = return "wd-console-out"
   optionHelp = return "console output: (stdout), stderr, PATH"
 
 
@@ -398,7 +398,7 @@ newtype TestDelay = TestDelay
 instance TO.IsOption TestDelay where
   defaultValue = TestDelay 500000
   parseValue = fmap TestDelay . readMaybe
-  optionName = return "delay"
+  optionName = return "wd-delay"
   optionHelp = return "delay between test attempts in ms: (500000), INT"
 
 
@@ -422,7 +422,7 @@ instance TO.IsOption Deployment where
     "test" -> Just $ Deployment TEST
     "prod" -> Just $ Deployment PROD
     _ -> Nothing
-  optionName = return "deploy"
+  optionName = return "wd-deploy"
   optionHelp = return "deployment environment: (dev), test, prod"
 
 
@@ -458,7 +458,7 @@ newtype RemoteEndRef = RemoteEndRef
 instance TO.IsOption RemoteEndRef where
   defaultValue = RemoteEndRef Nothing
   parseValue _ = Just $ RemoteEndRef Nothing
-  optionName = return "remote-ends-config"
+  optionName = return "wd-remote-ends-config"
   optionHelp = return "path to remote end config"
 
 
@@ -469,7 +469,7 @@ data RemoteEndOpt = RemoteEndOpt
 instance TO.IsOption RemoteEndOpt where
   defaultValue = RemoteEndOpt
   parseValue _ = Just RemoteEndOpt
-  optionName = return "remote-ends"
+  optionName = return "wd-remote-ends"
   optionHelp = return "remote end uris"
 
 
