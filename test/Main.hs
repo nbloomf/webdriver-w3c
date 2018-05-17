@@ -28,7 +28,7 @@ main = do
   testPagePath <- fmap (\path -> path ++ "/test/page") getCurrentDirectory
 
   args <- getArgs
-  withArgs (["--remote-ends","geckodriver: https://localhost:4444 https://localhost:4445 chromedriver: https://localhost:9515 https://localhost:9516"] ++ args) $
+  withArgs (["--wd-remote-ends","geckodriver: https://localhost:4444 https://localhost:4445 chromedriver: https://localhost:9515 https://localhost:9516"] ++ args) $
     defaultWebDriverMain $ testGroup "All Tests"
       [ Test.Tasty.WebDriver.Config.Test.tests
       , Web.Api.Http.Assert.Test.tests
