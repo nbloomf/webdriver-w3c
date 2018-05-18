@@ -12,6 +12,7 @@ Portability : POSIX
 module Test.Tasty.WebDriver.Config (
     DriverName(..)
   , RemoteEndPool(..)
+  , emptyRemoteEndPool
   , combineRemoteEndPools
   , addRemoteEndForDriver
   , getRemoteEndForDriver
@@ -48,6 +49,9 @@ instance Show DriverName where
 data RemoteEndPool = RemoteEndPool
   { freeRemoteEnds :: MS.Map DriverName [RemoteEnd]
   } deriving (Eq, Show)
+
+emptyRemoteEndPool :: RemoteEndPool
+emptyRemoteEndPool = RemoteEndPool { freeRemoteEnds = MS.fromList [] }
 
 -- | Unions two remote end pools.
 combineRemoteEndPools :: RemoteEndPool -> RemoteEndPool -> RemoteEndPool

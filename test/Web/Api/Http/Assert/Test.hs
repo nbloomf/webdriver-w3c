@@ -14,12 +14,12 @@ tests :: TT.TestTree
 tests = TT.testGroup "Web.Api.Http.Assert"
   [ check_assertions
       "assertions"
-      (\h -> setEnv (setLogHandle h . setAssertionLogHandle h)
+      (\h -> setEnvironment (setLogHandle h . setAssertionLogHandle h)
         (basicHttpSessionConfig show show Nothing () ()))
 
   , check_assertion_summaries
       "assertion summaries"
-      (\h -> setEnv (setLogHandle h . setAssertionLogHandle h)
+      (\h -> setEnvironment (setLogHandle h . setAssertionLogHandle h)
         (basicHttpSessionConfig show show Nothing () ()))
   ]
 

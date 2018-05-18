@@ -66,7 +66,7 @@ instance (Effectful m, Typeable m) => TT.IsTest (HttpSessionTest m) where
 
     let
       config =
-        setEnv
+        setEnvironment
           ( setLogHandle logHandle
           . setAssertionLogHandle alogHandle
           . setConsoleInHandle cinHandle
