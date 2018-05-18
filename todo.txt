@@ -2,6 +2,4 @@
 * Stealth commands should not log request/response details. We should test that this is the case.
 * /session/{session id}/element/{element id}/displayed
 * Need a ci test matrix, but have to think about how to prevent combinatorial blowup; dependencies are geckodriver+firefox+chromedriver+chrome, so matrix will get big fast. Compromise: only support one version of the drivers at a time?
-* Revisit the tasty test helpers. Does the if/unless style make sense? Do we need helpers for other options?
 * todo.txt => roadmap.md
-* Prefix option names with 'wd-' to match style of other tasty providers
