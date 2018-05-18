@@ -51,6 +51,10 @@ module Web.Api.Http.Types (
   , setErrorInjectFunction
   , theClientEnvironment
   , setClientEnvironment
+  , theLogLock
+  , setLogLock
+  , theSessionUid
+  , setSessionUid
   , basicEnv
   , jsonEnv
 
@@ -98,6 +102,9 @@ import System.IO
   ( Handle, stderr, stdout, stdin )
 import System.IO.Error
   ( ioeGetFileName, ioeGetLocation, ioeGetErrorString )
+import Control.Concurrent.MVar
+  ( MVar )
+
 
 import Web.Api.Http.Assert
 import Web.Api.Http.Effects
@@ -297,6 +304,10 @@ data Env err log env = Env {
   -- | A function used to inject `HttpException`s into the consumer-supplied error type. Handy when dealing with APIs that use HTTP error codes semantically.
   , __http_error_inject :: Maybe (HttpException -> Maybe err)
 
+  , __log_lock :: Maybe (MVar ())
+
+  , __session_uid :: String
+
   -- | Unspecified environment type; defined by consumers of `HttpSession`.
   , __user_env :: env
   }
@@ -381,6 +392,26 @@ setClientEnvironment
   :: env -> Env err log env -> Env err log env
 setClientEnvironment e env = env { __user_env = e }
 
+-- | Retrieve the log lock in a monadic context.
+theLogLock
+  :: (Monad m) => Env err log env -> m (Maybe (MVar ()))
+theLogLock = return . __log_lock
+
+-- | Set the log lock of an `Env`.
+setLogLock
+  :: Maybe (MVar ()) -> Env err log env -> Env err log env
+setLogLock logLock env = env { __log_lock = logLock }
+
+-- | Retrieve the log lock in a monadic context.
+theSessionUid
+  :: (Monad m) => Env err log env -> m String
+theSessionUid = return . __session_uid
+
+-- | Set the log lock of an `Env`.
+setSessionUid
+  :: String -> Env err log env -> Env err log env
+setSessionUid sessionUid env = env { __session_uid = sessionUid }
+
 
 -- | A reasonable standard environment for text or binary oriented APIs: logs are printed with `basicLogPrinter`, the session log goes to `stderr`, and the assertion log goes to `stdout`.
 basicEnv
@@ -397,6 +428,8 @@ basicEnv printErr printLog promote env = Env
   , __console_in_handle = stdin
   , __console_out_handle = stdout
   , __http_error_inject = promote
+  , __log_lock = Nothing
+  , __session_uid = ""
   , __user_env = env
   }
 
@@ -415,6 +448,8 @@ jsonEnv printErr printLog promote env = Env
   , __console_in_handle = stdin
   , __console_out_handle = stdout
   , __http_error_inject = promote
+  , __log_lock = Nothing
+  , __session_uid = ""
   , __user_env = env
   }
 
@@ -476,52 +511,51 @@ setState f config = config
 
 
 -- | A type representing the functions used to print logs. With this type, and the `basicLogPrinter` and `jsonLogPrinter` values, consumers of `HttpSession` don't have to think about formatting their logs beyond their specific `log` and `err` types unless they *really* want to.
-
 data LogPrinter err log = LogPrinter {
   -- | Printer for consumer-defined errors.
-    __error :: UTCTime -> err -> String
+    __error :: UTCTime -> String -> err -> String
 
   -- | Printer for comments.
-  , __comment :: UTCTime -> String -> String
+  , __comment :: UTCTime -> String -> String -> String
 
   -- | Printer for detailed HTTP requests.
-  , __request :: UTCTime -> HttpVerb -> String -> Wreq.Options -> Maybe ByteString -> String
+  , __request :: UTCTime -> String -> HttpVerb -> String -> Wreq.Options -> Maybe ByteString -> String
 
   -- | Printer for detailed HTTP responses.
-  , __response :: UTCTime -> HttpResponse -> String
+  , __response :: UTCTime -> String -> HttpResponse -> String
 
   -- | Printer for `HttpException`s.
-  , __http_error :: UTCTime -> HttpException -> String
+  , __http_error :: UTCTime -> String -> HttpException -> String
 
   -- | Printer for silent HTTP requests.
-  , __silent_request :: UTCTime -> String
+  , __silent_request :: UTCTime -> String -> String
 
   -- | Printer for slient HTTP responses.
-  , __silent_response :: UTCTime -> String
+  , __silent_response :: UTCTime -> String -> String
 
   -- | Printer for `IOException`s.
-  , __io_error :: UTCTime -> IOException -> String
+  , __io_error :: UTCTime -> String -> IOException -> String
 
   -- | Printer for session actions.
-  , __session :: UTCTime -> SessionVerb -> String
+  , __session :: UTCTime -> String -> SessionVerb -> String
 
   -- | Printer for `JsonError`s.
-  , __json_error :: UTCTime -> JsonError -> String
+  , __json_error :: UTCTime -> String -> JsonError -> String
 
   -- | Printer for `UnexpectedSuccess`.
-  , __unexpected_success :: UTCTime -> String -> String
+  , __unexpected_success :: UTCTime -> String -> String -> String
 
   -- | Printer for `UnexpectedFailure`.
-  , __unexpected_failure :: UTCTime -> String -> String
+  , __unexpected_failure :: UTCTime -> String -> String -> String
 
   -- | Printer for `Assertion`s.
-  , __assertion :: UTCTime -> Assertion -> String
+  , __assertion :: UTCTime -> String -> Assertion -> String
 
   -- | Printer for delay events.
-  , __pause :: UTCTime -> Int -> String
+  , __pause :: UTCTime -> String -> Int -> String
 
   -- | Printer for consumer-defined log entries.
-  , __log :: UTCTime -> log -> String
+  , __log :: UTCTime -> String -> log -> String
   }
 
 
@@ -588,52 +622,52 @@ silentLog = LogVerbosity
 
 
 -- | Prints a log entry with the given `LogPrinter`.
-printEntryWith :: LogPrinter err log -> LogVerbosity err log -> (UTCTime, Entry err log) -> Maybe String
-printEntryWith printer LogVerbosity{..} (time, entry) = case entry of
+printEntryWith :: LogPrinter err log -> LogVerbosity err log -> (UTCTime, String, Entry err log) -> Maybe String
+printEntryWith printer LogVerbosity{..} (time, uid, entry) = case entry of
   LogError err -> if _err_verbosity err
-    then Just $ __error printer time err
+    then Just $ __error printer time uid err
     else Nothing
   LogComment msg -> if _comment_verbosity
-    then Just $ __comment printer time msg
+    then Just $ __comment printer time uid msg
     else Nothing
   LogRequest verb url opts payload -> if _request_verbosity
-    then Just $ __request printer time verb url opts payload
+    then Just $ __request printer time uid verb url opts payload
     else Nothing
   LogResponse str -> if _response_verbosity
-    then Just $ __response printer time str
+    then Just $ __response printer time uid str
     else Nothing
   LogHttpError err -> if _http_error_verbosity
-    then Just $ __http_error printer time err
+    then Just $ __http_error printer time uid err
     else Nothing
   LogSilentRequest -> if _silent_request_verbosity
-    then Just $ __silent_request printer time
+    then Just $ __silent_request printer time uid
     else Nothing
   LogSilentResponse -> if _silent_response_verbosity
-    then Just $ __silent_response printer time
+    then Just $ __silent_response printer time uid
     else Nothing
   LogIOError err -> if _io_error_verbosity
-    then Just $ __io_error printer time err
+    then Just $ __io_error printer time uid err
     else Nothing
   LogJsonError err -> if _json_error_verbosity
-    then Just $ __json_error printer time err
+    then Just $ __json_error printer time uid err
     else Nothing
   LogUnexpectedSuccess msg -> if _unexpected_success_verbosity
-    then Just $ __unexpected_success printer time msg
+    then Just $ __unexpected_success printer time uid msg
     else Nothing
   LogUnexpectedFailure msg -> if _unexpected_failure_verbosity
-    then Just $ __unexpected_failure printer time msg
+    then Just $ __unexpected_failure printer time uid msg
     else Nothing
   LogSession verb -> if _session_verbosity
-    then Just $ __session printer time verb
+    then Just $ __session printer time uid verb
     else Nothing
   LogAssertion x -> if _assertion_verbosity
-    then Just $ __assertion printer time x
+    then Just $ __assertion printer time uid x
     else Nothing
   LogPause m -> if _pause_verbosity
-    then Just $ __pause printer time m
+    then Just $ __pause printer time uid m
     else Nothing
   LogItem x -> if _log_verbosity x
-    then Just $ __log printer time x
+    then Just $ __log printer time uid x
     else Nothing
 
 
@@ -660,40 +694,40 @@ basicLogPrinter
   -> (Assertion -> String)  -- ^ Function for printing `Assertion`s
   -> LogPrinter err log
 basicLogPrinter color pE pL pA = LogPrinter
-  { __error = \time err -> unwords
-    [paint color red $ trunc time, "ERROR", pE err]
-  , __comment = \time msg -> unwords
-    [paint color green $ trunc time, msg]
-  , __request = \time verb url opts payload -> unwords
-    [paint color blue $ trunc time, show verb, url]
-  , __response = \time response -> unwords
-    [paint color blue $ trunc time, show response]
-  , __http_error = \time err -> unwords
-    [paint color red $ trunc time, show err]
-  , __silent_request = \time -> unwords
-    [paint color blue $ trunc time, "Silent Request"]
-  , __silent_response = \time -> unwords
-    [paint color blue $ trunc time, "Silent Response"]
-  , __io_error = \time err -> unwords
-    [ paint color red $ trunc time
+  { __error = \time uid err -> unwords
+    [paint color red $ trunc time, uid, "ERROR", pE err]
+  , __comment = \time uid msg -> unwords
+    [paint color green $ trunc time, uid, msg]
+  , __request = \time uid verb url opts payload -> unwords
+    [paint color blue $ trunc time, uid, show verb, url]
+  , __response = \time uid response -> unwords
+    [paint color blue $ trunc time, uid, show response]
+  , __http_error = \time uid err -> unwords
+    [paint color red $ trunc time, uid, show err]
+  , __silent_request = \time uid -> unwords
+    [paint color blue $ trunc time, uid, "Silent Request"]
+  , __silent_response = \time uid -> unwords
+    [paint color blue $ trunc time, uid, "Silent Response"]
+  , __io_error = \time uid err -> unwords
+    [ paint color red $ trunc time, uid
     , show $ ioeGetFileName err
     , ioeGetLocation err
     , ioeGetErrorString err
     ]
-  , __json_error = \time err -> unwords
-    [paint color red $ trunc time, show err]
-  , __unexpected_success = \time msg -> unwords
-    [paint color red $ trunc time, "Unexpected Success: ", msg]
-  , __unexpected_failure = \time msg -> unwords
-    [paint color red $ trunc time, "Unexpected Failure: ", msg]
-  , __session = \time verb -> unwords
-    [paint color magenta $ trunc time, show verb]
-  , __assertion = \time a -> unwords
-    [paint color magenta $ trunc time, pA a]
-  , __pause = \time m -> unwords
-    [paint color magenta $ trunc time, "pause for", show m ++ "μs"]
-  , __log = \time x -> unwords
-    [paint color yellow $ trunc time, pL x]
+  , __json_error = \time uid err -> unwords
+    [paint color red $ trunc time, uid, show err]
+  , __unexpected_success = \time uid msg -> unwords
+    [paint color red $ trunc time, uid, "Unexpected Success: ", msg]
+  , __unexpected_failure = \time uid msg -> unwords
+    [paint color red $ trunc time, uid, "Unexpected Failure: ", msg]
+  , __session = \time uid verb -> unwords
+    [paint color magenta $ trunc time, uid, show verb]
+  , __assertion = \time uid a -> unwords
+    [paint color magenta $ trunc time, uid, pA a]
+  , __pause = \time uid m -> unwords
+    [paint color magenta $ trunc time, uid, "pause for", show m ++ "μs"]
+  , __log = \time uid x -> unwords
+    [paint color yellow $ trunc time, uid, pL x]
   }
 
 -- | `LogPrinter` that treats all requests and responses as JSON objects.
@@ -704,7 +738,7 @@ jsonLogPrinter
   -> (Assertion -> String) -- ^ Function for printing `Assertion`s
   -> LogPrinter err log
 jsonLogPrinter color pE pL pA = (basicLogPrinter color pE pL pA)
-  { __request = \time verb url opts payload ->
+  { __request = \time uid verb url opts payload ->
       let
         json = case payload of
           Nothing -> ""
@@ -712,20 +746,20 @@ jsonLogPrinter color pE pL pA = (basicLogPrinter color pE pL pA)
             Nothing -> "parse error:\n" ++ unpack x
             Just v -> ('\n':) $ unpack $ encodePretty (v :: Value)
       in
-        unwords [paint color blue $ trunc time, show verb, url]
+        unwords [paint color blue $ trunc time, uid, show verb, url]
           ++ json
-  , __response = \time response ->
+  , __response = \time uid response ->
       let
         headers = __response_headers response
         json = unpack $ encodePretty $ preview _Value $ __response_body response
       in
-        unwords [paint color blue $ trunc time, "Response"]
+        unwords [paint color blue $ trunc time, uid, "Response"]
           ++ "\n" ++ json
-  , __http_error = \time err ->
+  , __http_error = \time uid err ->
       case triageHttpException err of
         Nothing -> unwords [paint color red $ trunc time, show err]
         Just (code,json) ->
-          unwords [paint color red $ trunc time, "HTTP Error Response", code]
+          unwords [paint color red $ trunc time, uid, "HTTP Error Response", code]
             ++ "\n" ++ json
   }
 

@@ -142,7 +142,7 @@ data WebDriverEnv = WebDriverEnv
   , __vars :: M.Map String String -- ^ Named constants; this makes it possible to e.g. run the same WebDriver session against both a test and production environment on different hosts.
   , __response_format :: ResponseFormat -- ^ Flag for the format of HTTP responses from the remote end. E.g., chromedriver reponses are not spec-compliant.
   , __api_version :: ApiVersion -- ^ Version of the WebDriver specification.
-  } deriving Show
+  }
 
 -- | Configured for geckodriver.
 defaultWebDriverEnv :: WebDriverEnv
@@ -240,10 +240,10 @@ data WebDriverError
   = NoSession
   | ResponseError ResponseErrorCode String String (Maybe Value) Status -- ^ See <https://w3c.github.io/webdriver/webdriver-spec.html#handling-errors>
   | UnableToConnect
-  | UnhandledHttpException
+  | UnhandledHttpException N.HttpException
   | ImageDecodeError String
   | UnexpectedValue String
-  deriving (Eq, Show)
+  deriving (Show)
 
 -- | For validating responses. Throws an `UnexpectedValue` error if the two arguments are not equal according to their `Eq` instance.
 expect :: (Eq a, Show a, Effectful m) => a -> a -> WebDriver m a
@@ -268,7 +268,7 @@ promoteHttpResponseError e = case e of
 
   N.HttpExceptionRequest _ (N.ConnectionFailure _) -> Just UnableToConnect
 
-  _ -> Just UnhandledHttpException
+  _ -> Just $ UnhandledHttpException e
 
 -- | For pretty printing.
 printWebDriverError :: WebDriverError -> String
@@ -287,7 +287,7 @@ printWebDriverError e = case e of
         , "data" .= (toJSON <$> obj)
         ]
   UnableToConnect -> "Unable to connect to WebDriver server"
-  UnhandledHttpException -> "Unhandled HTTP Exception"
+  UnhandledHttpException e -> "Unhandled HTTP Exception: " ++ show e
   ImageDecodeError msg -> "Image decode: " ++ msg
   UnexpectedValue msg -> "Unexpected value: " ++ msg
 

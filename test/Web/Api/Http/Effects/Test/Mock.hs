@@ -213,6 +213,8 @@ instance EffectConsole (MockIO st) where
 
   mhPutStrLn _ string = mPutStr (string ++ "\n")
 
+  mhBlockedPutStrLn _ _ string = mPutStr (string ++ "\n")
+
 
 instance EffectTimer (MockIO st) where
   mThreadDelay _ = return ()

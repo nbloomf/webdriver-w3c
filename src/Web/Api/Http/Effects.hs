@@ -62,6 +62,8 @@ import Prelude hiding (try, readFile, writeFile)
 
 import Control.Concurrent
   ( threadDelay )
+import Control.Concurrent.MVar
+  ( MVar, withMVar )
 import Control.Exception
   ( Exception, try )
 import Data.Time as T
@@ -122,6 +124,9 @@ class (Monad m) => EffectConsole m where
   -- | Acts like `putStrLn`.
   mhPutStrLn :: Handle -> String -> m ()
 
+  -- | Locking `putStrLn`
+  mhBlockedPutStrLn :: MVar () -> Handle -> String -> m ()
+
 
 instance EffectConsole IO where
   mhGetEcho = hGetEcho
@@ -136,6 +141,9 @@ instance EffectConsole IO where
   mhPutChar = hPutChar
   mhPutStr = hPutStr
   mhPutStrLn = hPutStrLn
+
+  mhBlockedPutStrLn lock handle str =
+    withMVar lock (\_ -> hPutStrLn handle str)
 
 
 -- | Acts like `getChar`.
