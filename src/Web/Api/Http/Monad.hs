@@ -73,7 +73,7 @@ import Web.Api.Http.Types
 -- | An opaque type representing abstract HTTP interactions. The @err@, @log@, @st@, and @env@ types are escape hatches for allowing consumers of this library to extend the error handling and state that come built in. @m@ is where all the IO-like effects happen; in practice it's the real `IO`, but we can swap it for a fake IO for testing.
 newtype HttpSession m err st log env t = HttpSession
   { execSession ::
-      (St st, Log err log, Env err log env)
+      (St st, Env err log env)
         -> m (Either (Err err) t, (St st, Log err log))
   } deriving Typeable
 
@@ -87,7 +87,7 @@ runSession
 runSession config session = do
   let state = __initial_state config
   let env = __environment config
-  (result, _) <- execSession session (state, mempty, env)
+  (result, _) <- execSession session (state, env)
   return result
 
 -- | Run an `HttpSession`, returning the list of assertions it makes.
@@ -99,20 +99,22 @@ debugSession
 debugSession config session = do
   let state = __initial_state config
   let env = __environment config
-  (result, (_, (Log _ assertions))) <- execSession session (state, mempty, env)
+  (result, (_, (Log _ assertions))) <- execSession session (state, env)
   return (result, map snd assertions)
 
 
 
 instance (Monad m) => Monad (HttpSession m err st log env) where
-  return x = HttpSession $ \(st, log, env) ->
-    return (Right x, (st, log))
+  return x = HttpSession $ \(st, env) ->
+    return (Right x, (st, mempty))
 
-  x >>= f = HttpSession $ \(st, log, env) -> do
-    (result, (st1, log1)) <- execSession x (st, log, env)
+  x >>= f = HttpSession $ \(st, env) -> do
+    (result, (st1, log)) <- execSession x (st, env)
     case result of
-      Right ok -> execSession (f ok) (st1, log1, env)
-      Left err -> return (Left err, (st1, log1))
+      Right ok -> do
+        (result2, (st2, log2)) <- execSession (f ok) (st1, env)
+        return (result2, (st2, mappend log log2))
+      Left err -> return (Left err, (st1, log))
 
 instance (Monad m) => Functor (HttpSession m err st log env) where
   fmap f x = x >>= (return . f)
@@ -123,8 +125,8 @@ instance (Monad m) => Applicative (HttpSession m err st log env) where
 
 -- | Injects an @m a@ into an HTTP session.
 liftSession :: (Functor m) => m a -> HttpSession m err st log env a
-liftSession x = HttpSession $ \(st,log,_) ->
-  fmap (\a -> (Right a, (st,log))) x
+liftSession x = HttpSession $ \(st,_) ->
+  fmap (\a -> (Right a, (st,mempty))) x
 
 instance (MonadIO m) => MonadIO (HttpSession m err st log env) where
   liftIO = liftSession . liftIO
@@ -138,8 +140,8 @@ instance (MonadIO m) => MonadThrow (HttpSession m err st log env) where
 getEnvironment
   :: (Monad m)
   => HttpSession m err st log env (Env err log env)
-getEnvironment = HttpSession $ \(st, log, env) ->
-  return (Right env, (st, log))
+getEnvironment = HttpSession $ \(st, env) ->
+  return (Right env, (st, mempty))
 
 
 
@@ -147,27 +149,28 @@ getEnvironment = HttpSession $ \(st, log, env) ->
 getState
   :: (Monad m)
   => HttpSession m err st log env (St st)
-getState = HttpSession $ \(st, log, _) -> 
-  return (Right st, (st, log))
+getState = HttpSession $ \(st, _) -> 
+  return (Right st, (st, mempty))
 
 -- | Overwrite the current state.
 putState
   :: (Monad m)
   => St st
   -> HttpSession m err st log env ()
-putState st = HttpSession $ \(_, log, _) ->
-  return (Right (), (st, log))
-
+putState st = HttpSession $ \(_, _) ->
+  return (Right (), (st, mempty))
 
 
 
 -- | Append a log to the current log.
-appendLog
+putLog
   :: (Monad m)
   => Log err log
   -> (HttpSession m err st log env ())
-appendLog msg = HttpSession $ \(state, log, _) ->
-  return (Right (), (state, mappend log msg))
+putLog msg = HttpSession $ \(state, _) ->
+  return (Right (), (state, msg))
+
+
 
 -- | Write an entry to the log.
 logNow
@@ -188,7 +191,7 @@ logNow msg = do
         Nothing -> mhPutStrLn handle msg
         Just lock -> mhBlockedPutStrLn lock handle msg
       mhFlush handle
-  appendLog $ Log [(time, msg)] []
+  putLog $ Log [(time, msg)] []
 
 -- | Write a comment to the log.
 comment
@@ -224,7 +227,7 @@ assertNow a = do
           mhPutStrLn handle msg
           mhFlush handle
         Nothing -> return ()
-  appendLog $ Log [] [(time, a)]
+  putLog $ Log [] [(time, a)]
 
 
 
@@ -241,8 +244,8 @@ throwError e = do
     ErrUnexpectedSuccess m -> logNow $ LogUnexpectedSuccess m
     ErrUnexpectedFailure m -> logNow $ LogUnexpectedFailure m
     Err e -> logNow $ LogError e
-  HttpSession $ \(st, log, _) ->
-    return (Left e, (st, log))
+  HttpSession $ \(st, _) ->
+    return (Left e, (st, mempty))
 
 -- | Attempt an `HttpSession` computation, but capture errors with the given handler.
 catchError
@@ -250,11 +253,11 @@ catchError
   => HttpSession m err st log env a
   -> (Err err -> HttpSession m err st log env a) -- ^ Error handler
   -> HttpSession m err st log env a
-catchError session handler = HttpSession $ \(st0,log0,env) -> do
-  (result,(st1,log1)) <- execSession session (st0,log0,env)
+catchError session handler = HttpSession $ \(st0,env) -> do
+  (result,(st1,log1)) <- execSession session (st0,env)
   case result of
     Right ok -> return (Right ok, (st1,log1))
-    Left err -> execSession (handler err) (st1,log1,env)
+    Left err -> execSession (handler err) (st1,env)
 
 -- | Inject HTTP exceptions to our native consumer-defined error type using the injection function defined in `Env`.
 captureHttpError
@@ -295,13 +298,13 @@ instance (EffectTimer m) => EffectTimer (HttpSession m err st log env) where
   mThreadDelay k = liftSession $ mThreadDelay k
 
 instance (EffectTry m) => EffectTry (HttpSession m err st log env) where
-  mTry (HttpSession f) = HttpSession $ \(st,log,env) -> do
-    result <- mTry $ f (st,log,env)
+  mTry (HttpSession f) = HttpSession $ \(st,env) -> do
+    result <- mTry $ f (st,env)
     case result of
-      Left err -> return (Right (Left err), (st,log))
-      Right (it,(st2,log2)) -> case it of
-        Left err -> return (Left err, (st2,log2))
-        Right ok -> return (Right (Right ok), (st2,log2))
+      Left err -> return (Right (Left err), (st,mempty))
+      Right (it,(st2,log)) -> case it of
+        Left err -> return (Left err, (st2,log))
+        Right ok -> return (Right (Right ok), (st2,log))
 
 instance (EffectFiles m) => EffectFiles (HttpSession m err st log env) where
   mReadFile path = liftSession $ mReadFile path

@@ -319,12 +319,5 @@ theRemoteUrlWithSession = do
 -- | Initialize state for a WebDriver shell session.
 wdshInit
   :: WebDriverConfig
-  -> IO (IORef
-       ( St WebDriverState
-       , Log WebDriverError Void
-       , Env WebDriverError Void WebDriverEnv
-       ))
-wdshInit config = initShell
-  (__initial_state config)
-  (Log [] [])
-  (__environment config)
+  -> IO (IORef (St WebDriverState, Env WebDriverError Void WebDriverEnv))
+wdshInit config = initShell (__initial_state config) (__environment config)
