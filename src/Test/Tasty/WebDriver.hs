@@ -33,6 +33,7 @@ module Test.Tasty.WebDriver (
   , WebDriverApiVersion(..)
   , LogHandle(..)
   , TestDelay(..)
+  , NumRetries(..)
   , LogNoiseLevel(..)
   , AssertionLogHandle(..)
   , ConsoleInHandle(..)
@@ -61,6 +62,15 @@ import Control.Concurrent
   ( threadDelay )
 import Text.Read
   ( readMaybe )
+import Control.Concurrent.MVar
+  ( MVar, newMVar, withMVar )
+import qualified Data.ByteString.Lazy.Char8 as BS
+  ( pack )
+import qualified Data.Digest.Pure.SHA as SHA
+  ( showDigest, sha1 )
+import Data.Time.Clock.System
+  ( getSystemTime )
+import qualified Data.ByteString.Lazy as BL
 import qualified Data.Map.Strict as MS
 import qualified Test.Tasty as T
 import qualified Test.Tasty.Providers as TT
@@ -99,6 +109,7 @@ instance (Effectful m, Typeable m) => TT.IsTest (WebDriverTest m) where
     , TO.Option (Proxy :: Proxy TestDelay)
     , TO.Option (Proxy :: Proxy RemoteEndRef)
     , TO.Option (Proxy :: Proxy RemoteEndOpt)
+    , TO.Option (Proxy :: Proxy NumRetries)
     ]
 
   run opts WebDriverTest{..} _ = do
@@ -116,50 +127,19 @@ instance (Effectful m, Typeable m) => TT.IsTest (WebDriverTest m) where
       SecretsPath secrets = TO.lookupOption opts
       BrowserPath browserPath = TO.lookupOption opts
       RemoteEndRef remotes = TO.lookupOption opts
-
-    logHandle <- writeModeHandle log
-    alogHandle <- writeModeHandle alog
-    cinHandle <- readModeHandle cin
-    coutHandle <- writeModeHandle cout
-
-    secretsPath <- case secrets of
-      "" -> fmap (++ "/.webdriver/secrets") $ SE.getEnv "HOME"
-      spath -> return spath
-
-    remotesRef <- case remotes of
-      Just ref -> return ref
-      Nothing -> do
-        putStrLn "Error: no remote ends specified."
-        exitFailure
-
-    remote <- acquireRemoteEnd delay remotesRef driver
+      NumRetries numRetries = TO.lookupOption opts
+      LogPrinterLock logLock = TO.lookupOption opts
 
     let
       title = case _test_name of
         Nothing -> return ()
         Just str -> comment str
 
+      attemptLabel k = comment $ "Attempt #" ++ show k
+
       logNoise = case logNoiseLevel of
         NoisyLog -> noisyLog
         SilentLog -> silentLog
-
-      config =
-        setEnvironment
-          ( setLogHandle logHandle
-          . setLogVerbosity logNoise
-          . setAssertionLogHandle alogHandle
-          . setConsoleInHandle cinHandle
-          . setConsoleOutHandle coutHandle
-          . setClientEnvironment
-              ( setRemoteHostname (remoteEndHost remote)
-              . setRemotePort (remoteEndPort remote)
-              . setRemotePath (remoteEndPath remote)
-              . setResponseFormat format
-              . setApiVersion version
-              . setSecretsPath secretsPath
-              $ defaultWebDriverEnv
-              )
-          ) defaultWebDriverConfig
 
       caps = case driver of
         Geckodriver -> emptyCapabilities
@@ -178,15 +158,67 @@ instance (Effectful m, Typeable m) => TT.IsTest (WebDriverTest m) where
               }
           }
 
-    (result, assertions) <- toIO $
-      debugSession config $ title >> runIsolated caps _test_session
+    logHandle <- writeModeHandle log
+    alogHandle <- writeModeHandle alog
+    cinHandle <- readModeHandle cin
+    coutHandle <- writeModeHandle cout
 
-    releaseRemoteEnd remotesRef driver remote
+    secretsPath <- case secrets of
+      "" -> fmap (++ "/.webdriver/secrets") $ SE.getEnv "HOME"
+      spath -> return spath
 
-    return $ case result of
-      Right _ -> webDriverAssertionsToResult $ summarize assertions
-      Left err -> TT.testFailed $
-        "Unhandled error: " ++ printErr printWebDriverError err
+    remotesRef <- case remotes of
+      Just ref -> return ref
+      Nothing -> do
+        putStrLn "Error: no remote ends specified."
+        exitFailure
+
+    let
+      attempt :: Int -> IO TT.Result
+      attempt attemptNumber = do
+
+        remote <- acquireRemoteEnd delay remotesRef driver
+
+        let
+          uid = (take 8 $ SHA.showDigest $ SHA.sha1 $ BS.pack $
+            show _test_name) ++ "-" ++ show attemptNumber
+
+          config =
+            setEnvironment
+              ( setLogHandle logHandle
+              . setLogVerbosity logNoise
+              . setAssertionLogHandle alogHandle
+              . setConsoleInHandle cinHandle
+              . setConsoleOutHandle coutHandle
+              . setLogLock logLock
+              . setSessionUid uid
+              . setClientEnvironment
+                  ( setRemoteHostname (remoteEndHost remote)
+                  . setRemotePort (remoteEndPort remote)
+                  . setRemotePath (remoteEndPath remote)
+                  . setResponseFormat format
+                  . setApiVersion version
+                  . setSecretsPath secretsPath
+                  $ defaultWebDriverEnv
+                  )
+              ) defaultWebDriverConfig
+
+        (result, assertions) <- toIO $
+          debugSession config $
+            title >> attemptLabel attemptNumber >> runIsolated caps _test_session
+
+        releaseRemoteEnd remotesRef driver remote
+
+        case result of
+          Right _ -> do
+            return $ webDriverAssertionsToResult $ summarize assertions
+          Left err -> if attemptNumber >= numRetries
+            then return $ TT.testFailed $
+              "Unhandled error: " ++ printErr printWebDriverError err
+            else attempt (attemptNumber + 1)
+
+    attempt 1
+
 
 
 webDriverAssertionsToResult :: AssertionSummary -> TT.Result
@@ -326,6 +358,18 @@ instance TO.IsOption LogHandle where
 
 
 
+newtype LogPrinterLock = LogPrinterLock
+  { theLogPrinterLock :: Maybe (MVar ())
+  } deriving Typeable
+
+instance TO.IsOption LogPrinterLock where
+  defaultValue = LogPrinterLock Nothing
+  parseValue = error "LogPrinterLock is an internal option."
+  optionName = error "LogPrinterLock is an internal option."
+  optionHelp = error "LogPrinterLock is an internal option."
+
+
+
 -- | Log Noise Level.
 data LogNoiseLevel
   = NoisyLog
@@ -340,6 +384,19 @@ instance TO.IsOption LogNoiseLevel where
     _ -> Nothing
   optionName = return "wd-verbosity"
   optionHelp = return "log verbosity: (noisy), silent"
+
+
+
+-- | Max number of retries.
+newtype NumRetries
+  = NumRetries { theNumRetries :: Int }
+  deriving Typeable
+
+instance TO.IsOption NumRetries where
+  defaultValue = NumRetries 1
+  parseValue = fmap NumRetries . readMaybe
+  optionName = return "wd-num-retries"
+  optionHelp = return "number of times to retry a failed test"
 
 
 
@@ -521,12 +578,15 @@ unlessTierIs tier f tree = T.askOption checkDeployment
 defaultWebDriverMain :: TT.TestTree -> IO ()
 defaultWebDriverMain tree = do
 
+  logLock <- newMVar ()
+
   deploy <- determineDeploymentTier
   pool <- getRemoteEndRef
 
   T.defaultMain
     $ T.localOption (Deployment deploy)
     $ T.localOption (RemoteEndRef $ Just pool)
+    $ T.localOption (LogPrinterLock $ Just logLock)
     $ tree
 
 

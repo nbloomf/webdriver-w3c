@@ -178,11 +178,15 @@ logNow msg = do
   time <- mGetSystemTime
   printer <- getEnvironment >>= theLogPrinter
   handle <- getEnvironment >>= theLogHandle
+  logLock <- getEnvironment >>= theLogLock
   verbosity <- getEnvironment >>= theLogVerbosity
-  case printEntryWith printer verbosity (time, msg) of
+  uid <- getEnvironment >>= theSessionUid
+  case printEntryWith printer verbosity (time, uid, msg) of
     Nothing -> return ()
     Just msg -> do
-      mhPutStrLn handle msg
+      case logLock of
+        Nothing -> mhPutStrLn handle msg
+        Just lock -> mhBlockedPutStrLn lock handle msg
       mhFlush handle
   appendLog $ Log [(time, msg)] []
 
@@ -214,7 +218,8 @@ assertNow a = do
       printer <- getEnvironment >>= theLogPrinter
       handle <- getEnvironment >>= theAssertionLogHandle
       verbosity <- getEnvironment >>= theLogVerbosity
-      case printEntryWith printer verbosity (time, LogAssertion a) of
+      uid <- getEnvironment >>= theSessionUid
+      case printEntryWith printer verbosity (time, uid, LogAssertion a) of
         Just msg -> do
           mhPutStrLn handle msg
           mhFlush handle
@@ -283,6 +288,7 @@ instance (EffectConsole m) => EffectConsole (HttpSession m err st log env) where
   mhPutChar handle c = liftSession $ mhPutChar handle c
   mhPutStr handle str = liftSession $ mhPutStr handle str
   mhPutStrLn handle str = liftSession $ mhPutStrLn handle str
+  mhBlockedPutStrLn lock handle str = liftSession $ mhBlockedPutStrLn lock handle str
 
 instance (EffectTimer m) => EffectTimer (HttpSession m err st log env) where
   mGetSystemTime = liftSession mGetSystemTime
