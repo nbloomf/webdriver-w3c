@@ -46,10 +46,8 @@ import Web.Api.WebDriver.Types.Keyboard
 cleanupOnError
   :: WebDriver a -- ^ `WebDriver` session that may throw errors
   -> WebDriver a
-cleanupOnError x = do
-  comment "Error detected! Cleaning up..."
-  catch x $ \e ->
-    deleteSession >> throwError e
+cleanupOnError x = catch x $ \e ->
+  deleteSession >> throwError e
 
 
 

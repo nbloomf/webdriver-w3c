@@ -217,7 +217,7 @@ instance (Monad m, Typeable m) => TT.IsTest (WebDriverTest m) where
         remote <- acquireRemoteEnd remotesRef delay driver
 
         let
-          uid = digest wdTestName ++ "-" ++ show attemptNumber
+          uid = digest wdTestName ++ "-" ++ show attemptNumber ++ " " ++ show remote
             where
               digest :: (Show a) => a -> String
               digest = take 8 . SHA.showDigest . SHA.sha1 . BS.pack . show

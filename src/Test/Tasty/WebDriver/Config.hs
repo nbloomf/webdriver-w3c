@@ -81,7 +81,15 @@ data RemoteEnd = RemoteEnd
   { remoteEndHost :: String -- ^ Scheme, auth, and hostname
   , remoteEndPort :: Int
   , remoteEndPath :: String -- ^ Additional path component
-  } deriving (Eq, Show)
+  } deriving Eq
+
+instance Show RemoteEnd where
+  show remote = concat
+    [ remoteEndHost remote
+    , ":"
+    , show $ remoteEndPort remote
+    , remoteEndPath remote
+    ]
 
 -- | Parse a remote end config file. This file consists of 0 or more blocks of the form
 --
@@ -127,10 +135,10 @@ tokenizeRemoteEndOption ws = case ws of
   [] -> return []
   (first:rest) -> do
     driver <- case first of
-      "geckodriver:" -> return Geckodriver
-      "chromedriver:" -> return Chromedriver
+      "geckodriver" -> return Geckodriver
+      "chromedriver" -> return Chromedriver
       _ -> Left $ "Unrecognized driver name '" ++ first ++ "'."
-    let (remotes, remainder) = break (isSuffixOf ":") rest
+    let (remotes, remainder) = break (`elem` ["geckodriver","chromedriver"]) rest
     ends <- mapM parseRemoteEnd remotes
     option <- tokenizeRemoteEndOption remainder
     return $ (driver, nub ends) : option

@@ -7,6 +7,7 @@
 * make endpoints part of WDAct
 
 -- refactor cleanup tasks
+* cleanup response headers in log
 * log lock in tasty is a just; shouldn't be
 * make log printing more configurable in http
 * default webdriver config?

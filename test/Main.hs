@@ -29,7 +29,7 @@ main = do
   lock <- newMVar ()
 
   args <- getArgs
-  withArgs (["--wd-remote-ends","geckodriver: https://localhost:4444 https://localhost:4445 chromedriver: https://localhost:9515 https://localhost:9516"] ++ args) $
+  withArgs (["--wd-remote-ends","geckodriver https://localhost:4444 https://localhost:4445 chromedriver https://localhost:9515 https://localhost:9516"] ++ args) $
     defaultWebDriverMain $
       (localOption $ NumRetries 3) $
         testGroup "All Tests"
