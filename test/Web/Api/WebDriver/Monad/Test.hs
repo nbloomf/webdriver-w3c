@@ -27,7 +27,7 @@ tests path = testGroup "Web.Api.WebDriver.Monad"
 
   ,   localOption (Driver Geckodriver)
     $ localOption (ApiResponseFormat SpecFormat)
-    -- $ localOption (SilentLog)
+    $ localOption (SilentLog)
     $ localOption (AssertionLogHandle $ Path "/dev/null")
     $ testGroup "Geckodriver" (endpointTests path (return () :: IO ()))
 
