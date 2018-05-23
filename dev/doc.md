@@ -4,6 +4,23 @@ Info for Developers
 Here's some notes about the implementation of webdriver-w3c.
 
 
+Setting up an Environment
+-------------------------
+
+To have a complete dev environment and run all the tests, you'll need to install [geckodriver](https://github.com/mozilla/geckodriver/releases) and [chromedriver](http://chromedriver.chromium.org/).
+
+For building `webdriver-w3c` itself or your own projects, I recommend [stack](https://docs.haskellstack.org/en/stable/README/) for ease of use. With stack and this repo on your machine, 
+
+* `stack ghci` loads the library in a ghci session
+* `make test` runs the tests and generates a code coverage report
+
+
+Structure of the Library
+------------------------
+
+The heart of the library is the `WebDriver` monad, which handles network requests, logging, errors, and other state. The bulk of the API consists of functions into this monad -- one for each endpoint in the WebDriver spec.
+
+
 About Parallelism
 -----------------
 
