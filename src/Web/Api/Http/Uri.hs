@@ -20,8 +20,9 @@ import Test.QuickCheck
 
 
 -- | The host part of a URI. See <https://tools.ietf.org/html/rfc3986#page-18>.
-newtype Host = Host { unHost :: String }
-  deriving Eq
+newtype Host = Host
+  { unHost :: String
+  } deriving Eq
 
 -- | Constructor for hosts that checks for invalid characters.
 mkHost :: String -> Maybe Host
