@@ -34,8 +34,8 @@ import Web.Api.Http
 
 
 data HttpSessionTest m = HttpSessionTest
-  { _test_name :: Maybe String
-  , _test_session :: (HttpSession m () () () () ())
+  { httpTestName :: Maybe String
+  , httpTestSession :: (HttpSession m () () () () ())
   } deriving Typeable
 
 
@@ -55,7 +55,7 @@ instance (Effectful m, Typeable m) => TT.IsTest (HttpSessionTest m) where
       ConsoleInHandle cin = TO.lookupOption opts
       ConsoleOutHandle cout = TO.lookupOption opts
 
-      title = case _test_name of
+      title = case httpTestName of
         Nothing -> return ()
         Just str -> comment str
 
@@ -74,7 +74,7 @@ instance (Effectful m, Typeable m) => TT.IsTest (HttpSessionTest m) where
           ) $ basicHttpSessionConfig (const "") (const "") Nothing () ()
 
     (result, assertions) <- toIO $
-      debugSession config $ title >> _test_session
+      debugSession config $ title >> httpTestSession
 
     return $ case result of
       Right _ -> httpAssertionsToResult $ summarize assertions
@@ -107,8 +107,8 @@ testCaseWithSetup
   -> TT.TestTree
 testCaseWithSetup name setup teardown test =
   TT.singleTest name $ HttpSessionTest
-    { _test_name = Just name
-    , _test_session = setup >> test >> teardown
+    { httpTestName = Just name
+    , httpTestSession = setup >> test >> teardown
     }
 
 

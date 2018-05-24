@@ -87,8 +87,8 @@ import Test.Tasty.WebDriver.Config
 
 
 data WebDriverTest m = WebDriverTest
-  { _test_name :: Maybe String
-  , _test_session :: (WebDriver m ())
+  { wdTestName :: Maybe String
+  , wdTestSession :: (WebDriver m ())
   } deriving Typeable
 
 instance (Effectful m, Typeable m) => TT.IsTest (WebDriverTest m) where
@@ -131,7 +131,7 @@ instance (Effectful m, Typeable m) => TT.IsTest (WebDriverTest m) where
       LogPrinterLock logLock = TO.lookupOption opts
 
     let
-      title = case _test_name of
+      title = case wdTestName of
         Nothing -> return ()
         Just str -> comment str
 
@@ -181,7 +181,7 @@ instance (Effectful m, Typeable m) => TT.IsTest (WebDriverTest m) where
 
         let
           uid = (take 8 $ SHA.showDigest $ SHA.sha1 $ BS.pack $
-            show _test_name) ++ "-" ++ show attemptNumber
+            show wdTestName) ++ "-" ++ show attemptNumber
 
           config =
             setEnvironment
@@ -205,12 +205,12 @@ instance (Effectful m, Typeable m) => TT.IsTest (WebDriverTest m) where
 
         (result, assertions) <- toIO $
           debugSession config $
-            title >> attemptLabel attemptNumber >> runIsolated caps _test_session
+            title >> attemptLabel attemptNumber >> runIsolated caps wdTestSession
 
         releaseRemoteEnd remotesRef driver remote
 
         case result of
-          Right _ -> do
+          Right _ ->
             return $ webDriverAssertionsToResult $ summarize assertions
           Left err -> if attemptNumber >= numRetries
             then return $ TT.testFailed $
@@ -250,8 +250,8 @@ testCaseWithSetup
   -> TT.TestTree
 testCaseWithSetup name setup teardown test =
   TT.singleTest name $ WebDriverTest
-    { _test_name = Just name
-    , _test_session = setup >> test >> teardown
+    { wdTestName = Just name
+    , wdTestSession = setup >> test >> teardown
     }
 
 
@@ -649,7 +649,7 @@ getRemoteEndOptionString = do
       _ -> Just Nothing
   case foo args of
     Just Nothing -> return Nothing
-    Just (Just str) -> do
+    Just (Just str) ->
       case parseRemoteEndOption str of
         Left err -> do
           putStrLn err
