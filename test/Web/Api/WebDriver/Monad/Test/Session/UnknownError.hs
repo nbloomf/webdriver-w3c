@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BangPatterns, OverloadedStrings #-}
 module Web.Api.WebDriver.Monad.Test.Session.UnknownError (
     unknownErrorExit
   ) where

@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Web.Api.Http.Assert.Test (
     tests
   ) where

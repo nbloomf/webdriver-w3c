@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BangPatterns, OverloadedStrings #-}
 module Web.Api.WebDriver.Monad.Test.Session.Success (
     successfulExit
   ) where
@@ -18,7 +18,7 @@ unexpectedError
   :: (Effectful m, Typeable m)
   => Err WebDriverError
   -> WebDriver m ()
-unexpectedError e = assertFailure $ "Unexpected error:\n" ++ show e
+unexpectedError e = assertFailure $ AssertionComment $ "Unexpected error:\n" ++ show e
 
 
 successfulExit :: (Effectful m, Typeable m) => FilePath -> m () -> T.TestTree
@@ -329,10 +329,10 @@ _test_setWindowRect_success _ =
   let
     session = do
       !rect <- setWindowRect $ Rect
-        { _rect_x = 0
-        , _rect_y = 0
-        , _rect_width = 640
-        , _rect_height = 480
+        { _rectX = 0
+        , _rectY = 0
+        , _rectWidth = 640
+        , _rectHeight = 480
         }
       assertSuccess "yay"
       return ()
@@ -541,7 +541,7 @@ _test_getElementCssValue_success page _ =
       !text <- getElementCssValue element "text-decoration"
       case text of
         "none" -> assertSuccess "yay"
-        _ -> assertFailure $ "expected 'none', got '" ++ text ++ "'"
+        _ -> assertFailure $ AssertionComment $ "expected 'none', got '" ++ text ++ "'"
       return ()
 
   in catchError session unexpectedError
@@ -573,7 +573,7 @@ _test_getElementTagName_success page _ =
       !text <- getElementTagName element
       case text of
         "div" -> assertSuccess "yay"
-        _ -> assertFailure $ "expected 'div', got '" ++ text ++ "'"
+        _ -> assertFailure $ AssertionComment $ "expected 'div', got '" ++ text ++ "'"
       return ()
 
   in catchError session unexpectedError
@@ -715,8 +715,8 @@ _test_getNamedCookie_success page _ =
       navigateTo page
       findElement CssSelector "button#add-cookie-button" >>= elementClick
       !cookie <- getNamedCookie "fakeCookie"
-      assertEqual (_cookie_name cookie) (Just "fakeCookie") "cookie name"
-      assertEqual (_cookie_value cookie) (Just "fakeValue") "cookie name"
+      assertEqual (_cookieName cookie) (Just "fakeCookie") "cookie name"
+      assertEqual (_cookieValue cookie) (Just "fakeValue") "cookie name"
       return ()
 
   in catchError session unexpectedError

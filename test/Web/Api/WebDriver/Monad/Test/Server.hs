@@ -793,8 +793,8 @@ get_session_id_cookie_name
 get_session_id_cookie_name session_id = do
   verifyIsActiveSession session_id
   return $ _success_with_value $ toJSON $ emptyCookie
-      { _cookie_name = Just "fakeCookie"
-      , _cookie_value = Just "fakeValue"
+      { _cookieName = Just "fakeCookie"
+      , _cookieValue = Just "fakeValue"
       }
 
 post_session_id_cookie

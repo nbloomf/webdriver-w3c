@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, BangPatterns #-}
+{-# LANGUAGE FlexibleInstances, BangPatterns, OverloadedStrings #-}
 module Web.Api.Http.Effects.Test (
     tests
   ) where
@@ -71,7 +71,8 @@ unexpectedError
   :: (Effectful m, Typeable m)
   => Err ()
   -> HttpSession m () () () () ()
-unexpectedError e = assertFailure $ "Unexpected error:\n" ++ show e
+unexpectedError e = assertFailure $
+  AssertionComment $ "Unexpected error:\n" ++ show e
 
 
 _test_mPauseInSeconds_success
@@ -167,7 +168,8 @@ _test_mRandomDecimalDigit_success _ =
       if elem c ['0'..'9']
         then assertSuccess "yay"
         else do
-          assertFailure $ "Expected a decimal digit; got '" ++ [c] ++ "'"
+          assertFailure $
+            AssertionComment $ "Expected a decimal digit; got '" ++ [c] ++ "'"
           throwError $ ErrUnexpectedFailure "mRandomDecimalDigit: bad characters."
       return ()
 
@@ -185,7 +187,8 @@ _test_mRandomLowerCaseLetter_success _ =
       if elem c ['a'..'z']
         then assertSuccess "yay"
         else do
-          assertFailure $ "Expected a lower case letter; got '" ++ [c] ++ "'"
+          assertFailure $
+            AssertionComment $ "Expected a lower case letter; got '" ++ [c] ++ "'"
           throwError $ ErrUnexpectedFailure "mRandomLowerCaseLetter: bad characters."
       return ()
 
@@ -203,7 +206,8 @@ _test_mRandomUpperCaseLetter_success _ =
       if elem c ['A'..'Z']
         then assertSuccess "yay"
         else do
-          assertFailure $ "Expected an upper case letter; got '" ++ [c] ++ "'"
+          assertFailure $
+            AssertionComment $ "Expected an upper case letter; got '" ++ [c] ++ "'"
           throwError $ ErrUnexpectedFailure "mRandomUpperCaseLetter: bad characters."
       return ()
 
@@ -221,7 +225,8 @@ _test_mRandomAlphanumericCharacter_success _ =
       if elem c $ ['0'..'9'] ++ ['a'..'z'] ++ ['A'..'Z']
         then assertSuccess "yay"
         else do
-          assertFailure $ "Expected an alphanumeric character; got '" ++ [c] ++ "'"
+          assertFailure $
+            AssertionComment $ "Expected an alphanumeric character; got '" ++ [c] ++ "'"
           throwError $ ErrUnexpectedFailure "mRandomAlphanumericCharacter: bad characters."
       return ()
 
@@ -239,7 +244,8 @@ _test_mRandomDecimalDigitString_success _ =
       if all (`elem` ['0'..'9']) cs
         then assertSuccess "yay"
         else do
-          assertFailure $ "Expected only decimal digits; got '" ++ cs ++ "'"
+          assertFailure $
+            AssertionComment $ "Expected only decimal digits; got '" ++ cs ++ "'"
           throwError $ ErrUnexpectedFailure "mRandomDecimalDigitString: bad characters."
       return ()
 
@@ -257,7 +263,8 @@ _test_mRandomAlphanumericString_success _ =
       if all (`elem` (['0'..'9'] ++ ['a'..'z'] ++ ['A'..'Z'])) cs
         then assertSuccess "yay"
         else do
-          assertFailure $ "Expected only alphanumeric characters; got '" ++ cs ++ "'"
+          assertFailure $
+            AssertionComment $ "Expected only alphanumeric characters; got '" ++ cs ++ "'"
           throwError $ ErrUnexpectedFailure "mRandomAlphanumericString: bad characters."
       return ()
 

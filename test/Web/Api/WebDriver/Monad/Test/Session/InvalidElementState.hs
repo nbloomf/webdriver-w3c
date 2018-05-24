@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BangPatterns, OverloadedStrings #-}
 module Web.Api.WebDriver.Monad.Test.Session.InvalidElementState (
     invalidElementStateExit
   ) where
@@ -20,7 +20,8 @@ invalidElementState
   -> WebDriver m ()
 invalidElementState e = case e of
   Err (ResponseError InvalidElementState _ _ _ _) -> assertSuccess "yay!"
-  err -> assertFailure $ "Expecting 'invalid element state' but got: " ++ show err
+  err -> assertFailure $
+    AssertionComment $ "Expecting 'invalid element state' but got: " ++ show err
 
 
 invalidElementStateExit :: (Effectful m, Typeable m) => FilePath -> m () -> T.TestTree

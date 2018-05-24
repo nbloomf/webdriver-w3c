@@ -17,8 +17,8 @@ module Web.Api.Http.Assert (
     Assertion()
   , success
   , failure
-  , AssertionStatement()
-  , AssertionComment()
+  , AssertionStatement(..)
+  , AssertionComment(..)
   , AssertionResult()
   , isSuccess
   , printAssertion
