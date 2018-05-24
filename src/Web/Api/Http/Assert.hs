@@ -69,7 +69,7 @@ data Assertion = Assertion
 
 
 -- | Human-readable statement which may be true or false.
-data AssertionStatement = AssertionStatement
+newtype AssertionStatement = AssertionStatement
   { theAssertionStatement :: String
   } deriving Eq
 
@@ -81,7 +81,7 @@ instance IsString AssertionStatement where
 
 
 -- | Human-readable explanation for why an assertion is made.
-data AssertionComment = AssertionComment
+newtype AssertionComment = AssertionComment
   { theAssertionComment :: String
   } deriving Eq
 
@@ -159,7 +159,7 @@ assertSuccessIf
   -> AssertionStatement -- ^ Statement being asserted (the /what/)
   -> AssertionComment -- ^ An additional comment (the /why/)
   -> m ()
-assertSuccessIf p statement comment = do
+assertSuccessIf p statement comment =
   assert $ (if p then success else failure) statement comment
 
 -- | Assertion that always succeeds.
@@ -182,7 +182,7 @@ assertTrue
   => Bool
   -> AssertionComment -- ^ An additional comment (the /why/)
   -> m ()
-assertTrue p = assertSuccessIf (p == True)
+assertTrue p = assertSuccessIf p
   (AssertionStatement $ show p ++ " is True")
 
 -- | Succeeds if @Bool@ is `False`.
@@ -191,7 +191,7 @@ assertFalse
   => Bool
   -> AssertionComment -- ^ An additional comment (the /why/)
   -> m ()
-assertFalse p = assertSuccessIf (p == False)
+assertFalse p = assertSuccessIf (not p)
   (AssertionStatement $ show p ++ " is False")
 
 -- | Succeeds if the given @t@s are equal according to their `Eq` instance.
@@ -221,7 +221,7 @@ assertIsSubstring
   -> [a]
   -> AssertionComment -- ^ An additional comment (the /why/)
   -> m ()
-assertIsSubstring x y = assertSuccessIf (isInfixOf x y)
+assertIsSubstring x y = assertSuccessIf (x `isInfixOf` y)
   (AssertionStatement $ show x ++ " is a substring of " ++ show y)
 
 -- | Succeeds if the first list is not an infix of the second, according to their `Eq` instance.
@@ -231,7 +231,7 @@ assertIsNotSubstring
   -> [a]
   -> AssertionComment -- ^ An additional comment (the /why/)
   -> m ()
-assertIsNotSubstring x y = assertSuccessIf (not $ isInfixOf x y)
+assertIsNotSubstring x y = assertSuccessIf (not $ x `isInfixOf` y)
   (AssertionStatement $ show x ++ " is not a substring of " ++ show y)
 
 -- | Succeeds if the first list is an infix of the second, named list, according to their `Eq` instance. This is similar to `assertIsSubstring`, except that the "name" of the second list argument is used in reporting failures. Handy if the second list is very large -- say the source of a webpage.
@@ -241,7 +241,7 @@ assertIsNamedSubstring
   -> ([a],String)
   -> AssertionComment -- ^ An additional comment (the /why/)
   -> m ()
-assertIsNamedSubstring x (y,name) = assertSuccessIf (isInfixOf x y)
+assertIsNamedSubstring x (y,name) = assertSuccessIf (x `isInfixOf` y)
   (AssertionStatement $ show x ++ " is a substring of " ++ name)
 
 -- | Succeeds if the first list is not an infix of the second, named list, according to their `Eq` instance. This is similar to `assertIsNotSubstring`, except that the "name" of the second list argument is used in reporting failures. Handy if the second list is very large -- say the source of a webpage.
