@@ -7,7 +7,7 @@ Maintainer  : Nathan Bloomfield (nbloomf@gmail.com)
 Stability   : experimental
 Portability : POSIX
 
-`WebDriver` sessions are most often tests of some other system. In this module we make "assertions" first class objects.
+In this module we define assertions as first class objects and some helper functions for creating and manipulating them.
 -}
 
 {-# LANGUAGE RecordWildCards #-}
@@ -62,9 +62,9 @@ import Data.String
 -- To construct assertions outside this module, use `success` and `failure`.
 
 data Assertion = Assertion
-  { __assertion :: AssertionStatement
-  , __assertion_comment :: AssertionComment
-  , __assertion_result :: AssertionResult
+  { assertionStatement :: AssertionStatement
+  , assertionComment :: AssertionComment
+  , assertionResult :: AssertionResult
   } deriving (Eq, Show)
 
 
@@ -99,24 +99,24 @@ data AssertionResult
 
 -- | Detects successful assertions.
 isSuccess :: Assertion -> Bool
-isSuccess a = AssertSuccess == __assertion_result a
+isSuccess a = AssertSuccess == assertionResult a
 
 
 -- | Basic string representation of an assertion.
 printAssertion :: Assertion -> String
 printAssertion Assertion{..} =
-  case __assertion_result of
+  case assertionResult of
     AssertSuccess -> 
       unwords
         [ "\x1b[1;32mValid Assertion\x1b[0;39;49m"
-        , "\nassertion: " ++ show __assertion
-        , "\ncomment: " ++ show __assertion_comment
+        , "\nassertion: " ++ show assertionStatement
+        , "\ncomment: " ++ show assertionComment
         ]
     AssertFailure ->
       unwords
         [ "\x1b[1;31mInvalid Assertion\x1b[0;39;49m"
-        , "\nassertion: " ++ show __assertion
-        , "\ncomment: " ++ show __assertion_comment
+        , "\nassertion: " ++ show assertionStatement
+        , "\ncomment: " ++ show assertionComment
         ]
 
 
@@ -127,9 +127,9 @@ success
   -> AssertionComment -- ^ An additional comment (the /why/)
   -> Assertion
 success statement comment = Assertion
-  { __assertion = statement
-  , __assertion_comment = comment
-  , __assertion_result = AssertSuccess
+  { assertionStatement = statement
+  , assertionComment = comment
+  , assertionResult = AssertSuccess
   }
 
 -- | Construct a failed assertion.
@@ -138,16 +138,16 @@ failure
   -> AssertionComment -- ^ An additional comment (the /why/)
   -> Assertion
 failure statement comment = Assertion
-  { __assertion = statement
-  , __assertion_comment = comment
-  , __assertion_result = AssertFailure
+  { assertionStatement = statement
+  , assertionComment = comment
+  , assertionResult = AssertFailure
   }
 
 
 
 -- | Assertions are made and evaluated inside some context, represented by the `Assert` class.
 class Assert m where
-  -- | Make an assertion.
+  -- | Make an assertion. Typically @m@ is a monad, and the `Assert` instance handles the assertion in @m@ by e.g. logging it, changing state, etc.
   assert :: Assertion -> m ()
 
 
