@@ -112,7 +112,7 @@ object_ = object . filter (\(_, v) -> v /= Null) . catMaybes
 (.==) key value = Just (key .= value)
 
 (.=?) :: (ToJSON v, KeyValue kv) => Text -> Maybe v -> Maybe kv
-(.=?) key = fmap $ (key .=)
+(.=?) key = fmap (key .=)
 
 
 
@@ -120,8 +120,9 @@ object_ = object . filter (\(_, v) -> v /= Null) . catMaybes
 type SessionId = String
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#dfn-web-element-reference>.
-data ElementRef = ElementRef String
-  deriving Eq
+newtype ElementRef = ElementRef
+  { theElementRef :: String
+  } deriving Eq
 
 instance Show ElementRef where
   show (ElementRef str) = str
@@ -130,8 +131,9 @@ instance IsString ElementRef where
   fromString = ElementRef
 
 -- | Identifier for a /browsing context/; see <https://w3c.github.io/webdriver/webdriver-spec.html#dfn-current-browsing-context>.
-data ContextId = ContextId String
-  deriving Eq
+newtype ContextId = ContextId
+  { theContextId :: String
+  } deriving Eq
 
 instance Show ContextId where
   show (ContextId str) = str
@@ -302,21 +304,21 @@ instance Arbitrary ResponseErrorCode where
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#capabilities>.
 data Capabilities = Capabilities
-  { _browser_name :: Maybe BrowserName -- ^ @browserName@
-  , _browser_version :: Maybe String -- ^ @browserVersion@
-  , _platform_name :: Maybe PlatformName -- ^ @platformName@
-  , _accept_insecure_certs :: Maybe Bool -- ^ @acceptInsecureCerts@
-  , _page_load_strategy :: Maybe String -- ^ @pageLoadStrategy@
+  { _browserName :: Maybe BrowserName -- ^ @browserName@
+  , _browserVersion :: Maybe String -- ^ @browserVersion@
+  , _platformName :: Maybe PlatformName -- ^ @platformName@
+  , _acceptInsecureCerts :: Maybe Bool -- ^ @acceptInsecureCerts@
+  , _pageLoadStrategy :: Maybe String -- ^ @pageLoadStrategy@
   , _proxy :: Maybe ProxyConfig -- ^ @proxy@
-  , _set_window_rect :: Maybe Bool -- ^ @setWindowRect@
+  , _setWindowRect :: Maybe Bool -- ^ @setWindowRect@
   , _timeouts :: Maybe TimeoutConfig -- ^ @timeouts@
-  , _unhandled_prompt_behavior :: Maybe PromptHandler -- ^ @unhandledPromptBehavior@
+  , _unhandledPromptBehavior :: Maybe PromptHandler -- ^ @unhandledPromptBehavior@
 
   -- | Optional extension, but very common.
-  , _chrome_options :: Maybe ChromeOptions -- ^ @chromeOptions@
+  , _chromeOptions :: Maybe ChromeOptions -- ^ @chromeOptions@
 
   -- | Optional extension, but very common.
-  , _firefox_options :: Maybe FirefoxOptions -- ^ @moz:firefoxOptions@
+  , _firefoxOptions :: Maybe FirefoxOptions -- ^ @moz:firefoxOptions@
   } deriving (Eq, Show)
 
 instance FromJSON Capabilities where
@@ -336,17 +338,17 @@ instance FromJSON Capabilities where
 
 instance ToJSON Capabilities where
   toJSON Capabilities{..} = object_
-    [ "browserName" .=? (toJSON <$> _browser_name)
-    , "browserVersion" .=? (toJSON <$> _browser_version)
-    , "platformName" .=? (toJSON <$> _platform_name)
-    , "acceptInsecureCerts" .=? (toJSON <$> _accept_insecure_certs)
-    , "pageLoadStrategy" .=? (toJSON <$> _page_load_strategy)
+    [ "browserName" .=? (toJSON <$> _browserName)
+    , "browserVersion" .=? (toJSON <$> _browserVersion)
+    , "platformName" .=? (toJSON <$> _platformName)
+    , "acceptInsecureCerts" .=? (toJSON <$> _acceptInsecureCerts)
+    , "pageLoadStrategy" .=? (toJSON <$> _pageLoadStrategy)
     , "proxy" .=? (toJSON <$> _proxy)
-    , "setWindowRect" .=? (toJSON <$> _set_window_rect)
+    , "setWindowRect" .=? (toJSON <$> _setWindowRect)
     , "timeouts" .=? (toJSON <$> _timeouts)
-    , "unhandledPromptBehavior" .=? (toJSON <$> _unhandled_prompt_behavior)
-    , "chromeOptions" .=? (toJSON <$> _chrome_options)
-    , "moz:firefoxOptions" .=? (toJSON <$> _firefox_options)
+    , "unhandledPromptBehavior" .=? (toJSON <$> _unhandledPromptBehavior)
+    , "chromeOptions" .=? (toJSON <$> _chromeOptions)
+    , "moz:firefoxOptions" .=? (toJSON <$> _firefoxOptions)
     ]
 
 instance Arbitrary Capabilities where
@@ -366,37 +368,37 @@ instance Arbitrary Capabilities where
 -- | `Capabilities` with all members set to `Nothing`.
 emptyCapabilities :: Capabilities
 emptyCapabilities = Capabilities
-  { _browser_name = Nothing
-  , _browser_version = Nothing
-  , _platform_name = Nothing
-  , _accept_insecure_certs = Nothing
-  , _page_load_strategy = Nothing
+  { _browserName = Nothing
+  , _browserVersion = Nothing
+  , _platformName = Nothing
+  , _acceptInsecureCerts = Nothing
+  , _pageLoadStrategy = Nothing
   , _proxy = Nothing
-  , _set_window_rect = Nothing
+  , _setWindowRect = Nothing
   , _timeouts = Nothing
-  , _unhandled_prompt_behavior = Nothing
-  , _chrome_options = Nothing
-  , _firefox_options = Nothing
+  , _unhandledPromptBehavior = Nothing
+  , _chromeOptions = Nothing
+  , _firefoxOptions = Nothing
   }
 
--- | All members set to `Nothing` except `_browser_name`, which is @Just Firefox@.
+-- | All members set to `Nothing` except `_browserName`, which is @Just Firefox@.
 defaultFirefoxCapabilities :: Capabilities
 defaultFirefoxCapabilities = emptyCapabilities
-  { _browser_name = Just Firefox
+  { _browserName = Just Firefox
   }
 
 -- | Passing the "-headless" parameter to Firefox.
 headlessFirefoxCapabilities :: Capabilities
 headlessFirefoxCapabilities = defaultFirefoxCapabilities
-  { _firefox_options = Just $ defaultFirefoxOptions
-    { _firefox_args = Just ["-headless"]
+  { _firefoxOptions = Just $ defaultFirefoxOptions
+    { _firefoxArgs = Just ["-headless"]
     }
   }
 
--- | All members set to `Nothing` except `_browser_name`, which is @Just Chrome@.
+-- | All members set to `Nothing` except `_browserName`, which is @Just Chrome@.
 defaultChromeCapabilities :: Capabilities
 defaultChromeCapabilities = emptyCapabilities
-  { _browser_name = Just Chrome
+  { _browserName = Just Chrome
   }
 
 
@@ -447,8 +449,8 @@ instance Arbitrary PlatformName where
 
 -- | See <https://sites.google.com/a/chromium.org/chromedriver/capabilities>.
 data ChromeOptions = ChromeOptions
-  { _chrome_binary :: Maybe FilePath -- ^ @binary@
-  , _chrome_args :: Maybe [String] -- ^ @args@
+  { _chromeBinary :: Maybe FilePath -- ^ @binary@
+  , _chromeArgs :: Maybe [String] -- ^ @args@
   } deriving (Eq, Show)
 
 instance FromJSON ChromeOptions where
@@ -459,8 +461,8 @@ instance FromJSON ChromeOptions where
 
 instance ToJSON ChromeOptions where
   toJSON ChromeOptions{..} = object_
-    [ "binary" .=? (toJSON <$> _chrome_binary)
-    , "args" .=? (toJSON <$> _chrome_args)
+    [ "binary" .=? (toJSON <$> _chromeBinary)
+    , "args" .=? (toJSON <$> _chromeArgs)
     ]
 
 instance Arbitrary ChromeOptions where
@@ -471,16 +473,16 @@ instance Arbitrary ChromeOptions where
 -- | All members set to `Nothing`.
 defaultChromeOptions :: ChromeOptions
 defaultChromeOptions = ChromeOptions
-  { _chrome_binary = Nothing
-  , _chrome_args = Nothing
+  { _chromeBinary = Nothing
+  , _chromeArgs = Nothing
   }
 
 
 
 -- | See <https://github.com/mozilla/geckodriver#firefox-capabilities>.
 data FirefoxOptions = FirefoxOptions
-  { _firefox_binary :: Maybe FilePath -- ^ @binary@
-  , _firefox_args :: Maybe [String] -- ^ @args@
+  { _firefoxBinary :: Maybe FilePath -- ^ @binary@
+  , _firefoxArgs :: Maybe [String] -- ^ @args@
   } deriving (Eq, Show)
 
 instance FromJSON FirefoxOptions where
@@ -491,8 +493,8 @@ instance FromJSON FirefoxOptions where
 
 instance ToJSON FirefoxOptions where
   toJSON FirefoxOptions{..} = object_
-    [ "binary" .=? (toJSON <$> _firefox_binary)
-    , "args" .=? (toJSON <$> _firefox_args)
+    [ "binary" .=? (toJSON <$> _firefoxBinary)
+    , "args" .=? (toJSON <$> _firefoxArgs)
     ]
 
 instance Arbitrary FirefoxOptions where
@@ -503,22 +505,22 @@ instance Arbitrary FirefoxOptions where
 -- | All members set to `Nothing`.
 defaultFirefoxOptions :: FirefoxOptions
 defaultFirefoxOptions = FirefoxOptions
-  { _firefox_binary = Nothing
-  , _firefox_args = Nothing
+  { _firefoxBinary = Nothing
+  , _firefoxArgs = Nothing
   }
 
 
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#proxy>.
 data ProxyConfig = ProxyConfig
-  { _proxy_type :: Maybe ProxyType -- ^ @proxyType@
-  , _proxy_autoconfig_url :: Maybe String -- ^ @proxyAutoconfigUrl@
-  , _ftp_proxy :: Maybe HostAndOptionalPort -- ^ @ftpProxy@
-  , _http_proxy :: Maybe HostAndOptionalPort -- ^ @httpProxy@
-  , _no_proxy :: Maybe [String] -- ^ @noProxy@
-  , _ssl_proxy :: Maybe HostAndOptionalPort -- ^ @sslProxy@
-  , _socks_proxy :: Maybe HostAndOptionalPort -- ^ @socksProxy@
-  , _socks_version :: Maybe Int -- ^ @socksVersion@
+  { _proxyType :: Maybe ProxyType -- ^ @proxyType@
+  , _proxyAutoconfigUrl :: Maybe String -- ^ @proxyAutoconfigUrl@
+  , _ftpProxy :: Maybe HostAndOptionalPort -- ^ @ftpProxy@
+  , _httpProxy :: Maybe HostAndOptionalPort -- ^ @httpProxy@
+  , _noProxy :: Maybe [String] -- ^ @noProxy@
+  , _sslProxy :: Maybe HostAndOptionalPort -- ^ @sslProxy@
+  , _socksProxy :: Maybe HostAndOptionalPort -- ^ @socksProxy@
+  , _socksVersion :: Maybe Int -- ^ @socksVersion@
   } deriving (Eq, Show)
 
 instance FromJSON ProxyConfig where
@@ -535,14 +537,14 @@ instance FromJSON ProxyConfig where
 
 instance ToJSON ProxyConfig where
   toJSON ProxyConfig{..} = object_
-    [ "proxyType" .=? (toJSON <$> _proxy_type)
-    , "proxyAutoconfigUrl" .=? (toJSON <$> _proxy_autoconfig_url)
-    , "ftpProxy" .=? (toJSON <$> _ftp_proxy)
-    , "httpProxy" .=? (toJSON <$> _http_proxy)
-    , "noProxy" .=? (toJSON <$> _no_proxy)
-    , "sslProxy" .=? (toJSON <$> _ssl_proxy)
-    , "socksProxy" .=? (toJSON <$> _socks_proxy)
-    , "socksVersion" .=? (toJSON <$> _socks_version)
+    [ "proxyType" .=? (toJSON <$> _proxyType)
+    , "proxyAutoconfigUrl" .=? (toJSON <$> _proxyAutoconfigUrl)
+    , "ftpProxy" .=? (toJSON <$> _ftpProxy)
+    , "httpProxy" .=? (toJSON <$> _httpProxy)
+    , "noProxy" .=? (toJSON <$> _noProxy)
+    , "sslProxy" .=? (toJSON <$> _sslProxy)
+    , "socksProxy" .=? (toJSON <$> _socksProxy)
+    , "socksVersion" .=? (toJSON <$> _socksVersion)
     ]
 
 instance Arbitrary ProxyConfig where
@@ -559,22 +561,22 @@ instance Arbitrary ProxyConfig where
 -- | `ProxyConfig` object with all members set to `Nothing`.
 emptyProxyConfig :: ProxyConfig
 emptyProxyConfig = ProxyConfig
-  { _proxy_type = Nothing
-  , _proxy_autoconfig_url = Nothing
-  , _ftp_proxy = Nothing
-  , _http_proxy = Nothing
-  , _no_proxy = Nothing
-  , _ssl_proxy = Nothing
-  , _socks_proxy = Nothing
-  , _socks_version = Nothing
+  { _proxyType = Nothing
+  , _proxyAutoconfigUrl = Nothing
+  , _ftpProxy = Nothing
+  , _httpProxy = Nothing
+  , _noProxy = Nothing
+  , _sslProxy = Nothing
+  , _socksProxy = Nothing
+  , _socksVersion = Nothing
   }
 
 
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#dfn-host-and-optional-port>.
 data HostAndOptionalPort = HostAndOptionalPort
-  { _url_host :: Host
-  , _url_port :: Maybe Port
+  { _urlHost :: Host
+  , _urlPort :: Maybe Port
   } deriving (Eq, Show)
 
 instance FromJSON HostAndOptionalPort where
@@ -584,26 +586,26 @@ instance FromJSON HostAndOptionalPort where
       ("",_) -> malformedValue "Host" string
       (str,[]) -> case mkHost str of
         Nothing -> malformedValue "Host" string
-        Just h -> return $ HostAndOptionalPort
-          { _url_host = h
-          , _url_port = Nothing
+        Just h -> return HostAndOptionalPort
+          { _urlHost = h
+          , _urlPort = Nothing
           }
       (str,":") -> malformedValue "Port" string
       (str,':':rest) -> case mkHost str of
         Nothing -> malformedValue "Host" string
         Just h -> case mkPort rest of
           Nothing -> malformedValue "Port" rest
-          Just p -> return $ HostAndOptionalPort
-            { _url_host = h
-            , _url_port = Just p
+          Just p -> return HostAndOptionalPort
+            { _urlHost = h
+            , _urlPort = Just p
             }
       (str,rest) -> malformedValue "Host" string
   parseJSON invalid = typeMismatch "HostAndOptionalPort" invalid
 
 instance ToJSON HostAndOptionalPort where
-  toJSON HostAndOptionalPort{..} = case _url_port of
-    Nothing -> String $ pack $ show _url_host
-    Just pt -> String $ pack $ concat [show _url_host, ":", show pt]
+  toJSON HostAndOptionalPort{..} = case _urlPort of
+    Nothing -> String $ pack $ show _urlHost
+    Just pt -> String $ pack $ concat [show _urlHost, ":", show pt]
 
 instance Arbitrary HostAndOptionalPort where
   arbitrary = HostAndOptionalPort
@@ -649,7 +651,7 @@ instance Arbitrary ProxyType where
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#dfn-timeouts>.
 data TimeoutConfig = TimeoutConfig
   { _script :: Maybe Int -- ^ @script@
-  , _page_load :: Maybe Int -- ^ @pageLoad@
+  , _pageLoad :: Maybe Int -- ^ @pageLoad@
   , _implicit :: Maybe Int -- ^ @implicit@
   } deriving (Eq, Show)
 
@@ -663,7 +665,7 @@ instance FromJSON TimeoutConfig where
 instance ToJSON TimeoutConfig where
   toJSON TimeoutConfig{..} = object_
     [ "script" .== (toJSON <$> _script)
-    , "pageLoad" .== (toJSON <$> _page_load)
+    , "pageLoad" .== (toJSON <$> _pageLoad)
     , "implicit" .== (toJSON <$> _implicit)
     ]
 
@@ -677,7 +679,7 @@ instance Arbitrary TimeoutConfig where
 emptyTimeoutConfig :: TimeoutConfig
 emptyTimeoutConfig = TimeoutConfig
   { _script = Nothing
-  , _page_load = Nothing
+  , _pageLoad = Nothing
   , _implicit = Nothing
   }
 
@@ -769,10 +771,10 @@ instance Arbitrary PointerSubtype where
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#processing-actions-requests>.
 data Action = Action
-  { _input_source_type :: Maybe InputSource -- ^ @type@
-  , _input_source_id :: Maybe String -- ^ @id@
-  , _input_source_parameters :: Maybe InputSourceParameter -- ^ @parameters@
-  , _action_items :: [ActionItem] -- ^ @actions@
+  { _inputSourceType :: Maybe InputSource -- ^ @type@
+  , _inputSourceId :: Maybe String -- ^ @id@
+  , _inputSourceParameters :: Maybe InputSourceParameter -- ^ @parameters@
+  , _actionItems :: [ActionItem] -- ^ @actions@
   } deriving (Eq, Show)
 
 instance FromJSON Action where
@@ -785,10 +787,10 @@ instance FromJSON Action where
 
 instance ToJSON Action where
   toJSON Action{..} = object_
-    [ "type" .=? (toJSON <$> _input_source_type)
-    , "id" .=? (toJSON <$> _input_source_id)
-    , "parameters" .=? (toJSON <$> _input_source_parameters)
-    , "actions" .== (toJSON <$> _action_items)
+    [ "type" .=? (toJSON <$> _inputSourceType)
+    , "id" .=? (toJSON <$> _inputSourceId)
+    , "parameters" .=? (toJSON <$> _inputSourceParameters)
+    , "actions" .== (toJSON <$> _actionItems)
     ]
 
 instance Arbitrary Action where
@@ -798,12 +800,12 @@ instance Arbitrary Action where
     <*> arbitrary
     <*> arbitrary
 
--- | All members set to `Nothing` except `_action_items`, which is the empty list.
+-- | All members set to `Nothing` except `_actionItems`, which is the empty list.
 emptyAction = Action
-  { _input_source_type = Nothing
-  , _input_source_id = Nothing
-  , _input_source_parameters = Nothing
-  , _action_items = []
+  { _inputSourceType = Nothing
+  , _inputSourceId = Nothing
+  , _inputSourceParameters = Nothing
+  , _actionItems = []
   }
 
 
@@ -847,8 +849,8 @@ instance Arbitrary ActionType where
 
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#dfn-pointer-input-state>.
-data InputSourceParameter = InputSourceParameter
-  { _pointer_subtype :: Maybe PointerSubtype -- ^ @subtype@
+newtype InputSourceParameter = InputSourceParameter
+  { _pointerSubtype :: Maybe PointerSubtype -- ^ @subtype@
   } deriving (Eq, Show)
 
 instance FromJSON InputSourceParameter where
@@ -858,7 +860,7 @@ instance FromJSON InputSourceParameter where
 
 instance ToJSON InputSourceParameter where
   toJSON InputSourceParameter{..} = object_
-    [ "subtype" .=? (toJSON <$> _pointer_subtype)
+    [ "subtype" .=? (toJSON <$> _pointerSubtype)
     ]
 
 instance Arbitrary InputSourceParameter where
@@ -869,13 +871,13 @@ instance Arbitrary InputSourceParameter where
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#dfn-process-an-input-source-action-sequence>.
 data ActionItem = ActionItem
-  { _action_type :: Maybe ActionType -- ^ @type@
-  , _action_duration :: Maybe Int -- ^ @duration@
-  , _action_origin :: Maybe String -- ^ @origin@
-  , _action_value :: Maybe String -- ^ @value@
-  , _action_button :: Maybe Int -- ^ @button@
-  , _action_x :: Maybe Int -- ^ @x@
-  , _action_y :: Maybe Int -- ^ @y@
+  { _actionType :: Maybe ActionType -- ^ @type@
+  , _actionDuration :: Maybe Int -- ^ @duration@
+  , _actionOrigin :: Maybe String -- ^ @origin@
+  , _actionValue :: Maybe String -- ^ @value@
+  , _actionButton :: Maybe Int -- ^ @button@
+  , _actionX :: Maybe Int -- ^ @x@
+  , _actionY :: Maybe Int -- ^ @y@
   } deriving (Eq, Show)
 
 instance FromJSON ActionItem where
@@ -891,13 +893,13 @@ instance FromJSON ActionItem where
 
 instance ToJSON ActionItem where
   toJSON ActionItem{..} = object_
-    [ "type" .=? (toJSON <$> _action_type)
-    , "duration" .=? (toJSON <$> _action_duration)
-    , "origin" .=? (toJSON <$> _action_origin)
-    , "value" .=? (toJSON <$> _action_value)
-    , "button" .=? (toJSON <$> _action_button)
-    , "x" .=? (toJSON <$> _action_x)
-    , "y" .=? (toJSON <$> _action_y)
+    [ "type" .=? (toJSON <$> _actionType)
+    , "duration" .=? (toJSON <$> _actionDuration)
+    , "origin" .=? (toJSON <$> _actionOrigin)
+    , "value" .=? (toJSON <$> _actionValue)
+    , "button" .=? (toJSON <$> _actionButton)
+    , "x" .=? (toJSON <$> _actionX)
+    , "y" .=? (toJSON <$> _actionY)
     ]
 
 instance Arbitrary ActionItem where
@@ -913,31 +915,31 @@ instance Arbitrary ActionItem where
 -- | All members set to `Nothing`.
 emptyActionItem :: ActionItem
 emptyActionItem = ActionItem
-  { _action_type = Nothing
-  , _action_duration = Nothing
-  , _action_origin = Nothing
-  , _action_value = Nothing
-  , _action_button = Nothing
-  , _action_x = Nothing
-  , _action_y = Nothing
+  { _actionType = Nothing
+  , _actionDuration = Nothing
+  , _actionOrigin = Nothing
+  , _actionValue = Nothing
+  , _actionButton = Nothing
+  , _actionX = Nothing
+  , _actionY = Nothing
   }
 
 
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-element-rect>.
 data Rect = Rect
-  { _rect_x :: Scientific -- ^ @x@
-  , _rect_y :: Scientific -- ^ @y@
-  , _rect_width :: Scientific -- ^ @width@
-  , _rect_height :: Scientific -- ^ @height@
+  { _rectX :: Scientific -- ^ @x@
+  , _rectY :: Scientific -- ^ @y@
+  , _rectWidth :: Scientific -- ^ @width@
+  , _rectHeight :: Scientific -- ^ @height@
   } deriving (Eq, Show)
 
 instance ToJSON Rect where
   toJSON Rect{..} = object
-    [ "x" .= (toJSON _rect_x)
-    , "y" .= (toJSON _rect_y)
-    , "width" .= (toJSON _rect_width)
-    , "height" .= (toJSON _rect_height)
+    [ "x" .= toJSON _rectX
+    , "y" .= toJSON _rectY
+    , "width" .= toJSON _rectWidth
+    , "height" .= toJSON _rectHeight
     ]
 
 instance FromJSON Rect where
@@ -959,13 +961,13 @@ instance Arbitrary Rect where
     <*> arbScientific
     <*> arbScientific
 
--- | All members set to `Nothing`.
+-- | All members set to `0`.
 emptyRect :: Rect
 emptyRect = Rect
-  { _rect_x = 0
-  , _rect_y = 0
-  , _rect_width = 0
-  , _rect_height = 0
+  { _rectX = 0
+  , _rectY = 0
+  , _rectWidth = 0
+  , _rectHeight = 0
   }
 
 
@@ -1004,24 +1006,24 @@ instance Arbitrary PromptHandler where
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#dfn-table-for-cookie-conversion>.
 data Cookie = Cookie
-  { _cookie_name :: Maybe String -- ^ @name@
-  , _cookie_value :: Maybe String -- ^ @value@
-  , _cookie_path :: Maybe String -- ^ @path@
-  , _cookie_domain :: Maybe String -- ^ @domain@
-  , _cookie_secure :: Maybe Bool -- ^ @secure@
-  , _cookie_http_only :: Maybe Bool -- ^ @httpOnly@
-  , _cookie_expiry_time :: Maybe String -- ^ @expiryTime@
+  { _cookieName :: Maybe String -- ^ @name@
+  , _cookieValue :: Maybe String -- ^ @value@
+  , _cookiePath :: Maybe String -- ^ @path@
+  , _cookieDomain :: Maybe String -- ^ @domain@
+  , _cookieSecure :: Maybe Bool -- ^ @secure@
+  , _cookieHttpOnly :: Maybe Bool -- ^ @httpOnly@
+  , _cookieExpiryTime :: Maybe String -- ^ @expiryTime@
   } deriving (Eq, Show)
 
 instance ToJSON Cookie where
   toJSON Cookie{..} = object_
-    [ "name" .=? (toJSON <$> _cookie_name)
-    , "value" .=? (toJSON <$> _cookie_value)
-    , "path" .=? (toJSON <$> _cookie_path)
-    , "domain" .=? (toJSON <$> _cookie_domain)
-    , "secure" .=? (toJSON <$> _cookie_secure)
-    , "httpOnly" .=? (toJSON <$> _cookie_http_only)
-    , "expiryTime" .=? (toJSON <$> _cookie_expiry_time)
+    [ "name" .=? (toJSON <$> _cookieName)
+    , "value" .=? (toJSON <$> _cookieValue)
+    , "path" .=? (toJSON <$> _cookiePath)
+    , "domain" .=? (toJSON <$> _cookieDomain)
+    , "secure" .=? (toJSON <$> _cookieSecure)
+    , "httpOnly" .=? (toJSON <$> _cookieHttpOnly)
+    , "expiryTime" .=? (toJSON <$> _cookieExpiryTime)
     ]
 
 instance FromJSON Cookie where
@@ -1048,13 +1050,13 @@ instance Arbitrary Cookie where
 -- | All members set to `Nothing`.
 emptyCookie :: Cookie
 emptyCookie = Cookie
-  { _cookie_name = Nothing
-  , _cookie_value = Nothing
-  , _cookie_path = Nothing
-  , _cookie_domain = Nothing
-  , _cookie_secure = Nothing
-  , _cookie_http_only = Nothing
-  , _cookie_expiry_time = Nothing
+  { _cookieName = Nothing
+  , _cookieValue = Nothing
+  , _cookiePath = Nothing
+  , _cookieDomain = Nothing
+  , _cookieSecure = Nothing
+  , _cookieHttpOnly = Nothing
+  , _cookieExpiryTime = Nothing
   }
 
 -- | All members other than @name@ and @value@ set to `Nothing`.
@@ -1063,6 +1065,6 @@ cookie
   -> String -- ^ @value@
   -> Cookie
 cookie name value = emptyCookie
-  { _cookie_name = Just name
-  , _cookie_value = Just value
+  { _cookieName = Just name
+  , _cookieValue = Just value
   }

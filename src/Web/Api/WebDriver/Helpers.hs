@@ -123,26 +123,26 @@ readCookieFile file = do
 -- | `KeyDownAction` with the given `Char`.
 keypress :: Char -> ActionItem
 keypress x = emptyActionItem
-  { _action_type = Just KeyDownAction
-  , _action_value = Just [x]
+  { _actionType = Just KeyDownAction
+  , _actionValue = Just [x]
   }
 
 
 -- | Simulate pressing a `Key`.
 press :: Key -> Action
 press key = emptyAction
-  { _input_source_type = Just KeyInputSource
-  , _input_source_id = Just "kbd"
-  , _action_items = [keypress (keyToChar key)]
+  { _inputSourceType = Just KeyInputSource
+  , _inputSourceId = Just "kbd"
+  , _actionItems = [keypress (keyToChar key)]
   }
 
 
 -- | Simulate typing some text.
 typeString :: String -> Action
 typeString x = emptyAction
-  { _input_source_type = Just KeyInputSource
-  , _input_source_id = Just "kbd"
-  , _action_items = map keypress x
+  { _inputSourceType = Just KeyInputSource
+  , _inputSourceId = Just "kbd"
+  , _actionItems = map keypress x
   }
 
 

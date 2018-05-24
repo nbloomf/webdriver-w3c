@@ -143,18 +143,18 @@ instance (Effectful m, Typeable m) => TT.IsTest (WebDriverTest m) where
 
       caps = case driver of
         Geckodriver -> emptyCapabilities
-          { _browser_name = Just Firefox
-          , _firefox_options = Just $ defaultFirefoxOptions
-              { _firefox_binary = browserPath
-              , _firefox_args = if headless then Just ["-headless"] else Nothing
+          { _browserName = Just Firefox
+          , _firefoxOptions = Just $ defaultFirefoxOptions
+              { _firefoxBinary = browserPath
+              , _firefoxArgs = if headless then Just ["-headless"] else Nothing
               }
           }
 
         Chromedriver -> emptyCapabilities
-          { _browser_name = Just Chrome
-          , _chrome_options = Just $ defaultChromeOptions
-              { _chrome_binary = browserPath
-              , _chrome_args = if headless then Just ["--headless"] else Nothing
+          { _browserName = Just Chrome
+          , _chromeOptions = Just $ defaultChromeOptions
+              { _chromeBinary = browserPath
+              , _chromeArgs = if headless then Just ["--headless"] else Nothing
               }
           }
 
