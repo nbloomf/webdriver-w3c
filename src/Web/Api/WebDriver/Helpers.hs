@@ -86,7 +86,7 @@ loadCookies string = do
   case contents of
     Nothing -> return False
     Just cs -> do
-      mapM addCookie cs
+      mapM_ addCookie cs
       return True
 
 

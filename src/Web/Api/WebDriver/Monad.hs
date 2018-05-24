@@ -102,8 +102,8 @@ type WebDriverConfig =
 
 -- | Constructor for `WebDriverConfig`s with default printers.
 webDriverConfig :: WebDriverState -> WebDriverEnv -> WebDriverConfig
-webDriverConfig st env = jsonHttpSessionConfig
-  printWebDriverError show (Just promoteHttpResponseError) st env
+webDriverConfig = jsonHttpSessionConfig
+  printWebDriverError show (Just promoteHttpResponseError)
 
 -- | Default config.
 defaultWebDriverConfig :: WebDriverConfig
@@ -113,47 +113,47 @@ defaultWebDriverConfig =
 
 
 -- | Includes a @Maybe String@ representing the current session ID, if one has been opened.
-data WebDriverState = WebDriverState
-  { __session_id :: Maybe String
+newtype WebDriverState = WebDriverState
+  { _sessionId :: Maybe String
   } deriving Show
 
 -- | Session ID set to `Nothing`.
 defaultWebDriverState :: WebDriverState
 defaultWebDriverState = WebDriverState
-  { __session_id = Nothing
+  { _sessionId = Nothing
   }
 
 -- | Retrieve the session id in a monadic context.
 theSessionId :: (Monad m) => WebDriverState -> m (Maybe String)
-theSessionId = return . __session_id
+theSessionId = return . _sessionId
 
 -- | Set the session id of a `WebDriverState`.
 setSessionId :: Maybe String -> WebDriverState -> WebDriverState
-setSessionId x st = st { __session_id = x }
+setSessionId x st = st { _sessionId = x }
 
 
 
 -- | Read-only environment variables specific to WebDriver.
 data WebDriverEnv = WebDriverEnv
-  { __remote_hostname :: String -- ^ Hostname of the remote WebDriver server
-  , __remote_port :: Int -- ^ Port of the remote WebDriver server
-  , __remote_path :: String -- ^ Extra path for the remote WebDriver server
-  , __secrets_path :: FilePath -- ^ Path where secret data is stored
-  , __vars :: M.Map String String -- ^ Named constants; this makes it possible to e.g. run the same WebDriver session against both a test and production environment on different hosts.
-  , __response_format :: ResponseFormat -- ^ Flag for the format of HTTP responses from the remote end. E.g., chromedriver reponses are not spec-compliant.
-  , __api_version :: ApiVersion -- ^ Version of the WebDriver specification.
+  { _remoteHostname :: String -- ^ Hostname of the remote WebDriver server
+  , _remotePort :: Int -- ^ Port of the remote WebDriver server
+  , _remotePath :: String -- ^ Extra path for the remote WebDriver server
+  , _secretsPath :: FilePath -- ^ Path where secret data is stored
+  , _vars :: M.Map String String -- ^ Named constants; this makes it possible to e.g. run the same WebDriver session against both a test and production environment on different hosts.
+  , _responseFormat :: ResponseFormat -- ^ Flag for the format of HTTP responses from the remote end. E.g., chromedriver reponses are not spec-compliant.
+  , _apiVersion :: ApiVersion -- ^ Version of the WebDriver specification.
   }
 
 -- | Configured for geckodriver.
 defaultWebDriverEnv :: WebDriverEnv
 defaultWebDriverEnv = WebDriverEnv
-  { __remote_hostname = "localhost"
-  , __remote_port = 4444
-  , __remote_path = ""
-  , __secrets_path = ""
-  , __vars = M.empty
-  , __response_format = SpecFormat
-  , __api_version = CR_2018_03_04
+  { _remoteHostname = "localhost"
+  , _remotePort = 4444
+  , _remotePath = ""
+  , _secretsPath = ""
+  , _vars = M.empty
+  , _responseFormat = SpecFormat
+  , _apiVersion = CR_2018_03_04
   }
 
 -- | Version of the WebDriver specification.
@@ -170,59 +170,59 @@ data ResponseFormat
 
 -- | Retrieve the remote hostname in a monadic context.
 theRemoteHostname :: (Monad m) => WebDriverEnv -> m String
-theRemoteHostname = return . __remote_hostname
+theRemoteHostname = return . _remoteHostname
 
 -- | Set the remote hostname of a `WebDriverEnv`.
 setRemoteHostname :: String -> WebDriverEnv -> WebDriverEnv
-setRemoteHostname host env = env { __remote_hostname = host }
+setRemoteHostname host env = env { _remoteHostname = host }
 
 -- | Retrieve the remote port in a monadic context.
 theRemotePort :: (Monad m) => WebDriverEnv -> m Int
-theRemotePort = return . __remote_port
+theRemotePort = return . _remotePort
 
 -- | Set the remote port of a `WebDriverEnv`.
 setRemotePort :: Int -> WebDriverEnv -> WebDriverEnv
-setRemotePort port env = env { __remote_port = port }
+setRemotePort port env = env { _remotePort = port }
 
 -- | Retrieve the remote path in a monadic context.
 theRemotePath :: (Monad m) => WebDriverEnv -> m String
-theRemotePath = return . __remote_path
+theRemotePath = return . _remotePath
 
 -- | Set the remote path of a `WebDriverEnv`.
 setRemotePath :: String -> WebDriverEnv -> WebDriverEnv
-setRemotePath path env = env { __remote_path = path }
+setRemotePath path env = env { _remotePath = path }
 
 -- | Retrieve the secrets path in a monadic context.
 theSecretsPath :: (Monad m) => WebDriverEnv -> m FilePath
-theSecretsPath = return . __secrets_path
+theSecretsPath = return . _secretsPath
 
 -- | Set the secrets of a `WebDriverEnv`.
 setSecretsPath :: FilePath -> WebDriverEnv -> WebDriverEnv
-setSecretsPath path env = env { __secrets_path = path }
+setSecretsPath path env = env { _secretsPath = path }
 
 -- | Retrieve the WebDriver API version in a monadic context.
 theApiVersion :: (Monad m) => WebDriverEnv -> m ApiVersion
-theApiVersion = return . __api_version
+theApiVersion = return . _apiVersion
 
 -- | Set the API version of a `WebDriverEnv`.
 setApiVersion :: ApiVersion -> WebDriverEnv -> WebDriverEnv
-setApiVersion version env = env { __api_version = version }
+setApiVersion version env = env { _apiVersion = version }
 
 -- | Retrieve the vars map.
 theVars :: (Monad m) => WebDriverEnv -> m (M.Map String String)
-theVars = return . __vars
+theVars = return . _vars
 
 -- | Set the vars map of a `WebDriverEnv`.
 setVars :: M.Map String String -> WebDriverEnv -> WebDriverEnv
-setVars vars env = env { __vars = vars }
+setVars vars env = env { _vars = vars }
 
 -- | Retrieve the response format in a monadic context.
 theResponseFormat :: (Monad m) => WebDriverEnv -> m ResponseFormat
-theResponseFormat = return . __response_format
+theResponseFormat = return . _responseFormat
 
 -- | Set the response format of a `WebDriverEnv`.
 setResponseFormat :: ResponseFormat -> WebDriverEnv -> WebDriverEnv
-setResponseFormat format env = env { __response_format = format }
+setResponseFormat format env = env { _responseFormat = format }
 
 -- | Retrieve the `ResponseFormat` in a `WebDriver` context directly.
 readResponseFormat
@@ -281,9 +281,9 @@ printWebDriverError e = case e of
     in
       (("Response: " ++ show code ++ " " ++ SC.unpack smsg ++ "\n") ++) $
       LC.unpack $ encodePretty $ object
-        [ "error" .= (toJSON code)
-        , "message" .= (toJSON msg)
-        , "stacktrace" .= (toJSON trace)
+        [ "error" .= toJSON code
+        , "message" .= toJSON msg
+        , "stacktrace" .= toJSON trace
         , "data" .= (toJSON <$> obj)
         ]
   UnableToConnect -> "Unable to connect to WebDriver server"

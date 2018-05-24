@@ -166,7 +166,7 @@ putState st = HttpSession $ \(_, _) ->
 putLog
   :: (Monad m)
   => Log err log
-  -> (HttpSession m err st log env ())
+  -> HttpSession m err st log env ()
 putLog msg = HttpSession $ \(state, _) ->
   return (Right (), (state, msg))
 
