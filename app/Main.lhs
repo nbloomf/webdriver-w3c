@@ -5,6 +5,7 @@ Hello, and welcome to the wonderful world of browser automation with WebDriver a
 
 (This text is a literate program, so we have to start with some compiler noises. Nothing to see here!)
 
+> {-# LANGUAGE OverloadedStrings #-}
 > module Main where
 > 
 > import Web.Api.Http

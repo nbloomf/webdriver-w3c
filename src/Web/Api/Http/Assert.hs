@@ -11,12 +11,15 @@ Portability : POSIX
 -}
 
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Web.Api.Http.Assert (
   -- * Assertions
     Assertion()
   , success
   , failure
-  , AssertionResult(..)
+  , AssertionStatement()
+  , AssertionComment()
+  , AssertionResult()
   , isSuccess
   , printAssertion
 
@@ -45,6 +48,8 @@ module Web.Api.Http.Assert (
 
 import Data.List
   ( unwords, isInfixOf )
+import Data.String
+  ( IsString, fromString )
 
 
 
@@ -57,10 +62,35 @@ import Data.List
 -- To construct assertions outside this module, use `success` and `failure`.
 
 data Assertion = Assertion
-  { __assertion :: String
-  , __assertion_comment :: String
+  { __assertion :: AssertionStatement
+  , __assertion_comment :: AssertionComment
   , __assertion_result :: AssertionResult
   } deriving (Eq, Show)
+
+
+-- | Human-readable statement which may be true or false.
+data AssertionStatement = AssertionStatement
+  { theAssertionStatement :: String
+  } deriving Eq
+
+instance Show AssertionStatement where
+  show = theAssertionStatement
+
+instance IsString AssertionStatement where
+  fromString = AssertionStatement
+
+
+-- | Human-readable explanation for why an assertion is made.
+data AssertionComment = AssertionComment
+  { theAssertionComment :: String
+  } deriving Eq
+
+instance Show AssertionComment where
+  show = theAssertionComment
+
+instance IsString AssertionComment where
+  fromString = AssertionComment
+
 
 -- | Type representing the result (success or failure) of an evaluated assertion.
 data AssertionResult
@@ -79,20 +109,22 @@ printAssertion Assertion{..} =
     AssertSuccess -> 
       unwords
         [ "\x1b[1;32mValid Assertion\x1b[0;39;49m"
-        , "\nassertion: " ++ __assertion
-        , "\ncomment: " ++ __assertion_comment
+        , "\nassertion: " ++ show __assertion
+        , "\ncomment: " ++ show __assertion_comment
         ]
     AssertFailure ->
       unwords
         [ "\x1b[1;31mInvalid Assertion\x1b[0;39;49m"
-        , "\nassertion: " ++ __assertion
-        , "\ncomment: " ++ __assertion_comment
+        , "\nassertion: " ++ show __assertion
+        , "\ncomment: " ++ show __assertion_comment
         ]
+
+
 
 -- | Construct a successful assertion.
 success
-  :: String -- ^ Statement being asserted (the /what/)
-  -> String -- ^ An additional comment (the /why/)
+  :: AssertionStatement -- ^ Statement being asserted (the /what/)
+  -> AssertionComment -- ^ An additional comment (the /why/)
   -> Assertion
 success statement comment = Assertion
   { __assertion = statement
@@ -102,8 +134,8 @@ success statement comment = Assertion
 
 -- | Construct a failed assertion.
 failure
-  :: String -- ^ Statement being asserted (the /what/)
-  -> String -- ^ An additional comment (the /why/)
+  :: AssertionStatement -- ^ Statement being asserted (the /what/)
+  -> AssertionComment -- ^ An additional comment (the /why/)
   -> Assertion
 failure statement comment = Assertion
   { __assertion = statement
@@ -124,8 +156,8 @@ class Assert m where
 assertSuccessIf
   :: (Monad m, Assert m)
   => Bool
-  -> String -- ^ Statement being asserted (the /what/)
-  -> String -- ^ An additional comment (the /why/)
+  -> AssertionStatement -- ^ Statement being asserted (the /what/)
+  -> AssertionComment -- ^ An additional comment (the /why/)
   -> m ()
 assertSuccessIf p statement comment = do
   assert $ (if p then success else failure) statement comment
@@ -133,94 +165,94 @@ assertSuccessIf p statement comment = do
 -- | Assertion that always succeeds.
 assertSuccess
   :: (Monad m, Assert m)
-  => String -- ^ An additional comment (the /why/)
+  => AssertionComment -- ^ An additional comment (the /why/)
   -> m ()
-assertSuccess = assertSuccessIf True "Success!"
+assertSuccess = assertSuccessIf True (AssertionStatement "Success!")
 
 -- | Assertion that always fails.
 assertFailure
   :: (Monad m, Assert m)
-  => String -- ^ An additional comment (the /why/)
+  => AssertionComment -- ^ An additional comment (the /why/)
   -> m ()
-assertFailure = assertSuccessIf False "Failure :("
+assertFailure = assertSuccessIf False (AssertionStatement "Failure :(")
 
 -- | Succeeds if @Bool@ is `True`.
 assertTrue
   :: (Monad m, Assert m)
   => Bool
-  -> String -- ^ An additional comment (the /why/)
+  -> AssertionComment -- ^ An additional comment (the /why/)
   -> m ()
 assertTrue p = assertSuccessIf (p == True)
-  (show p ++ " is True")
+  (AssertionStatement $ show p ++ " is True")
 
 -- | Succeeds if @Bool@ is `False`.
 assertFalse
   :: (Monad m, Assert m)
   => Bool
-  -> String -- ^ An additional comment (the /why/)
+  -> AssertionComment -- ^ An additional comment (the /why/)
   -> m ()
 assertFalse p = assertSuccessIf (p == False)
-  (show p ++ " is False")
+  (AssertionStatement $ show p ++ " is False")
 
 -- | Succeeds if the given @t@s are equal according to their `Eq` instance.
 assertEqual
   :: (Monad m, Assert m, Eq t, Show t)
   => t
   -> t
-  -> String -- ^ An additional comment (the /why/)
+  -> AssertionComment -- ^ An additional comment (the /why/)
   -> m ()
 assertEqual x y = assertSuccessIf (x == y)
-  (show x ++ " is equal to " ++ show y)
+  (AssertionStatement $ show x ++ " is equal to " ++ show y)
 
 -- | Succeeds if the given @t@s are not equal according to their `Eq` instance.
 assertNotEqual
   :: (Monad m, Assert m, Eq t, Show t)
   => t
   -> t
-  -> String -- ^ An additional comment (the /why/)
+  -> AssertionComment -- ^ An additional comment (the /why/)
   -> m ()
 assertNotEqual x y = assertSuccessIf (x /= y)
-  (show x ++ " is not equal to " ++ show y)
+  (AssertionStatement $ show x ++ " is not equal to " ++ show y)
 
 -- | Succeeds if the first list is an infix of the second, according to their `Eq` instance.
 assertIsSubstring
   :: (Monad m, Assert m, Eq a, Show a)
   => [a]
   -> [a]
-  -> String -- ^ An additional comment (the /why/)
+  -> AssertionComment -- ^ An additional comment (the /why/)
   -> m ()
 assertIsSubstring x y = assertSuccessIf (isInfixOf x y)
-  (show x ++ " is a substring of " ++ show y)
+  (AssertionStatement $ show x ++ " is a substring of " ++ show y)
 
 -- | Succeeds if the first list is not an infix of the second, according to their `Eq` instance.
 assertIsNotSubstring
   :: (Monad m, Assert m, Eq a, Show a)
   => [a]
   -> [a]
-  -> String -- ^ An additional comment (the /why/)
+  -> AssertionComment -- ^ An additional comment (the /why/)
   -> m ()
 assertIsNotSubstring x y = assertSuccessIf (not $ isInfixOf x y)
-  (show x ++ " is not a substring of " ++ show y)
+  (AssertionStatement $ show x ++ " is not a substring of " ++ show y)
 
 -- | Succeeds if the first list is an infix of the second, named list, according to their `Eq` instance. This is similar to `assertIsSubstring`, except that the "name" of the second list argument is used in reporting failures. Handy if the second list is very large -- say the source of a webpage.
 assertIsNamedSubstring
   :: (Monad m, Assert m, Eq a, Show a)
   => [a]
   -> ([a],String)
-  -> String -- ^ An additional comment (the /why/)
+  -> AssertionComment -- ^ An additional comment (the /why/)
   -> m ()
 assertIsNamedSubstring x (y,name) = assertSuccessIf (isInfixOf x y)
-  (show x ++ " is a substring of " ++ name)
+  (AssertionStatement $ show x ++ " is a substring of " ++ name)
 
 -- | Succeeds if the first list is not an infix of the second, named list, according to their `Eq` instance. This is similar to `assertIsNotSubstring`, except that the "name" of the second list argument is used in reporting failures. Handy if the second list is very large -- say the source of a webpage.
 assertIsNotNamedSubstring
   :: (Monad m, Assert m, Eq a, Show a)
   => [a]
   -> ([a],String)
-  -> String -- ^ An additional comment (the /why/)
+  -> AssertionComment -- ^ An additional comment (the /why/)
   -> m ()
 assertIsNotNamedSubstring x (y,name) = assertSuccessIf (not $ isInfixOf x y)
-  (show x ++ " is not a substring of " ++ name)
+  (AssertionStatement $ show x ++ " is not a substring of " ++ name)
 
 
 

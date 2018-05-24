@@ -5,6 +5,7 @@ It's possible to run "raw" WebDriver sessions, but it's much more convenient to 
 
 This module demonstrates how to set up a basic test executable and configure it with command line options.
 
+> {-# LANGUAGE OverloadedStrings #-}
 > module Main where
 
 We'll need some imports. These are the usual `tasty` modules:
