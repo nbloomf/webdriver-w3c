@@ -84,7 +84,7 @@ instance (Effectful m, Typeable m) => TT.IsTest (HttpSessionTest m) where
 httpAssertionsToResult :: AssertionSummary -> TT.Result
 httpAssertionsToResult x =
   if numFailures x > 0
-    then TT.testFailed $ unlines $ map showAssertion $ failures x
+    then TT.testFailed $ unlines $ map printAssertion $ failures x
     else TT.testPassed $ show (numSuccesses x) ++ " assertion(s)"
 
 -- | Simple `HttpSession` test case.

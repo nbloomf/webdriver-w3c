@@ -224,7 +224,7 @@ instance (Effectful m, Typeable m) => TT.IsTest (WebDriverTest m) where
 webDriverAssertionsToResult :: AssertionSummary -> TT.Result
 webDriverAssertionsToResult x =
   if numFailures x > 0
-    then TT.testFailed $ unlines $ map showAssertion $ failures x
+    then TT.testFailed $ unlines $ map printAssertion $ failures x
     else TT.testPassed $ show (numSuccesses x) ++ " assertion(s)"
 
 

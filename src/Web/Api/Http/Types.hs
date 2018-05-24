@@ -421,7 +421,7 @@ basicEnv
   -> env
   -> Env err log env
 basicEnv printErr printLog promote env = Env
-  { __log_printer = basicLogPrinter True printErr printLog showAssertion
+  { __log_printer = basicLogPrinter True printErr printLog printAssertion
   , __log_verbosity = noisyLog
   , __log_handle = stderr
   , __assertion_log_handle = stdout
@@ -441,7 +441,7 @@ jsonEnv
   -> env
   -> Env err log env
 jsonEnv printErr printLog promote env = Env
-  { __log_printer = jsonLogPrinter True printErr printLog showAssertion
+  { __log_printer = jsonLogPrinter True printErr printLog printAssertion
   , __log_verbosity = noisyLog
   , __log_handle = stderr
   , __assertion_log_handle = stdout

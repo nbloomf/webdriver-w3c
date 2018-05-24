@@ -14,11 +14,11 @@ Portability : POSIX
 module Web.Api.Http.Assert (
   -- * Assertions
     Assertion()
-  , AssertionResult(..)
-  , isSuccess
-  , showAssertion
   , success
   , failure
+  , AssertionResult(..)
+  , isSuccess
+  , printAssertion
 
   -- * The `Assert` Class
   , Assert(..)
@@ -52,7 +52,7 @@ import Data.List
 --
 -- * A human-readable statement being asserted, which may be either true or false.
 -- * A result (either success or failure).
--- * A comment, representing /why/ the assertion was made, also to assist in debugging.
+-- * A comment, representing /why/ the assertion was made, to assist in debugging.
 --
 -- To construct assertions outside this module, use `success` and `failure`.
 
@@ -73,8 +73,8 @@ isSuccess a = AssertSuccess == __assertion_result a
 
 
 -- | Basic string representation of an assertion.
-showAssertion :: Assertion -> String
-showAssertion Assertion{..} =
+printAssertion :: Assertion -> String
+printAssertion Assertion{..} =
   case __assertion_result of
     AssertSuccess -> 
       unwords
@@ -113,8 +113,7 @@ failure statement comment = Assertion
 
 
 
--- | Assertions are made and evaluated inside some larger named context, represented by the `Assert` class.
-
+-- | Assertions are made and evaluated inside some context, represented by the `Assert` class.
 class Assert m where
   -- | Make an assertion.
   assert :: Assertion -> m ()
@@ -261,7 +260,7 @@ summarizeAll = mconcat
 -- | Very basic string representation of an `AssertionSummary`.
 printSummary :: AssertionSummary -> IO ()
 printSummary AssertionSummary{..} = do
-  mapM_ (putStrLn . showAssertion) failures
+  mapM_ (putStrLn . printAssertion) failures
   putStrLn $ "Assertions: " ++ show (numSuccesses + numFailures)
   putStrLn $ "Failures: " ++ show numFailures
 

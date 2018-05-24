@@ -47,7 +47,9 @@ Who is responsible for this?
 Nathan Bloomfield (@nbloomf) wrote and maintains the code.
 
 Other contributors, in lexicographic order:
-Ivan Enderlin (@hywan)
+
+* Ivan Enderlin (@hywan)
+
 And users like you!
 
 Also thanks to my employer for allowing -- actually, requiring :) -- this to be open source.
