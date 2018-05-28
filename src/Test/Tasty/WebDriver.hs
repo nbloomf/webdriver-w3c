@@ -88,7 +88,7 @@ import Test.Tasty.WebDriver.Config
 
 data WebDriverTest m = WebDriverTest
   { wdTestName :: Maybe String
-  , wdTestSession :: (WebDriver m ())
+  , wdTestSession :: WebDriver m ()
   } deriving Typeable
 
 instance (Effectful m, Typeable m) => TT.IsTest (WebDriverTest m) where

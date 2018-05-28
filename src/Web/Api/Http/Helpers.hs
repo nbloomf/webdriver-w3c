@@ -119,23 +119,23 @@ closeTcpSession = do
 
 
 data RequestOptions = RequestOptions
-  { _http_options :: Wreq.Options
-  , _log_request :: Bool
-  , _log_response :: Bool
+  { _httpOptions :: Wreq.Options
+  , _logRequest :: Bool
+  , _logResponse :: Bool
   }
 
 defaultRequestOptions :: RequestOptions
 defaultRequestOptions = RequestOptions
-  { _http_options = Wreq.defaults
-  , _log_request = True
-  , _log_response = True
+  { _httpOptions = Wreq.defaults
+  , _logRequest = True
+  , _logResponse = True
   }
 
 silentRequestOptions :: RequestOptions
 silentRequestOptions = RequestOptions
-  { _http_options = Wreq.defaults
-  , _log_request = False
-  , _log_response = False
+  { _httpOptions = Wreq.defaults
+  , _logRequest = False
+  , _logResponse = False
   }
 
 -- | The basic shape of all requests is the same, so we abstract it here for consistency.
@@ -147,10 +147,10 @@ processRequest
   -> HttpSession m err st log env HttpResponse
 
 processRequest opt entry request = do
-  let options = _http_options opt
+  let options = _httpOptions opt
 
   -- Log the request (or not).
-  if _log_request opt
+  if _logRequest opt
    then logNow entry
    else logNow LogSilentRequest
 
@@ -163,7 +163,7 @@ processRequest opt entry request = do
     -- If the result was ok:
     Right response -> do
       -- Log the response (or not).
-      logNow $ if _log_response opt
+      logNow $ if _logResponse opt
         then LogResponse response
         else LogSilentResponse
 
@@ -178,13 +178,13 @@ processRequest opt entry request = do
       w <- captureHttpError err
       case w of
         Just z -> do
-          logNow $ if _log_response opt
+          logNow $ if _logResponse opt
             then LogError z
             else LogSilentResponse
           throwError $ Err z
         Nothing -> do
           -- Log it (or not)
-          logNow $ if _log_response opt
+          logNow $ if _logResponse opt
             then LogHttpError err
             else LogSilentResponse
           throwError $ ErrHttp err
@@ -197,8 +197,8 @@ httpGetWith
   -> Url
   -> HttpSession m err st log env HttpResponse
 httpGetWith opt url = processRequest opt
-  (LogRequest GET url (_http_options opt) Nothing)
-  (\sn -> mGetWith (_http_options opt) sn url)
+  (LogRequest GET url (_httpOptions opt) Nothing)
+  (\sn -> mGetWith (_httpOptions opt) sn url)
 
 -- | Send a @GET@ request to a url.
 httpGet
@@ -221,8 +221,8 @@ httpPostWith
   -> LB.ByteString -- ^ Payload
   -> HttpSession m err st log env HttpResponse
 httpPostWith opt url payload = processRequest opt
-  (LogRequest POST url (_http_options opt) (Just payload))
-  (\sn -> mPostWith (_http_options opt) sn url payload)
+  (LogRequest POST url (_httpOptions opt) (Just payload))
+  (\sn -> mPostWith (_httpOptions opt) sn url payload)
 
 -- | Send a @POST@ request with a given payload to a url.
 httpPost
@@ -248,8 +248,8 @@ httpDeleteWith
   -> Url
   -> HttpSession m err st log env HttpResponse
 httpDeleteWith opt url = processRequest opt
-  (LogRequest DELETE url (_http_options opt) Nothing)
-  (\sn -> mDeleteWith (_http_options opt) sn url)
+  (LogRequest DELETE url (_httpOptions opt) Nothing)
+  (\sn -> mDeleteWith (_httpOptions opt) sn url)
 
 -- | Send a @DELETE@ request to a url.
 httpDelete

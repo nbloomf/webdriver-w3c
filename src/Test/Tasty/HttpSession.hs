@@ -35,7 +35,7 @@ import Web.Api.Http
 
 data HttpSessionTest m = HttpSessionTest
   { httpTestName :: Maybe String
-  , httpTestSession :: (HttpSession m () () () () ())
+  , httpTestSession :: HttpSession m () () () () ()
   } deriving Typeable
 
 
@@ -106,7 +106,7 @@ testCaseWithSetup
   -> HttpSession m () () () () () -- ^ The test
   -> TT.TestTree
 testCaseWithSetup name setup teardown test =
-  TT.singleTest name $ HttpSessionTest
+  TT.singleTest name HttpSessionTest
     { httpTestName = Just name
     , httpTestSession = setup >> test >> teardown
     }

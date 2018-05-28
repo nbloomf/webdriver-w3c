@@ -93,7 +93,7 @@ data RemoteEnd = RemoteEnd
 parseRemoteEndConfig :: String -> Either String RemoteEndPool
 parseRemoteEndConfig str = do
   freeEnds <- fmap (MS.fromListWith (++)) $ tokenizeRemoteEndConfig $ filter (/= "") $ lines str
-  return $ RemoteEndPool
+  return RemoteEndPool
     { freeRemoteEnds = freeEnds
     }
 
@@ -107,7 +107,7 @@ tokenizeRemoteEndConfig ls = case ls of
       "chromedriver" -> return Chromedriver
       _ -> Left $ "Unrecognized driver name '" ++ first ++ "'."
     let (remotes, remainder) = span ("- " `isPrefixOf`) rest
-    ends <- sequence $ map (parseRemoteEnd . drop 2) remotes
+    ends <- mapM (parseRemoteEnd . drop 2) remotes
     config <- tokenizeRemoteEndConfig remainder
     return $ (driver, nub ends) : config
 
@@ -120,7 +120,7 @@ tokenizeRemoteEndConfig ls = case ls of
 parseRemoteEndOption :: String -> Either String RemoteEndPool
 parseRemoteEndOption str = do
   freeEnds <- fmap (MS.fromListWith (++)) $ tokenizeRemoteEndOption $ words str
-  return $ RemoteEndPool
+  return RemoteEndPool
     { freeRemoteEnds = freeEnds
     }
 
@@ -134,7 +134,7 @@ tokenizeRemoteEndOption ws = case ws of
       "chromedriver:" -> return Chromedriver
       _ -> Left $ "Unrecognized driver name '" ++ first ++ "'."
     let (remotes, remainder) = span (not . isSuffixOf ":") rest
-    ends <- sequence $ map parseRemoteEnd remotes
+    ends <- mapM parseRemoteEnd remotes
     option <- tokenizeRemoteEndOption remainder
     return $ (driver, nub ends) : option
 
