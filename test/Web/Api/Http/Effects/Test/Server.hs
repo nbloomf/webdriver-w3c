@@ -16,54 +16,54 @@ import Web.Api.Http.Effects.Test.Mock
 
 _200_Ok :: ByteString -> HttpResponse
 _200_Ok body = HttpResponse
-  { __response_status = status200
-  , __response_version = http11
-  , __response_headers = []
-  , __response_body = body
-  , __response_cookie_jar = createCookieJar []
+  { _responseStatus = status200
+  , _responseVersion = http11
+  , _responseHeaders = []
+  , _responseBody = body
+  , _responseCookieJar = createCookieJar []
   }
 
 _400_Bad_Request :: ByteString -> HttpResponse
 _400_Bad_Request body = HttpResponse
-  { __response_status = status400
-  , __response_version = http11
-  , __response_headers = []
-  , __response_body = body
-  , __response_cookie_jar = createCookieJar []
+  { _responseStatus = status400
+  , _responseVersion = http11
+  , _responseHeaders = []
+  , _responseBody = body
+  , _responseCookieJar = createCookieJar []
   }
 
 _404_Not_Found :: ByteString -> HttpResponse
 _404_Not_Found body = HttpResponse
-  { __response_status = status404
-  , __response_version = http11
-  , __response_headers = []
-  , __response_body = body
-  , __response_cookie_jar = createCookieJar []
+  { _responseStatus = status404
+  , _responseVersion = http11
+  , _responseHeaders = []
+  , _responseBody = body
+  , _responseCookieJar = createCookieJar []
   }
 
 _405_Method_Not_Allowed :: ByteString -> HttpResponse
 _405_Method_Not_Allowed body = HttpResponse
-  { __response_status = status405
-  , __response_version = http11
-  , __response_headers = []
-  , __response_body = body
-  , __response_cookie_jar = createCookieJar []
+  { _responseStatus = status405
+  , _responseVersion = http11
+  , _responseHeaders = []
+  , _responseBody = body
+  , _responseCookieJar = createCookieJar []
   }
 
 _408_Request_Timeout :: ByteString -> HttpResponse
 _408_Request_Timeout body = HttpResponse
-  { __response_status = status408
-  , __response_version = http11
-  , __response_headers = []
-  , __response_body = body
-  , __response_cookie_jar = createCookieJar []
+  { _responseStatus = status408
+  , _responseVersion = http11
+  , _responseHeaders = []
+  , _responseBody = body
+  , _responseCookieJar = createCookieJar []
   }
 
 _500_Internal_Server_Error :: ByteString -> HttpResponse
 _500_Internal_Server_Error body = HttpResponse
-  { __response_status = status500
-  , __response_version = http11
-  , __response_headers = []
-  , __response_body = body
-  , __response_cookie_jar = createCookieJar []
+  { _responseStatus = status500
+  , _responseVersion = http11
+  , _responseHeaders = []
+  , _responseBody = body
+  , _responseCookieJar = createCookieJar []
   }
