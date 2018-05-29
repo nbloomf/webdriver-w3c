@@ -204,7 +204,8 @@ newSession'
   -> Capabilities
   -> WebDriver m SessionId
 newSession' f caps = do
-  (baseUrl, format) <- theRequestContext
+  baseUrl <- theRemoteUrl
+  format <- readResponseFormat
   let
     !payload = encode $ f $ object
       [ "capabilities" .= object
@@ -241,7 +242,8 @@ sessionStatus
  :: (Effectful m)
  => WebDriver m (Bool, String)
 sessionStatus = do
-  (baseUrl, format) <- theRequestContext
+  baseUrl <- theRemoteUrl
+  format <- readResponseFormat
   r <- httpGet (baseUrl ++ "/status")
     >>= (return . _responseBody)
     >>= mParseJson

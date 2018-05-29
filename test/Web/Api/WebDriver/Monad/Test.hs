@@ -22,8 +22,9 @@ import Web.Api.WebDriver.Monad.Test.Session.InvalidElementState
 
 tests :: FilePath -> TestTree
 tests path = testGroup "Web.Api.WebDriver.Monad"
-  [ testGroup "Mock Driver"
-      (endpointTests path (return () :: MockIO WebDriverServerState ()))
+  [   localOption (ApiResponseFormat SpecFormat)
+    $ testGroup "Mock Driver"
+        (endpointTests path (return () :: MockIO WebDriverServerState ()))
 
   ,   localOption (Driver Geckodriver)
     $ localOption (ApiResponseFormat SpecFormat)
