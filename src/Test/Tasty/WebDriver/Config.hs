@@ -12,8 +12,6 @@ Portability : POSIX
 module Test.Tasty.WebDriver.Config (
     DriverName(..)
   , RemoteEndPool(..)
-  , emptyRemoteEndPool
-  , combineRemoteEndPools
   , addRemoteEndForDriver
   , getRemoteEndForDriver
   , RemoteEnd(..)
@@ -46,18 +44,18 @@ instance Show DriverName where
 
 
 -- | Pool of remote end connections per driver.
-data RemoteEndPool = RemoteEndPool
+newtype RemoteEndPool = RemoteEndPool
   { freeRemoteEnds :: MS.Map DriverName [RemoteEnd]
   } deriving (Eq, Show)
 
-emptyRemoteEndPool :: RemoteEndPool
-emptyRemoteEndPool = RemoteEndPool { freeRemoteEnds = MS.fromList [] }
+instance Monoid RemoteEndPool where
+  mempty = RemoteEndPool
+    { freeRemoteEnds = MS.fromList []
+    }
 
--- | Unions two remote end pools.
-combineRemoteEndPools :: RemoteEndPool -> RemoteEndPool -> RemoteEndPool
-combineRemoteEndPools x y = RemoteEndPool
-  { freeRemoteEnds = MS.unionWith (++) (freeRemoteEnds x) (freeRemoteEnds y)
-  }
+  mappend x y = RemoteEndPool
+    { freeRemoteEnds = MS.unionWith (++) (freeRemoteEnds x) (freeRemoteEnds y)
+    }
 
 -- | Push a remote end to the pool stack for a given driver.
 addRemoteEndForDriver :: DriverName -> RemoteEnd -> RemoteEndPool -> RemoteEndPool
@@ -133,7 +131,7 @@ tokenizeRemoteEndOption ws = case ws of
       "geckodriver:" -> return Geckodriver
       "chromedriver:" -> return Chromedriver
       _ -> Left $ "Unrecognized driver name '" ++ first ++ "'."
-    let (remotes, remainder) = span (not . isSuffixOf ":") rest
+    let (remotes, remainder) = break (isSuffixOf ":") rest
     ends <- mapM parseRemoteEnd remotes
     option <- tokenizeRemoteEndOption remainder
     return $ (driver, nub ends) : option
@@ -146,14 +144,14 @@ parseRemoteEnd str = case parseURI str of
   Just URI{..} -> case uriAuthority of
     Nothing -> Left $ "Error parsing authority for URI '" ++ str ++ "'."
     Just URIAuth{..} -> case uriPort of
-      "" -> Right $ RemoteEnd
+      "" -> Right RemoteEnd
         { remoteEndHost = uriUserInfo ++ uriRegName
         , remoteEndPort = 4444
         , remoteEndPath = uriPath
         }
       ':':ds -> case readMaybe ds of
         Nothing -> Left $ "Error parsing port for URI '" ++ str ++ "'."
-        Just k -> Right $ RemoteEnd
+        Just k -> Right RemoteEnd
           { remoteEndHost = uriUserInfo ++ uriRegName
           , remoteEndPort = k
           , remoteEndPath = uriPath

@@ -93,8 +93,8 @@ testCase
   => TT.TestName
   -> HttpSession m () () () () ()
   -> TT.TestTree
-testCase name test =
-  testCaseWithSetup name (return ()) (return ()) test
+testCase name =
+  testCaseWithSetup name (return ()) (return ())
 
 
 -- | -- | `HttpSession` test case with additional setup and teardown phases -- setup runs before the test (for e.g. logging in) and teardown runs after the test (for e.g. deleting temp files).

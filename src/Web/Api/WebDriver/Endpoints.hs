@@ -213,7 +213,7 @@ newSession' f caps = do
       , "desiredCapabilities" .= toJSON caps
       ]
   httpPost (baseUrl ++ "/session") payload
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= case format of
           SpecFormat -> lookupKey "value"
@@ -231,7 +231,7 @@ deleteSession = do
   baseUrl <- theRemoteUrlWithSession
   format <- readResponseFormat
   httpDelete baseUrl
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= case format of
@@ -248,7 +248,7 @@ sessionStatus = do
   baseUrl <- theRemoteUrl
   format <- readResponseFormat
   r <- httpGet (baseUrl ++ "/status")
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
   ready <- case format of
     SpecFormat -> do
@@ -273,7 +273,7 @@ getTimeouts
 getTimeouts = do
   baseUrl <- theRemoteUrlWithSession
   httpGet (baseUrl ++ "/timeouts")
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= constructFromJSON
@@ -301,7 +301,7 @@ navigateTo url = do
   let !payload = encode $ object [ "url" .= url ]
   format <- readResponseFormat
   httpPost (baseUrl ++ "/url") payload
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= case format of
@@ -320,7 +320,7 @@ navigateToStealth url = do
   let !payload = encode $ object [ "url" .= url ]
   format <- readResponseFormat
   httpSilentPost (baseUrl ++ "/url") payload
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= case format of
@@ -336,7 +336,7 @@ getCurrentUrl
 getCurrentUrl = do
   baseUrl <- theRemoteUrlWithSession
   httpGet (baseUrl ++ "/url")
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= constructFromJSON
@@ -352,7 +352,7 @@ goBack = do
   let !payload = encode $ object []
   format <- readResponseFormat
   httpPost (baseUrl ++ "/back") payload
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= case format of
@@ -370,7 +370,7 @@ goForward = do
   let !payload = encode $ object []
   format <- readResponseFormat
   httpPost (baseUrl ++ "/forward") payload
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= case format of
@@ -388,7 +388,7 @@ pageRefresh = do
   let !payload = encode $ object []
   format <- readResponseFormat
   httpPost (baseUrl ++ "/refresh") payload
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= case format of
@@ -404,7 +404,7 @@ getTitle
 getTitle = do
   baseUrl <- theRemoteUrlWithSession
   httpGet (baseUrl ++ "/title")
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= constructFromJSON
@@ -418,7 +418,7 @@ getWindowHandle
 getWindowHandle = do
   baseUrl <- theRemoteUrlWithSession
   httpGet (baseUrl ++ "/window")
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= constructFromJSON
@@ -432,7 +432,7 @@ closeWindow
 closeWindow = do
   baseUrl <- theRemoteUrlWithSession
   httpDelete (baseUrl ++ "/window")
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= constructFromJSON
@@ -460,7 +460,7 @@ getWindowHandles
 getWindowHandles = do
   baseUrl <- theRemoteUrlWithSession
   httpGet (baseUrl ++ "/window/handles")
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= constructFromJSON
@@ -486,7 +486,7 @@ switchToFrame ref = do
       [ "id" .= toJSON frame ]
 
   httpPost (baseUrl ++ "/frame") payload
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= case format of
@@ -504,7 +504,7 @@ switchToParentFrame = do
   let !payload = encode $ object []
   format <- readResponseFormat
   httpPost (baseUrl ++ "/frame/parent") payload
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= case format of
@@ -520,7 +520,7 @@ getWindowRect
 getWindowRect = do
   baseUrl <- theRemoteUrlWithSession
   httpGet (baseUrl ++ "/window/rect")
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= constructFromJSON
@@ -535,7 +535,7 @@ setWindowRect rect = do
   baseUrl <- theRemoteUrlWithSession
   let !payload = encode rect
   httpPost (baseUrl ++ "/window/rect") payload
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= constructFromJSON
@@ -549,7 +549,7 @@ maximizeWindow = do
   baseUrl <- theRemoteUrlWithSession
   let !payload = encode $ object []
   httpPost (baseUrl ++ "/window/maximize") payload
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= constructFromJSON
@@ -563,7 +563,7 @@ minimizeWindow = do
   baseUrl <- theRemoteUrlWithSession
   let !payload = encode $ object []
   httpPost (baseUrl ++ "/window/minimize") payload
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= constructFromJSON
@@ -577,7 +577,7 @@ fullscreenWindow = do
   baseUrl <- theRemoteUrlWithSession
   let !payload = encode $ object []
   httpPost (baseUrl ++ "/window/fullscreen") payload
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= constructFromJSON
@@ -594,7 +594,7 @@ findElement strategy selector = do
   format <- readResponseFormat
   let !payload = encode $ object [ "value" .= selector, "using" .= toJSON strategy ]
   httpPost (baseUrl ++ "/element") payload
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= case format of
@@ -615,7 +615,7 @@ findElements strategy selector = do
   format <- readResponseFormat
   let !payload = encode $ object [ "value" .= selector, "using" .= toJSON strategy ]
   httpPost (baseUrl ++ "/elements") payload
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= constructFromJSON
@@ -639,7 +639,7 @@ findElementFromElement strategy selector root = do
   baseUrl <- theRemoteUrlWithSession
   let !payload = encode $ object [ "value" .= selector, "using" .= toJSON strategy ]
   httpPost (baseUrl ++ "/element/" ++ show root_id ++ "/element") payload
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= case format of
@@ -662,7 +662,7 @@ findElementsFromElement strategy selector root = do
   format <- readResponseFormat
   let !payload = encode $ object [ "value" .= selector, "using" .= toJSON strategy ]
   httpPost (baseUrl ++ "/element/" ++ show root_id ++ "/elements") payload
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= constructFromJSON
@@ -681,7 +681,7 @@ getActiveElement = do
   baseUrl <- theRemoteUrlWithSession
   format <- readResponseFormat
   httpGet (baseUrl ++ "/element/active")
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= case format of
@@ -700,7 +700,7 @@ isElementSelected element = do
   let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
   httpGet (baseUrl ++ "/element/" ++ elementRef ++ "/selected")
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= constructFromJSON
@@ -716,7 +716,7 @@ getElementAttribute element name = do
   let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
   x <- httpGet (baseUrl ++ "/element/" ++ elementRef ++ "/attribute/" ++ E.encode name)
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
   case x of
@@ -736,7 +736,7 @@ getElementProperty element name = do
   let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
   httpGet (baseUrl ++ "/element/" ++ elementRef ++ "/property/" ++ E.encode name)
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
 
@@ -751,7 +751,7 @@ getElementCssValue element name = do
   let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
   httpGet (baseUrl ++ "/element/" ++ elementRef ++ "/css/" ++ name)
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= constructFromJSON
@@ -766,7 +766,7 @@ getElementText element = do
   let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
   httpGet (baseUrl ++ "/element/" ++ elementRef ++ "/text")
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= constructFromJSON
@@ -781,7 +781,7 @@ getElementTagName element = do
   let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
   httpGet (baseUrl ++ "/element/" ++ elementRef ++ "/name")
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= constructFromJSON
@@ -796,7 +796,7 @@ getElementRect element = do
   let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
   httpGet (baseUrl ++ "/element/" ++ elementRef ++ "/rect")
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= constructFromJSON
@@ -811,7 +811,7 @@ isElementEnabled element = do
   let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
   httpGet (baseUrl ++ "/element/" ++ elementRef ++ "/enabled")
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= constructFromJSON
@@ -828,7 +828,7 @@ elementClick element = do
   format <- readResponseFormat
   let !payload = encode $ object []
   httpPost (baseUrl ++ "/element/" ++ elementRef ++ "/click") payload
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= case format of
@@ -848,7 +848,7 @@ elementClear element = do
   format <- readResponseFormat
   let !payload = encode $ object []
   httpPost (baseUrl ++ "/element/" ++ elementRef ++ "/clear") payload
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= case format of
@@ -868,7 +868,7 @@ elementSendKeys element text = do
   baseUrl <- theRemoteUrlWithSession
   let !payload = encode $ object [ "text" .= text ]
   httpPost (baseUrl ++ "/element/" ++ elementRef ++ "/value") payload
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= expect (object [])
@@ -882,7 +882,7 @@ getPageSource
 getPageSource = do
   baseUrl <- theRemoteUrlWithSession
   httpGet (baseUrl ++ "/source")
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= constructFromJSON
@@ -896,7 +896,7 @@ getPageSourceStealth
 getPageSourceStealth = do
   baseUrl <- theRemoteUrlWithSession
   httpSilentGet (baseUrl ++ "/source")
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= constructFromJSON
@@ -913,7 +913,7 @@ executeScript script args = do
   baseUrl <- theRemoteUrlWithSession
   let !payload = encode $ object [ "script" .= script, "args" .= toJSON args ]
   httpPost (baseUrl ++ "/execute/sync") payload
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
 
@@ -928,7 +928,7 @@ executeAsyncScript script args = do
   baseUrl <- theRemoteUrlWithSession
   let !payload = encode $ object [ "script" .= script, "args" .= toJSON args ]
   httpPost (baseUrl ++ "/execute/async") payload
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
 
@@ -940,7 +940,7 @@ getAllCookies
 getAllCookies = do
   baseUrl <- theRemoteUrlWithSession
   httpGet (baseUrl ++ "/cookie")
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= constructFromJSON
@@ -955,7 +955,7 @@ getNamedCookie
 getNamedCookie name = do
   baseUrl <- theRemoteUrlWithSession
   httpGet (baseUrl ++ "/cookie/" ++ E.encode name)
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= constructFromJSON
@@ -971,7 +971,7 @@ addCookie cookie = do
   let !payload = encode $ object [ "cookie" .= cookie ]
   format <- readResponseFormat
   httpSilentPost (baseUrl ++ "/cookie") payload
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= case format of
@@ -989,7 +989,7 @@ deleteCookie name = do
   baseUrl <- theRemoteUrlWithSession
   format <- readResponseFormat
   httpDelete (baseUrl ++ "/cookie/" ++ E.encode name)
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= case format of
@@ -1006,7 +1006,7 @@ deleteAllCookies = do
   baseUrl <- theRemoteUrlWithSession
   format <- readResponseFormat
   httpDelete (baseUrl ++ "/cookie")
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= case format of
@@ -1041,7 +1041,7 @@ _performActions stealth action = do
   let !payload = encode $ object [ "actions" .= toJSON action ]
   let httpMethod = if stealth then httpSilentPost else httpPost
   httpMethod (baseUrl ++ "/actions") payload
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= expect (object [])
@@ -1067,7 +1067,7 @@ dismissAlert = do
   let !payload = encode $ object []
   format <- readResponseFormat
   httpPost (baseUrl ++ "/alert/dismiss") payload
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= case format of
@@ -1085,7 +1085,7 @@ acceptAlert = do
   let !payload = encode $ object []
   format <- readResponseFormat
   httpPost (baseUrl ++ "/alert/accept") payload
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= case format of
@@ -1101,7 +1101,7 @@ getAlertText
 getAlertText = do
   baseUrl <- theRemoteUrlWithSession
   msg <- httpGet (baseUrl ++ "/alert/text")
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
   case msg of
@@ -1120,7 +1120,7 @@ sendAlertText msg = do
   let !payload = encode $ object [ "text" .= msg ]
   format <- readResponseFormat
   httpPost (baseUrl ++ "/alert/text") payload
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= case format of
@@ -1136,7 +1136,7 @@ takeScreenshot
 takeScreenshot = do
   baseUrl <- theRemoteUrlWithSession
   result <- httpGet (baseUrl ++ "/screenshot")
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= constructFromJSON
@@ -1155,7 +1155,7 @@ takeElementScreenshot element = do
   let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
   result <- httpGet (baseUrl ++ "/element/" ++ elementRef ++ "/screenshot")
-    >>= (return . __response_body)
+    >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
     >>= constructFromJSON

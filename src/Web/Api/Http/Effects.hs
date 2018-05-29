@@ -358,21 +358,21 @@ instance EffectHttp IO where
 -- | Our `IO` implementation is based on the `wreq` library, which can handle reusing TCP connections and maintaining cookies for us. Unfortunately the `Response` type that `wreq` deals with by default is opaque -- it is awkward to construct values of that type, say, for mocking a server. So instead we will extract `wreq`s responses to our own type, `HttpResponse`, that we can control.
 
 data HttpResponse = HttpResponse
-  { __response_status :: Status
-  , __response_version :: HttpVersion
-  , __response_headers :: ResponseHeaders
-  , __response_body :: ByteString
-  , __response_cookie_jar :: CookieJar
+  { _responseStatus :: Status
+  , _responseVersion :: HttpVersion
+  , _responseHeaders :: ResponseHeaders
+  , _responseBody :: ByteString
+  , _responseCookieJar :: CookieJar
   } deriving Show
 
 -- | Convert a `Response ByteString` into an `HttpResponse`.
 readHttpResponse :: Response ByteString -> HttpResponse
 readHttpResponse r = HttpResponse
-  { __response_status = responseStatus r
-  , __response_version = responseVersion r
-  , __response_headers = responseHeaders r
-  , __response_body = responseBody r
-  , __response_cookie_jar = responseCookieJar r
+  { _responseStatus = responseStatus r
+  , _responseVersion = responseVersion r
+  , _responseHeaders = responseHeaders r
+  , _responseBody = responseBody r
+  , _responseCookieJar = responseCookieJar r
   }
 
 

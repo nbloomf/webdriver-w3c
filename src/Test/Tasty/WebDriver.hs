@@ -70,6 +70,8 @@ import qualified Data.Digest.Pure.SHA as SHA
   ( showDigest, sha1 )
 import Data.Time.Clock.System
   ( getSystemTime )
+import Data.Maybe
+  ( fromMaybe )
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Map.Strict as MS
 import qualified Test.Tasty as T
@@ -235,8 +237,8 @@ testCase
   => TT.TestName
   -> WebDriver m ()
   -> TT.TestTree
-testCase name test =
-  testCaseWithSetup name (return ()) (return ()) test
+testCase name =
+  testCaseWithSetup name (return ()) (return ())
 
 
 
@@ -249,7 +251,7 @@ testCaseWithSetup
   -> WebDriver m () -- ^ The test
   -> TT.TestTree
 testCaseWithSetup name setup teardown test =
-  TT.singleTest name $ WebDriverTest
+  TT.singleTest name WebDriverTest
     { wdTestName = Just name
     , wdTestSession = setup >> test >> teardown
     }
@@ -575,18 +577,17 @@ unlessTierIs tier f tree = T.askOption checkDeployment
 
 
 
+-- | Run a tree of webdriver tests. Thin wrapper around tasty's @defaultMain@ that attempts to determine the deployment tier and interprets remote end config command line options.
 defaultWebDriverMain :: TT.TestTree -> IO ()
 defaultWebDriverMain tree = do
-
   logLock <- newMVar ()
-
   deploy <- determineDeploymentTier
   pool <- getRemoteEndRef
 
   T.defaultMain
-    $ T.localOption (Deployment deploy)
-    $ T.localOption (RemoteEndRef $ Just pool)
-    $ T.localOption (LogPrinterLock $ Just logLock)
+    . T.localOption (Deployment deploy)
+    . T.localOption (RemoteEndRef $ Just pool)
+    . T.localOption (LogPrinterLock $ Just logLock)
     $ tree
 
 
@@ -604,13 +605,9 @@ determineDeploymentTier = do
 
 getRemoteEndRef :: IO (IORef RemoteEndPool)
 getRemoteEndRef = do
-  configPool <- getRemoteEndConfigPath
-  optionPool <- getRemoteEndOptionString
-  case (configPool, optionPool) of
-    (Just x,  Just y)  -> newIORef $ combineRemoteEndPools x y
-    (Nothing, Just y)  -> newIORef y
-    (Just x,  Nothing) -> newIORef x
-    (Nothing, Nothing) -> newIORef emptyRemoteEndPool
+  configPool <- fromMaybe mempty <$> getRemoteEndConfigPath
+  optionPool <- fromMaybe mempty <$> getRemoteEndOptionString
+  newIORef $ mappend configPool optionPool
 
 
 getRemoteEndConfigPath :: IO (Maybe RemoteEndPool)

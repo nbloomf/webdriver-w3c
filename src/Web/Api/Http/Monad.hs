@@ -85,8 +85,8 @@ runSession
   -> HttpSession m err st log env a
   -> m (Either (Err err) a)
 runSession config session = do
-  let state = __initial_state config
-  let env = __environment config
+  let state = _initialState config
+  let env = _environment config
   (result, _) <- execSession session (state, env)
   return result
 
@@ -97,9 +97,9 @@ debugSession
   -> HttpSession m err st log env a
   -> m (Either (Err err) a, [Assertion])
 debugSession config session = do
-  let state = __initial_state config
-  let env = __environment config
-  (result, (_, (Log _ assertions))) <- execSession session (state, env)
+  let state = _initialState config
+  let env = _environment config
+  (result, (_, Log _ assertions)) <- execSession session (state, env)
   return (result, map snd assertions)
 
 

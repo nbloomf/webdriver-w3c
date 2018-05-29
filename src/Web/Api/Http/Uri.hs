@@ -27,7 +27,7 @@ newtype Host = Host
 -- | Constructor for hosts that checks for invalid characters.
 mkHost :: String -> Maybe Host
 mkHost str =
-  if all (`elem` host_allowed_chars) str
+  if all (`elem` hostAllowedChars) str
     then Just (Host str)
     else Nothing
 
@@ -37,13 +37,13 @@ instance Show Host where
 instance Arbitrary Host where
   arbitrary = do
     Positive k <- arbitrary
-    str <- vectorOf k $ oneof $ map return host_allowed_chars
+    str <- vectorOf k $ oneof $ map return hostAllowedChars
     case mkHost str of
       Just h -> return h
       Nothing -> error "In Arbitrary instance for Host: bad characters."
 
-host_allowed_chars :: [Char]
-host_allowed_chars = concat
+hostAllowedChars :: String
+hostAllowedChars = concat
   [ ['a'..'z'], ['A'..'Z'], ['0'..'9'], ['-','_','.','~','%'] ]
 
 
