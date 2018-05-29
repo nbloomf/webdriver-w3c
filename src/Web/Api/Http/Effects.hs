@@ -342,16 +342,16 @@ type Url = String
 
 instance EffectHttp IO where
   mGetWith opts session url = case session of
-    Nothing -> mTry $ fmap readHttpResponse $ getWith opts url
-    Just sn -> mTry $ fmap readHttpResponse $ S.getWith opts sn url
+    Nothing -> mTry $ readHttpResponse <$> getWith opts url
+    Just sn -> mTry $ readHttpResponse <$> S.getWith opts sn url
 
   mPostWith opts session url payload = case session of
-    Nothing -> mTry $ fmap readHttpResponse $ postWith opts url payload
-    Just sn -> mTry $ fmap readHttpResponse $ S.postWith opts sn url payload
+    Nothing -> mTry $ readHttpResponse <$> postWith opts url payload
+    Just sn -> mTry $ readHttpResponse <$> S.postWith opts sn url payload
 
   mDeleteWith opts session url = case session of
-    Nothing -> mTry $ fmap readHttpResponse $ deleteWith opts url
-    Just sn -> mTry $ fmap readHttpResponse $ S.deleteWith opts sn url
+    Nothing -> mTry $ readHttpResponse <$> deleteWith opts url
+    Just sn -> mTry $ readHttpResponse <$> S.deleteWith opts sn url
 
   mNewSessionState = S.newSession
 

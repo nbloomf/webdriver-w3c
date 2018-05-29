@@ -182,8 +182,10 @@ instance (Effectful m, Typeable m) => TT.IsTest (WebDriverTest m) where
         remote <- acquireRemoteEnd delay remotesRef driver
 
         let
-          uid = (take 8 $ SHA.showDigest $ SHA.sha1 $ BS.pack $
-            show wdTestName) ++ "-" ++ show attemptNumber
+          uid = digest wdTestName ++ "-" ++ show attemptNumber
+            where
+              digest :: (Show a) => a -> String
+              digest = take 8 . SHA.showDigest . SHA.sha1 . BS.pack . show
 
           config =
             setEnvironment

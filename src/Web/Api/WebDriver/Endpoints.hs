@@ -204,8 +204,7 @@ newSession'
   -> Capabilities
   -> WebDriver m SessionId
 newSession' f caps = do
-  baseUrl <- theRemoteUrl
-  format <- readResponseFormat
+  (baseUrl, format) <- theRequestContext
   let
     !payload = encode $ f $ object
       [ "capabilities" .= object
@@ -228,15 +227,12 @@ deleteSession
   :: (Effectful m)
   => WebDriver m ()
 deleteSession = do
-  baseUrl <- theRemoteUrlWithSession
-  format <- readResponseFormat
+  (baseUrl, format) <- theRequestContext
   httpDelete baseUrl
     >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
-    >>= case format of
-          SpecFormat -> expect (object [])
-          ChromeFormat -> expect Null
+    >>= expectEmptyObject format
   return ()
 
 
@@ -245,19 +241,18 @@ sessionStatus
  :: (Effectful m)
  => WebDriver m (Bool, String)
 sessionStatus = do
-  baseUrl <- theRemoteUrl
-  format <- readResponseFormat
+  (baseUrl, format) <- theRequestContext
   r <- httpGet (baseUrl ++ "/status")
     >>= (return . _responseBody)
     >>= mParseJson
   ready <- case format of
-    SpecFormat -> do
+    SpecFormat ->
       lookupKey "value" r
         >>= lookupKey "ready"
         >>= constructFromJSON
     ChromeFormat -> return True
   msg <- case format of
-    SpecFormat -> do
+    SpecFormat ->
       lookupKey "value" r
         >>= lookupKey "message"
         >>= constructFromJSON
@@ -297,16 +292,13 @@ navigateTo
   => Url
   -> WebDriver m ()
 navigateTo url = do
-  baseUrl <- theRemoteUrlWithSession
+  (baseUrl, format) <- theRequestContext
   let !payload = encode $ object [ "url" .= url ]
-  format <- readResponseFormat
   httpPost (baseUrl ++ "/url") payload
     >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
-    >>= case format of
-          SpecFormat -> expect (object [])
-          ChromeFormat -> expect Null
+    >>= expectEmptyObject format
   return ()
 
 
@@ -316,16 +308,13 @@ navigateToStealth
   => Url
   -> WebDriver m ()
 navigateToStealth url = do
-  baseUrl <- theRemoteUrlWithSession
+  (baseUrl, format) <- theRequestContext
   let !payload = encode $ object [ "url" .= url ]
-  format <- readResponseFormat
   httpSilentPost (baseUrl ++ "/url") payload
     >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
-    >>= case format of
-          SpecFormat -> expect (object [])
-          ChromeFormat -> expect Null
+    >>= expectEmptyObject format
   return ()
 
 
@@ -348,16 +337,13 @@ goBack
   :: (Effectful m)
   => WebDriver m ()
 goBack = do
-  baseUrl <- theRemoteUrlWithSession
+  (baseUrl, format) <- theRequestContext
   let !payload = encode $ object []
-  format <- readResponseFormat
   httpPost (baseUrl ++ "/back") payload
     >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
-    >>= case format of
-          SpecFormat -> expect (object [])
-          ChromeFormat -> expect Null
+    >>= expectEmptyObject format
   return ()
 
 
@@ -366,16 +352,13 @@ goForward
   :: (Effectful m)
   => WebDriver m ()
 goForward = do
-  baseUrl <- theRemoteUrlWithSession
+  (baseUrl, format) <- theRequestContext
   let !payload = encode $ object []
-  format <- readResponseFormat
   httpPost (baseUrl ++ "/forward") payload
     >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
-    >>= case format of
-          SpecFormat -> expect (object [])
-          ChromeFormat -> expect Null
+    >>= expectEmptyObject format
   return ()
 
 
@@ -384,16 +367,13 @@ pageRefresh
   :: (Effectful m)
   => WebDriver m ()
 pageRefresh = do
-  baseUrl <- theRemoteUrlWithSession
+  (baseUrl, format) <- theRequestContext
   let !payload = encode $ object []
-  format <- readResponseFormat
   httpPost (baseUrl ++ "/refresh") payload
     >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
-    >>= case format of
-          SpecFormat -> expect (object [])
-          ChromeFormat -> expect Null
+    >>= expectEmptyObject format
   return ()
 
 
@@ -474,8 +454,7 @@ switchToFrame
   => FrameReference
   -> WebDriver m ()
 switchToFrame ref = do
-  baseUrl <- theRemoteUrlWithSession
-  format <- readResponseFormat
+  (baseUrl, format) <- theRequestContext
   let
     !frame = case ref of
       TopLevelFrame -> Null
@@ -500,16 +479,13 @@ switchToParentFrame
   :: (Effectful m)
   => WebDriver m ()
 switchToParentFrame = do
-  baseUrl <- theRemoteUrlWithSession
+  (baseUrl, format) <- theRequestContext
   let !payload = encode $ object []
-  format <- readResponseFormat
   httpPost (baseUrl ++ "/frame/parent") payload
     >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
-    >>= case format of
-          SpecFormat -> expect (object [])
-          ChromeFormat -> expect Null
+    >>= expectEmptyObject format
   return ()
 
 
@@ -590,8 +566,7 @@ findElement
   -> Selector
   -> WebDriver m ElementRef
 findElement strategy selector = do
-  baseUrl <- theRemoteUrlWithSession
-  format <- readResponseFormat
+  (baseUrl, format) <- theRequestContext
   let !payload = encode $ object [ "value" .= selector, "using" .= toJSON strategy ]
   httpPost (baseUrl ++ "/element") payload
     >>= (return . _responseBody)
@@ -611,8 +586,7 @@ findElements
   -> Selector
   -> WebDriver m [ElementRef]
 findElements strategy selector = do
-  baseUrl <- theRemoteUrlWithSession
-  format <- readResponseFormat
+  (baseUrl, format) <- theRequestContext
   let !payload = encode $ object [ "value" .= selector, "using" .= toJSON strategy ]
   httpPost (baseUrl ++ "/elements") payload
     >>= (return . _responseBody)
@@ -634,9 +608,8 @@ findElementFromElement
   -> t
   -> WebDriver m ElementRef
 findElementFromElement strategy selector root = do
+  (baseUrl, format) <- theRequestContext
   let root_id = elementRefOf root
-  format <- readResponseFormat
-  baseUrl <- theRemoteUrlWithSession
   let !payload = encode $ object [ "value" .= selector, "using" .= toJSON strategy ]
   httpPost (baseUrl ++ "/element/" ++ show root_id ++ "/element") payload
     >>= (return . _responseBody)
@@ -657,9 +630,8 @@ findElementsFromElement
   -> t
   -> WebDriver m [ElementRef]
 findElementsFromElement strategy selector root = do
+  (baseUrl, format) <- theRequestContext
   let root_id = elementRefOf root
-  baseUrl <- theRemoteUrlWithSession
-  format <- readResponseFormat
   let !payload = encode $ object [ "value" .= selector, "using" .= toJSON strategy ]
   httpPost (baseUrl ++ "/element/" ++ show root_id ++ "/elements") payload
     >>= (return . _responseBody)
@@ -678,8 +650,7 @@ getActiveElement
   :: (Effectful m)
   => WebDriver m ElementRef
 getActiveElement = do
-  baseUrl <- theRemoteUrlWithSession
-  format <- readResponseFormat
+  (baseUrl, format) <- theRequestContext
   httpGet (baseUrl ++ "/element/active")
     >>= (return . _responseBody)
     >>= mParseJson
@@ -823,17 +794,14 @@ elementClick
   => t
   -> WebDriver m ()
 elementClick element = do
+  (baseUrl, format) <- theRequestContext
   let elementRef = show $ elementRefOf element
-  baseUrl <- theRemoteUrlWithSession
-  format <- readResponseFormat
   let !payload = encode $ object []
   httpPost (baseUrl ++ "/element/" ++ elementRef ++ "/click") payload
     >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
-    >>= case format of
-          SpecFormat -> expect (object [])
-          ChromeFormat -> expect Null
+    >>= expectEmptyObject format
   return ()
 
 
@@ -843,17 +811,14 @@ elementClear
   => t
   -> WebDriver m ()
 elementClear element = do
+  (baseUrl, format) <- theRequestContext
   let elementRef = show $ elementRefOf element
-  baseUrl <- theRemoteUrlWithSession
-  format <- readResponseFormat
   let !payload = encode $ object []
   httpPost (baseUrl ++ "/element/" ++ elementRef ++ "/clear") payload
     >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
-    >>= case format of
-          SpecFormat -> expect (object [])
-          ChromeFormat -> expect Null
+    >>= expectEmptyObject format
   return ()
 
 
@@ -967,16 +932,13 @@ addCookie
   => Cookie
   -> WebDriver m ()
 addCookie cookie = do
-  baseUrl <- theRemoteUrlWithSession
+  (baseUrl, format) <- theRequestContext
   let !payload = encode $ object [ "cookie" .= cookie ]
-  format <- readResponseFormat
   httpSilentPost (baseUrl ++ "/cookie") payload
     >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
-    >>= case format of
-          SpecFormat -> expect (object [])
-          ChromeFormat -> expect Null
+    >>= expectEmptyObject format
   return ()
 
 
@@ -986,15 +948,12 @@ deleteCookie
   => CookieName
   -> WebDriver m ()
 deleteCookie name = do
-  baseUrl <- theRemoteUrlWithSession
-  format <- readResponseFormat
+  (baseUrl, format) <- theRequestContext
   httpDelete (baseUrl ++ "/cookie/" ++ E.encode name)
     >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
-    >>= case format of
-          SpecFormat -> expect (object [])
-          ChromeFormat -> expect Null
+    >>= expectEmptyObject format
   return ()
 
 
@@ -1003,15 +962,12 @@ deleteAllCookies
   :: (Effectful m)
   => WebDriver m ()
 deleteAllCookies = do
-  baseUrl <- theRemoteUrlWithSession
-  format <- readResponseFormat
+  (baseUrl, format) <- theRequestContext
   httpDelete (baseUrl ++ "/cookie")
     >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
-    >>= case format of
-          SpecFormat -> expect (object [])
-          ChromeFormat -> expect Null
+    >>= expectEmptyObject format
   return ()
 
 
@@ -1063,16 +1019,13 @@ dismissAlert
   :: (Effectful m)
   => WebDriver m ()
 dismissAlert = do
-  baseUrl <- theRemoteUrlWithSession
+  (baseUrl, format) <- theRequestContext
   let !payload = encode $ object []
-  format <- readResponseFormat
   httpPost (baseUrl ++ "/alert/dismiss") payload
     >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
-    >>= case format of
-          SpecFormat -> expect (object [])
-          ChromeFormat -> expect Null
+    >>= expectEmptyObject format
   return ()
 
 
@@ -1081,16 +1034,13 @@ acceptAlert
   :: (Effectful m)
   => WebDriver m ()
 acceptAlert = do
-  baseUrl <- theRemoteUrlWithSession
+  (baseUrl, format) <- theRequestContext
   let !payload = encode $ object []
-  format <- readResponseFormat
   httpPost (baseUrl ++ "/alert/accept") payload
     >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
-    >>= case format of
-          SpecFormat -> expect (object [])
-          ChromeFormat -> expect Null
+    >>= expectEmptyObject format
   return ()
 
 
@@ -1116,16 +1066,13 @@ sendAlertText
   => String
   -> WebDriver m ()
 sendAlertText msg = do
-  baseUrl <- theRemoteUrlWithSession
+  (baseUrl, format) <- theRequestContext
   let !payload = encode $ object [ "text" .= msg ]
-  format <- readResponseFormat
   httpPost (baseUrl ++ "/alert/text") payload
     >>= (return . _responseBody)
     >>= mParseJson
     >>= lookupKey "value"
-    >>= case format of
-          SpecFormat -> expect (object [])
-          ChromeFormat -> expect Null
+    >>= expectEmptyObject format
   return ()
 
 
@@ -1163,3 +1110,17 @@ takeElementScreenshot element = do
   case result of
     Right img -> return img
     Left str -> throwError $ Err $ ImageDecodeError str
+
+
+-- | Detect empty responses by response format. Necessary because chromedriver is not strictly spec compliant.
+expectEmptyObject :: (Effectful m) => ResponseFormat -> Value -> WebDriver m Value
+expectEmptyObject format value = case format of
+  SpecFormat -> expect (object []) value
+  ChromeFormat -> expect Null value
+
+
+theRequestContext :: (Effectful m) => WebDriver m (String, ResponseFormat)
+theRequestContext = do
+  baseUrl <- theRemoteUrlWithSession
+  format <- readResponseFormat
+  return (baseUrl, format)

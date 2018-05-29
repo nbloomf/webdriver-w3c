@@ -15,7 +15,7 @@ module Web.Api.WebDriver.Classes (
 
 import Web.Api.WebDriver.Types
 
--- | Types which carry a *web element reference* as described in https://www.w3.org/TR/webdriver/#elements.
+-- | Types which carry a /web element reference/ as described in https://www.w3.org/TR/webdriver/#elements.
 class HasElementRef t where
   elementRefOf :: t -> ElementRef
 
@@ -23,7 +23,7 @@ instance HasElementRef ElementRef where
   elementRefOf = id
 
 
--- | Types which carry a *window handle* as described in https://www.w3.org/TR/webdriver/#command-contexts.
+-- | Types which carry a /window handle/ as described in https://www.w3.org/TR/webdriver/#command-contexts.
 class HasContextId t where
   contextIdOf :: t -> ContextId
 
