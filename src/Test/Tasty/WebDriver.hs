@@ -42,7 +42,6 @@ module Test.Tasty.WebDriver (
   , ConsoleInHandle(..)
   , ConsoleOutHandle(..)
   , RemoteEndRef(..)
-  , FileHandle(..)
   , Headless(..)
   , LogColors(..)
   , GeckodriverLog(..)
@@ -52,6 +51,16 @@ module Test.Tasty.WebDriver (
 
 
 
+import Control.Monad.IO.Class
+  ( MonadIO, liftIO )
+import Data.Typeable
+  ( Typeable, Proxy(Proxy) )
+import Data.List
+  ( unlines )
+import System.IO
+  ( Handle, stdout, stderr, stdin, openFile, IOMode(..), hClose )
+import System.Exit
+  ( exitFailure )
 import Control.Concurrent
   ( threadDelay )
 import Control.Concurrent.MVar
@@ -101,6 +110,20 @@ import Test.Tasty.WebDriver.Config
 
 
 
+_OPT_LOG_HANDLE :: String
+_OPT_LOG_HANDLE = "wd-log"
+
+_OPT_ASSERT_LOG_HANDLE :: String
+_OPT_ASSERT_LOG_HANDLE = "wd-assertion-log"
+
+_OPT_CONSOLE_OUT :: String
+_OPT_CONSOLE_OUT = "wd-console-out"
+
+_OPT_CONSOLE_IN :: String
+_OPT_CONSOLE_IN = "wd-console-in"
+
+
+
 data WebDriverTest m = WebDriverTest
   { wdTestName :: String
   , wdTestSession :: WebDriver ()
@@ -135,11 +158,11 @@ instance (Monad m, Typeable m) => TT.IsTest (WebDriverTest m) where
       Headless headless = TO.lookupOption opts
       ApiResponseFormat format = TO.lookupOption opts
       WebDriverApiVersion version = TO.lookupOption opts
-      LogHandle log = TO.lookupOption opts
+      LogHandle logHandle = TO.lookupOption opts
       logNoiseLevel = TO.lookupOption opts
-      ConsoleInHandle cin = TO.lookupOption opts
+      ConsoleInHandle cinHandle = TO.lookupOption opts
       TestDelay delay = TO.lookupOption opts
-      ConsoleOutHandle cout = TO.lookupOption opts
+      ConsoleOutHandle coutHandle = TO.lookupOption opts
       SecretsPath secrets = TO.lookupOption opts
       BrowserPath browserPath = TO.lookupOption opts
       RemoteEndRef remotes = TO.lookupOption opts
@@ -176,10 +199,6 @@ instance (Monad m, Typeable m) => TT.IsTest (WebDriverTest m) where
               , _chromeArgs = if headless then Just ["--headless"] else Nothing
               }
           }
-
-    logHandle <- writeModeHandle log
-    cinHandle <- readModeHandle cin
-    coutHandle <- writeModeHandle cout
 
     secretsPath <- case secrets of
       "" -> fmap (++ "/.webdriver/secrets") $ SE.getEnv "HOME"
@@ -442,16 +461,13 @@ instance TO.IsOption WebDriverApiVersion where
 
 -- | Log location.
 newtype LogHandle
-  = LogHandle { theLogHandle :: FileHandle }
+  = LogHandle { theLogHandle :: Handle }
   deriving Typeable
 
 instance TO.IsOption LogHandle where
-  defaultValue = LogHandle StdErr
-  parseValue path = case path of
-    "stdout" -> Just $ LogHandle StdOut
-    "stderr" -> Just $ LogHandle StdErr
-    _ -> Just $ LogHandle $ Path path
-  optionName = return "wd-log"
+  defaultValue = LogHandle stderr
+  parseValue _ = Just $ LogHandle stderr
+  optionName = return _OPT_LOG_HANDLE
   optionHelp = return "log destination: (stderr), stdout, PATH"
 
 
@@ -500,31 +516,26 @@ instance TO.IsOption NumRetries where
 
 -- | Console in location. Used to mock stdin for testing.
 newtype ConsoleInHandle
-  = ConsoleInHandle { theConsoleInHandle :: FileHandle }
+  = ConsoleInHandle { theConsoleInHandle :: Handle }
   deriving Typeable
 
 instance TO.IsOption ConsoleInHandle where
-  defaultValue = ConsoleInHandle StdIn
-  parseValue path = case path of
-    "stdin" -> Just $ ConsoleInHandle StdIn
-    _ -> Just $ ConsoleInHandle $ Path path
-  optionName = return "wd-console-in"
+  defaultValue = ConsoleInHandle stdin
+  parseValue _ = Just $ ConsoleInHandle stdin
+  optionName = return _OPT_CONSOLE_IN
   optionHelp = return "console input: (stdin), PATH"
 
 
 
 -- | Console out location. Used to mock stdout for testing.
 newtype ConsoleOutHandle
-  = ConsoleOutHandle { theConsoleOutHandle :: FileHandle }
+  = ConsoleOutHandle { theConsoleOutHandle :: Handle }
   deriving Typeable
 
 instance TO.IsOption ConsoleOutHandle where
-  defaultValue = ConsoleOutHandle StdOut
-  parseValue path = case path of
-    "stdout" -> Just $ ConsoleOutHandle StdOut
-    "stderr" -> Just $ ConsoleOutHandle StdErr
-    _ -> Just $ ConsoleOutHandle $ Path path
-  optionName = return "wd-console-out"
+  defaultValue = ConsoleOutHandle stdout
+  parseValue _ = Just $ ConsoleOutHandle stdout
+  optionName = return _OPT_CONSOLE_OUT
   optionHelp = return "console output: (stdout), stderr, PATH"
 
 
@@ -563,29 +574,6 @@ instance TO.IsOption Deployment where
     _ -> Nothing
   optionName = return "wd-deploy"
   optionHelp = return "deployment environment: (dev), test, prod"
-
-
-
--- | Representation of file handles, both paths and the stdin/out/err handles.
-data FileHandle
-  = StdIn
-  | StdErr
-  | StdOut
-  | Path FilePath
-
-writeModeHandle :: FileHandle -> IO Handle
-writeModeHandle x = case x of
-  StdIn -> error "writeModeHandle: Cannot open stdin in write mode."
-  StdOut -> return stdout
-  StdErr -> return stderr
-  Path path -> openFile path WriteMode
-
-readModeHandle :: FileHandle -> IO Handle
-readModeHandle x = case x of
-  StdIn -> return stdin
-  StdOut -> error "readModeHandle: Cannot open stdout in read mode."
-  StdErr -> error "readModeHandle: Cannot open stderr in read mode."
-  Path path -> openFile path ReadMode
 
 
 
@@ -676,11 +664,49 @@ defaultWebDriverMain tree = do
   deploy <- determineDeploymentTier
   pool <- getRemoteEndRef
 
+  logHandle <- getWriteModeHandleOption _OPT_LOG_HANDLE stderr
+  alogHandle <- getWriteModeHandleOption _OPT_ASSERT_LOG_HANDLE stdout
+  coutHandle <- getWriteModeHandleOption _OPT_CONSOLE_OUT stdout
+  cinHandle <- getReadModeHandleOption _OPT_CONSOLE_IN stdin
+
   T.defaultMain
     . T.localOption (Deployment deploy)
     . T.localOption (RemoteEndRef $ Just pool)
     . T.localOption (LogPrinterLock $ Just logLock)
+    . T.localOption (LogHandle logHandle)
+    . T.localOption (ConsoleOutHandle coutHandle)
+    . T.localOption (ConsoleInHandle cinHandle)
     $ tree
+
+  mapM_ hClose
+    [ logHandle, alogHandle, coutHandle, cinHandle ]
+
+
+getWriteModeHandleOption :: String -> Handle -> IO Handle
+getWriteModeHandleOption opt theDefault = do
+  args <- SE.getArgs
+  case parseOptionWithArgument ("--" ++ opt) args of
+    Nothing -> do
+      putStrLn $ "Error: option '" ++ opt ++ "' is missing a required path argument"
+      exitFailure
+    Just Nothing -> return theDefault
+    Just (Just path) -> case path of
+      "stdout" -> return stdout
+      "stderr" -> return stderr
+      _ -> openFile path WriteMode
+
+
+getReadModeHandleOption :: String -> Handle -> IO Handle
+getReadModeHandleOption opt theDefault = do
+  args <- SE.getArgs
+  case parseOptionWithArgument ("--" ++ opt) args of
+    Nothing -> do
+      putStrLn $ "Error: option '" ++ opt ++ "' is missing a required path argument"
+      exitFailure
+    Just Nothing -> return theDefault
+    Just (Just path) -> case path of
+      "stdin" -> return stdin
+      _ -> openFile path ReadMode
 
 
 determineDeploymentTier :: IO DeploymentTier
@@ -695,6 +721,7 @@ determineDeploymentTier = do
   return deploy
 
 
+
 getRemoteEndRef :: IO (TVar RemoteEndPool)
 getRemoteEndRef = do
   configPool <- fromMaybe mempty <$> getRemoteEndConfigPath
@@ -702,17 +729,14 @@ getRemoteEndRef = do
   newTVarIO $ mappend configPool optionPool
 
 
+
 getRemoteEndConfigPath :: IO (Maybe RemoteEndPool)
 getRemoteEndConfigPath = do
   args <- SE.getArgs
-  let
-    foo :: [String] -> Maybe (Maybe String)
-    foo as = case as of
-      ("--wd-remote-ends-config":('-':_):_) -> Nothing
-      ("--wd-remote-ends-config":path:_) -> Just $ Just path
-      (_:y:xs) -> foo (y:xs)
-      _ -> Just Nothing
-  case foo args of
+  case parseOptionWithArgument "--wd-remote-ends-config" args of
+    Nothing -> do
+      putStrLn "option --wd-remote-ends-config missing required path argument"
+      exitFailure
     Just Nothing -> return Nothing
     Just (Just path) -> do
       str <- readFile path
@@ -721,22 +745,16 @@ getRemoteEndConfigPath = do
           putStrLn err
           exitFailure
         Right x -> return (Just x)
-    Nothing -> do
-      putStrLn "option --wd-remote-ends-config missing required path argument"
-      exitFailure
+
 
 
 getRemoteEndOptionString :: IO (Maybe RemoteEndPool)
 getRemoteEndOptionString = do
   args <- SE.getArgs
-  let
-    foo :: [String] -> Maybe (Maybe String)
-    foo as = case as of
-      ("--wd-remote-ends":('-':_):_) -> Nothing
-      ("--wd-remote-ends":path:_) -> Just $ Just path
-      (_:y:xs) -> foo (y:xs)
-      _ -> Just Nothing
-  case foo args of
+  case parseOptionWithArgument "--wd-remote-ends" args of
+    Nothing -> do
+      putStrLn "option --wd-remote-ends missing required argument"
+      exitFailure
     Just Nothing -> return Nothing
     Just (Just str) ->
       case parseRemoteEndOption str of
@@ -744,9 +762,8 @@ getRemoteEndOptionString = do
           putStrLn err
           exitFailure
         Right x -> return (Just x)
-    Nothing -> do
-      putStrLn "option --wd-remote-ends missing required argument"
-      exitFailure
+
+
 
 acquireRemoteEnd :: TVar RemoteEndPool -> Int -> DriverName -> IO RemoteEnd
 acquireRemoteEnd var delay driver = do

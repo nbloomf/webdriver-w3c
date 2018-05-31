@@ -20,6 +20,8 @@ module Test.Tasty.WebDriver.Config (
   , parseRemoteEnd
   , parseRemoteEndConfig
   , parseRemoteEndOption
+
+  , parseOptionWithArgument
   ) where
 
 import Data.List
@@ -153,3 +155,17 @@ parseRemoteEnd str = case parseURI str of
           , remoteEndPath = uriPath
           }
       p -> Left $ "Unexpected port '" ++ p ++ "' in URI '" ++ str ++ "'."
+
+
+-- | Helper function for parsing command line options with a required argument. Assumes long-form option names starting with a hyphen. Note the return type; @Just Nothing@ indicates that the option was not present, while @Nothing@ indicates that the option was present but its required argument was not.
+parseOptionWithArgument
+  :: String -- ^ Option to parse for, including hyphen(s).
+  -> [String] -- ^ List of command line arguments.
+  -> Maybe (Maybe String)
+parseOptionWithArgument option args = case args of
+  (opt:arg:rest) -> if opt == option
+    then case arg of
+      '-':_ -> Nothing
+      _ -> Just (Just arg)
+    else parseOptionWithArgument option (arg:rest)
+  _ -> Just Nothing

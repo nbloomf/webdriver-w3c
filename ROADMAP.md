@@ -2,7 +2,6 @@
 * Stealth commands should not log request/response details. We should test that this is the case.
 * /session/{session id}/element/{element id}/displayed
 * Need a ci test matrix, but have to think about how to prevent combinatorial blowup; dependencies are geckodriver+firefox+chromedriver+chrome, so matrix will get big fast. Compromise: only support one version of the drivers at a time?
-* todo.txt => roadmap.md
 * no_color env variable
 
 -- refactor cleanup tasks
@@ -39,4 +38,3 @@
 Notes on ignored tests
 - getAlertText on headless geckodriver
   https://bugzilla.mozilla.org/show_bug.cgi?id=1460857
-
