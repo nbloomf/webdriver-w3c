@@ -44,7 +44,9 @@ library
     , QuickCheck >=2.10.1 && <2.11
     , random >=1.1 && <1.2
     , scientific >=0.3.5.2 && <0.4
+    , script-monad >=0.0.0.0 && <0.0.0.1
     , SHA >=1.6.4.2 && <1.7
+    , stm >=2.4.5.0 && <2.5
     , tasty >=1.0.1.1 && <1.1
     , tasty-expected-failure >=0.11.1.1 && <0.12
     , text >=1.2.3.0 && <1.3
@@ -55,18 +57,9 @@ library
     , wreq >=0.5.2 && <0.6
 
   exposed-modules:
-    Test.Tasty.HttpSession
     Test.Tasty.WebDriver
     Test.Tasty.WebDriver.Config
-    Web.Api.Http
-    Web.Api.Http.Assert
-    Web.Api.Http.Effects
-    Web.Api.Http.Helpers
-    Web.Api.Http.Json
-    Web.Api.Http.Monad
-    Web.Api.Http.Shell
-    Web.Api.Http.Types
-    Web.Api.Http.Uri
+    Web.Api.WebDriver.Assert
     Web.Api.WebDriver
     Web.Api.WebDriver.Classes
     Web.Api.WebDriver.Endpoints
@@ -74,6 +67,7 @@ library
     Web.Api.WebDriver.Monad
     Web.Api.WebDriver.Types
     Web.Api.WebDriver.Types.Keyboard
+    Web.Api.WebDriver.Uri
 
 
 
@@ -132,6 +126,7 @@ test-suite webdriver-w3c-test
     , random >=1.1 && <1.2
     , unordered-containers >=0.2.9.0 && <0.3
     , scientific >=0.3.5.2 && <0.4
+    , script-monad >=0.0.0.0 && <0.0.0.1
     , tasty >=1.0.1.1 && <1.1
     , tasty-expected-failure >=0.11.1.1 && <0.12
     , tasty-hunit >=0.10.0.1 && <0.11
@@ -143,10 +138,7 @@ test-suite webdriver-w3c-test
 
   other-modules:
     Test.Tasty.WebDriver.Config.Test
-    Web.Api.Http.Assert.Test
-    Web.Api.Http.Effects.Test
-    Web.Api.Http.Effects.Test.Mock
-    Web.Api.Http.Effects.Test.Server
+    Web.Api.WebDriver.Assert.Test
     Web.Api.WebDriver.Monad.Test
     Web.Api.WebDriver.Monad.Test.Server
     Web.Api.WebDriver.Monad.Test.Server.Page

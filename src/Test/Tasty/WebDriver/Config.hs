@@ -22,13 +22,16 @@ module Test.Tasty.WebDriver.Config (
   , parseRemoteEndOption
   ) where
 
-import Network.URI
-import Text.Read (readMaybe)
-import Data.List (unlines, isPrefixOf, isSuffixOf, nub)
-
+import Data.List
+  ( unlines, isPrefixOf, isSuffixOf, nub )
+import qualified Data.Map.Strict as MS
+  ( fromListWith, insert, lookup, adjust, fromList, unionWith, Map )
 import Data.Typeable
   ( Typeable, Proxy(Proxy) )
-import qualified Data.Map.Strict as MS
+import Network.URI
+  ( URI(..), URIAuth(..), parseURI )
+import Text.Read
+  ( readMaybe )
 
 
 
@@ -41,7 +44,6 @@ data DriverName
 instance Show DriverName where
   show Geckodriver = "geckodriver"
   show Chromedriver = "chromedriver"
-
 
 -- | Pool of remote end connections per driver.
 newtype RemoteEndPool = RemoteEndPool
@@ -72,14 +74,12 @@ getRemoteEndForDriver driver pool =
       [] -> (pool, Just Nothing)
       (r:rs) -> (pool { freeRemoteEnds = MS.insert driver rs $ freeRemoteEnds pool }, Just $ Just r)
 
-
 -- | Representation of a remote end connection.
 data RemoteEnd = RemoteEnd
   { remoteEndHost :: String -- ^ Scheme, auth, and hostname
   , remoteEndPort :: Int
   , remoteEndPath :: String -- ^ Additional path component
   } deriving (Eq, Show)
-
 
 -- | Parse a remote end config file. This file consists of 0 or more blocks of the form
 --
@@ -95,7 +95,6 @@ parseRemoteEndConfig str = do
     { freeRemoteEnds = freeEnds
     }
 
-
 tokenizeRemoteEndConfig :: [String] -> Either String [(DriverName, [RemoteEnd])]
 tokenizeRemoteEndConfig ls = case ls of
   [] -> return []
@@ -109,7 +108,6 @@ tokenizeRemoteEndConfig ls = case ls of
     config <- tokenizeRemoteEndConfig remainder
     return $ (driver, nub ends) : config
 
-
 -- | Parse a remote end command line option. This option consists of 0 or more substrings of the form
 --
 -- > DRIVER_NAME: REMOTE_END_URI REMOTE_END_URI ...
@@ -121,7 +119,6 @@ parseRemoteEndOption str = do
   return RemoteEndPool
     { freeRemoteEnds = freeEnds
     }
-
 
 tokenizeRemoteEndOption :: [String] -> Either String [(DriverName, [RemoteEnd])]
 tokenizeRemoteEndOption ws = case ws of
@@ -135,7 +132,6 @@ tokenizeRemoteEndOption ws = case ws of
     ends <- mapM parseRemoteEnd remotes
     option <- tokenizeRemoteEndOption remainder
     return $ (driver, nub ends) : option
-
 
 -- | Parse a single remote end URI. Must include the scheme (http:// or https://) even though this is redundant.
 parseRemoteEnd :: String -> Either String RemoteEnd

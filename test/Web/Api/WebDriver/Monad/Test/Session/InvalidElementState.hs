@@ -6,7 +6,7 @@ module Web.Api.WebDriver.Monad.Test.Session.InvalidElementState (
 import Data.Typeable (Typeable)
 import System.IO
 
-import Web.Api.Http
+
 import Web.Api.WebDriver
 import Test.Tasty.WebDriver
 
@@ -15,34 +15,37 @@ import qualified Test.Tasty.ExpectedFailure as TE
 
 
 invalidElementState
-  :: (Effectful m, Typeable m)
-  => Err WebDriverError
-  -> WebDriver m ()
+  :: E WDError
+  -> WebDriver ()
 invalidElementState e = case e of
-  Err (ResponseError InvalidElementState _ _ _ _) -> assertSuccess "yay!"
+  E (ResponseError InvalidElementState _ _ _ _) -> assertSuccess "yay!"
   err -> assertFailure $
     AssertionComment $ "Expecting 'invalid element state' but got: " ++ show err
 
 
-invalidElementStateExit :: (Effectful m, Typeable m) => FilePath -> m () -> T.TestTree
-invalidElementStateExit dir x =
+invalidElementStateExit
+  :: (String -> WebDriver () -> T.TestTree)
+  -> FilePath
+  -> T.TestTree
+invalidElementStateExit buildTestCase dir =
   let path = dir ++ "/invalidElementState.html" in
   T.testGroup "Invalid Element State"
     [ ifDriverIs Chromedriver TE.ignoreTest $
-        testCase "elementClear" (_test_elementClear_invalid_element_state path x)
+        buildTestCase "elementClear" (_test_elementClear_invalid_element_state path)
     ]
 
 
 
 _test_elementClear_invalid_element_state
-  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
-_test_elementClear_invalid_element_state page _ =
+  :: FilePath -> WebDriver ()
+_test_elementClear_invalid_element_state page =
   let
+    session :: WebDriver ()
     session = do
       navigateTo page
       !element <- findElement CssSelector "body"
       elementClear element
-      throwError $ ErrUnexpectedSuccess "Expecting 'invalid_element_state'"
+      throwError $ E $ UnexpectedResult IsSuccess "Expecting 'invalid_element_state'"
       return ()
 
-  in catchError session invalidElementState
+  in catch session invalidElementState

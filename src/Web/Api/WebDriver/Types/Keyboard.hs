@@ -11,7 +11,7 @@ Portability : POSIX
 module Web.Api.WebDriver.Types.Keyboard (
     Key(..)
   , keyToChar
-  ) where
+) where
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#keyboard-actions>.
 data Key

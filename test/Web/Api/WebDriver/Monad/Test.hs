@@ -1,19 +1,19 @@
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BangPatterns, GADTs #-}
 module Web.Api.WebDriver.Monad.Test (
     tests
-  ) where
+) where
 
 import Data.Typeable
   ( Typeable )
 import System.IO
 
-import Test.Tasty (TestTree(), testGroup, localOption)
+import Test.Tasty (TestTree(), testGroup, localOption, Timeout(NoTimeout))
 
-import Web.Api.Http hiding (TestTree)
+import Control.Monad.Script.Http.MockIO
+
 import Web.Api.WebDriver
 import Test.Tasty.WebDriver
 
-import Web.Api.Http.Effects.Test.Mock
 import Web.Api.WebDriver.Monad.Test.Server
 import Web.Api.WebDriver.Monad.Test.Session.Success
 import Web.Api.WebDriver.Monad.Test.Session.UnknownError
@@ -23,28 +23,34 @@ import Web.Api.WebDriver.Monad.Test.Session.InvalidElementState
 tests :: FilePath -> TestTree
 tests path = testGroup "Web.Api.WebDriver.Monad"
   [   localOption (ApiResponseFormat SpecFormat)
-    $ testGroup "Mock Driver"
-        (endpointTests path (return () :: MockIO WebDriverServerState ()))
+    $ localOption (SilentLog)
+    $ testGroup "Mock Driver" $ endpointTests testCaseMockIO path
 
   ,   localOption (Driver Geckodriver)
     $ localOption (ApiResponseFormat SpecFormat)
+    $ localOption (Headless True)
     $ localOption (SilentLog)
-    $ localOption (AssertionLogHandle $ Path "/dev/null")
-    $ testGroup "Geckodriver" (endpointTests path (return () :: IO ()))
+    $ testGroup "Geckodriver" $ endpointTests testCase path
 
   ,   localOption (Driver Chromedriver)
     $ localOption (ApiResponseFormat ChromeFormat)
     $ localOption (Headless True)
     $ ifTierIs TEST (localOption (BrowserPath $ Just "/usr/bin/google-chrome"))
     $ localOption (SilentLog)
-    $ localOption (AssertionLogHandle $ Path "/dev/null")
-    $ testGroup "Chromedriver" (endpointTests path (return () :: IO ()))
+    $ testGroup "Chromedriver" $ endpointTests testCase path
   ]
 
 
-endpointTests :: (Effectful m, Typeable m) => FilePath -> m () -> [TestTree]
-endpointTests path x =
-  [ successfulExit path x
-  , invalidElementStateExit path x
-  , unknownErrorExit path x
+
+testCaseMockIO :: String -> WebDriver () -> TestTree
+testCaseMockIO name = testCaseM name (evalMockIO evalWDActMockIO) (mockIOtoIO defaultWebDriverServer)
+
+endpointTests
+  :: (String -> WebDriver () -> TestTree)
+  -> FilePath
+  -> [TestTree]
+endpointTests buildTestCase path =
+  [ successfulExit buildTestCase path
+  , invalidElementStateExit buildTestCase path
+  , unknownErrorExit buildTestCase path
   ]

@@ -11,7 +11,7 @@ Portability : POSIX
 module Web.Api.WebDriver.Classes (
     HasElementRef(..)
   , HasContextId(..)
-  ) where
+) where
 
 import Web.Api.WebDriver.Types
 
@@ -21,6 +21,7 @@ class HasElementRef t where
 
 instance HasElementRef ElementRef where
   elementRefOf = id
+
 
 
 -- | Types which carry a /window handle/ as described in https://www.w3.org/TR/webdriver/#command-contexts.

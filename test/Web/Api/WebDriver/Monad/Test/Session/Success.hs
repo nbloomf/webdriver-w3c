@@ -3,10 +3,8 @@ module Web.Api.WebDriver.Monad.Test.Session.Success (
     successfulExit
   ) where
 
-import Data.Typeable (Typeable)
 import System.IO
 
-import Web.Api.Http
 import Web.Api.WebDriver
 import Test.Tasty.WebDriver
 
@@ -15,92 +13,92 @@ import qualified Test.Tasty.ExpectedFailure as TE
 
 
 unexpectedError
-  :: (Effectful m, Typeable m)
-  => Err WebDriverError
-  -> WebDriver m ()
+  :: E WDError
+  -> WebDriver ()
 unexpectedError e = assertFailure $ AssertionComment $ "Unexpected error:\n" ++ show e
 
 
-successfulExit :: (Effectful m, Typeable m) => FilePath -> m () -> T.TestTree
-successfulExit dir x =
+successfulExit
+  :: (String -> WebDriver () -> T.TestTree)
+  -> FilePath
+  -> T.TestTree
+successfulExit buildTestCase dir =
   let path = dir ++ "/success.html" in
   T.testGroup "Successful Exit"
-    [ testCase "sessionStatus" (_test_sessionStatus_success path x)
-    , testCase "getTimeouts" (_test_getTimeouts_success x)
-    , testCase "setTimeouts" (_test_setTimeouts_success x)
-    , testCase "navigateTo" (_test_navigateTo_success path x)
-    , testCase "navigateToStealth" (_test_navigateToStealth_success path x)
-    , testCase "getCurrentUrl" (_test_getCurrentUrl_success x)
-    , testCase "goBack" (_test_goBack_success x)
-    , testCase "goForward" (_test_goForward_success x)
-    , testCase "pageRefresh" (_test_pageRefresh_success x)
-    , testCase "getTitle" (_test_getTitle_success x)
-    , testCase "getWindowHandle" (_test_getWindowHandle_success x)
-    , testCase "switchToWindow" (_test_switchToWindow_success x)
-    , testCase "getWindowHandles" (_test_getWindowHandles_success path x)
-    , testCase "switchToFrame" (_test_switchToFrame_success path x)
-    , testCase "switchToParentFrame" (_test_switchToParentFrame_success path x)
-    , testCase "getWindowRect" (_test_getWindowRect_success x)
-    , testCase "setWindowRect" (_test_setWindowRect_success x)
-    ,   ifTierIs TEST TE.ignoreTest
-      $ ifDriverIs Chromedriver TE.ignoreTest
-      $ testCase "maximizeWindow" (_test_maximizeWindow_success x)
-    ,   ifTierIs TEST TE.ignoreTest
-      $ ifDriverIs Chromedriver TE.ignoreTest
-      $ testCase "minimizeWindow" (_test_minimizeWindow_success x)
-    ,   ifTierIs TEST TE.ignoreTest
-      $ ifDriverIs Chromedriver TE.ignoreTest
-      $ testCase "fullscreenWindow" (_test_fullscreenWindow_success x)
-    , testCase "findElement" (_test_findElement_success path x)
-    , testCase "findElements" (_test_findElements_success path x)
-    , testCase "findElementFromElement" (_test_findElementFromElement_success path x)
-    , testCase "findElementsFromElement" (_test_findElementsFromElement_success path x)
-    , testCase "getActiveElement" (_test_getActiveElement_success x)
-    , testCase "isElementSelected" (_test_isElementSelected_success path x)
-    , testCase "getElementAttribute" (_test_getElementAttribute_success path x)
-    , ifDriverIs Chromedriver TE.ignoreTest $
-        testCase "getElementCssValue" (_test_getElementCssValue_success path x)
-    , testCase "getElementText" (_test_getElementText_success path x)
-    , testCase "getElementTagName" (_test_getElementTagName_success path x)
-    , ifDriverIs Chromedriver TE.ignoreTest $
-        testCase "getElementRect" (_test_getElementRect_success path x)
-    , testCase "isElementEnabled" (_test_isElementEnabled_success path x)
-    , testCase "elementClick" (_test_elementClick_success path x)
-    , testCase "elementClear" (_test_elementClear_success path x)
-    , ifDriverIs Chromedriver TE.ignoreTest $
-        testCase "elementSendKeys" (_test_elementSendKeys_success path x)
-    , testCase "getPageSource" (_test_getPageSource_success path x)
-    , testCase "getPageSourceStealth" (_test_getPageSourceStealth_success path x)
-    , testCase "getAllCookies" (_test_getAllCookies_success path x)
-    , ifDriverIs Chromedriver TE.ignoreTest $
-        testCase "getNamedCookie" (_test_getNamedCookie_success path x)
-    , ifDriverIs Chromedriver TE.ignoreTest $
-        testCase "deleteCookie" (_test_deleteCookie_success path x)
-    , testCase "deleteAllCookies" (_test_deleteAllCookies_success x)
-    , ifDriverIs Chromedriver TE.ignoreTest $
-        testCase "performActions (keyboard)" (_test_performActions_keyboard_success x)
-    , ifDriverIs Chromedriver TE.ignoreTest $
-        testCase "performActionsStealth (keyboard)" (_test_performActionsStealth_keyboard_success x)
-    , ifDriverIs Chromedriver TE.ignoreTest $
-        testCase "releaseActions" (_test_releaseActions_success x)
-    , ifDriverIs Chromedriver TE.ignoreTest $
-        testCase "dismissAlert" (_test_dismissAlert_success path x)
-    , ifDriverIs Chromedriver TE.ignoreTest $
-        testCase "acceptAlert" (_test_acceptAlert_success path x)
-    , ifDriverIs Chromedriver TE.ignoreTest $
-        testCase "getAlertText" (_test_getAlertText_success path x)
-    , ifDriverIs Chromedriver TE.ignoreTest $
-        testCase "sendAlertText" (_test_sendAlertText_success path x)
-    , testCase "takeScreenshot" (_test_takeScreenshot_success path x)
-    , ifDriverIs Chromedriver TE.ignoreTest $
-        testCase "takeElementScreenshot" (_test_takeElementScreenshot_success path x)
+    [ buildTestCase "sessionStatus" (_test_sessionStatus_success path)
+    , buildTestCase "getTimeouts" (_test_getTimeouts_success)
+    , buildTestCase "setTimeouts" (_test_setTimeouts_success)
+    , buildTestCase "navigateTo" (_test_navigateTo_success path)
+    , buildTestCase "navigateToStealth" (_test_navigateToStealth_success path)
+    , buildTestCase "getCurrentUrl" (_test_getCurrentUrl_success)
+    , buildTestCase "goBack" (_test_goBack_success)
+    , buildTestCase "goForward" (_test_goForward_success)
+    , buildTestCase "pageRefresh" (_test_pageRefresh_success)
+    , buildTestCase "getTitle" (_test_getTitle_success)
+    , buildTestCase "getWindowHandle" (_test_getWindowHandle_success)
+    , buildTestCase "switchToWindow" (_test_switchToWindow_success)
+    , buildTestCase "getWindowHandles" (_test_getWindowHandles_success path)
+    , buildTestCase "switchToFrame" (_test_switchToFrame_success path)
+    , buildTestCase "switchToParentFrame" (_test_switchToParentFrame_success path)
+    , buildTestCase "getWindowRect" (_test_getWindowRect_success)
+    , buildTestCase "setWindowRect" (_test_setWindowRect_success)
+    ,   ifHeadless TE.ignoreTest
+      $ buildTestCase "maximizeWindow" (_test_maximizeWindow_success)
+    ,   ifHeadless TE.ignoreTest
+      $ buildTestCase "minimizeWindow" (_test_minimizeWindow_success)
+    ,   ifHeadless TE.ignoreTest
+      $ buildTestCase "fullscreenWindow" (_test_fullscreenWindow_success)
+    , buildTestCase "findElement" (_test_findElement_success path)
+    , buildTestCase "findElements" (_test_findElements_success path)
+    , buildTestCase "findElementFromElement" (_test_findElementFromElement_success path)
+    , buildTestCase "findElementsFromElement" (_test_findElementsFromElement_success path)
+    , buildTestCase "getActiveElement" (_test_getActiveElement_success)
+    , buildTestCase "isElementSelected" (_test_isElementSelected_success path)
+    , buildTestCase "getElementAttribute" (_test_getElementAttribute_success path)
+    ,   ifDriverIs Chromedriver TE.ignoreTest
+      $ buildTestCase "getElementCssValue" (_test_getElementCssValue_success path)
+    , buildTestCase "getElementText" (_test_getElementText_success path)
+    , buildTestCase "getElementTagName" (_test_getElementTagName_success path)
+    ,   ifDriverIs Chromedriver TE.ignoreTest
+      $ buildTestCase "getElementRect" (_test_getElementRect_success path)
+    , buildTestCase "isElementEnabled" (_test_isElementEnabled_success path)
+    , buildTestCase "elementClick" (_test_elementClick_success path)
+    , buildTestCase "elementClear" (_test_elementClear_success path)
+    ,   ifDriverIs Chromedriver TE.ignoreTest
+      $ buildTestCase "elementSendKeys" (_test_elementSendKeys_success path)
+    , buildTestCase "getPageSource" (_test_getPageSource_success path)
+    , buildTestCase "getPageSourceStealth" (_test_getPageSourceStealth_success path)
+    , buildTestCase "getAllCookies" (_test_getAllCookies_success path)
+    ,   ifDriverIs Chromedriver TE.ignoreTest
+      $ buildTestCase "getNamedCookie" (_test_getNamedCookie_success path)
+    ,   ifDriverIs Chromedriver TE.ignoreTest
+      $ buildTestCase "deleteCookie" (_test_deleteCookie_success path)
+    , buildTestCase "deleteAllCookies" (_test_deleteAllCookies_success)
+    ,   ifDriverIs Chromedriver TE.ignoreTest
+      $ buildTestCase "performActions (keyboard)" (_test_performActions_keyboard_success)
+    ,   ifDriverIs Chromedriver TE.ignoreTest
+      $ buildTestCase "performActionsStealth (keyboard)" (_test_performActionsStealth_keyboard_success)
+    ,   ifDriverIs Chromedriver TE.ignoreTest
+      $ buildTestCase "releaseActions" (_test_releaseActions_success)
+    ,   ifDriverIs Chromedriver TE.ignoreTest
+      $ buildTestCase "dismissAlert" (_test_dismissAlert_success path)
+    ,   ifDriverIs Chromedriver TE.ignoreTest
+      $ buildTestCase "acceptAlert" (_test_acceptAlert_success path)
+    ,   ifDriverIs Chromedriver TE.ignoreTest
+      $ ifHeadless TE.ignoreTest
+      $ buildTestCase "getAlertText" (_test_getAlertText_success path)
+    ,   ifDriverIs Chromedriver TE.ignoreTest
+      $ buildTestCase "sendAlertText" (_test_sendAlertText_success path)
+    , buildTestCase "takeScreenshot" (_test_takeScreenshot_success path)
+    ,   ifDriverIs Chromedriver TE.ignoreTest
+      $ buildTestCase "takeElementScreenshot" (_test_takeElementScreenshot_success path)
     ]
 
 
 
 _test_sessionStatus_success
-  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
-_test_sessionStatus_success page _ =
+  :: FilePath -> WebDriver ()
+_test_sessionStatus_success page =
   let
     session = do
       navigateTo page
@@ -108,137 +106,137 @@ _test_sessionStatus_success page _ =
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_getTimeouts_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_getTimeouts_success _ =
+  :: WebDriver ()
+_test_getTimeouts_success =
   let
     session = do
       !timeouts <- getTimeouts
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_setTimeouts_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_setTimeouts_success _ =
+  :: WebDriver ()
+_test_setTimeouts_success =
   let
     session = do
       () <- setTimeouts emptyTimeoutConfig
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_navigateTo_success
-  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
-_test_navigateTo_success page _ =
+  :: FilePath -> WebDriver ()
+_test_navigateTo_success page =
   let
     session = do
       () <- navigateTo page
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_navigateToStealth_success
-  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
-_test_navigateToStealth_success page _ =
+  :: FilePath -> WebDriver ()
+_test_navigateToStealth_success page =
   let
     session = do
       () <- navigateToStealth page
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_getCurrentUrl_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_getCurrentUrl_success _ =
+  :: WebDriver ()
+_test_getCurrentUrl_success =
   let
     session = do
       !url <- getCurrentUrl
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_goBack_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_goBack_success _ =
+  :: WebDriver ()
+_test_goBack_success =
   let
     session = do
       () <- goBack
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_goForward_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_goForward_success _ =
+  :: WebDriver ()
+_test_goForward_success =
   let
     session = do
       () <- goForward
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_pageRefresh_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_pageRefresh_success _ =
+  :: WebDriver ()
+_test_pageRefresh_success =
   let
     session = do
       () <- pageRefresh
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_getTitle_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_getTitle_success _ =
+  :: WebDriver ()
+_test_getTitle_success =
   let
     session = do
       !title <- getTitle
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_getWindowHandle_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_getWindowHandle_success _ =
+  :: WebDriver ()
+_test_getWindowHandle_success =
   let
     session = do
       !handle <- getWindowHandle
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
@@ -247,8 +245,8 @@ _test_getWindowHandle_success _ =
 
 
 _test_switchToWindow_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_switchToWindow_success _ =
+  :: WebDriver ()
+_test_switchToWindow_success =
   let
     session = do
       hs <- getWindowHandles
@@ -259,13 +257,13 @@ _test_switchToWindow_success _ =
           assertSuccess "yay"
           return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_getWindowHandles_success
-  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
-_test_getWindowHandles_success page _ =
+  :: FilePath -> WebDriver ()
+_test_getWindowHandles_success page =
   let
     session = do
       navigateTo page
@@ -278,13 +276,13 @@ _test_getWindowHandles_success page _ =
           assertSuccess "yay"
           return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_switchToFrame_success
-  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
-_test_switchToFrame_success page _ =
+  :: FilePath -> WebDriver ()
+_test_switchToFrame_success page =
   let
     session = do
       navigateTo page
@@ -292,13 +290,13 @@ _test_switchToFrame_success page _ =
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_switchToParentFrame_success
-  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
-_test_switchToParentFrame_success page _ =
+  :: FilePath -> WebDriver ()
+_test_switchToParentFrame_success page =
   let
     session = do
       navigateTo page
@@ -306,26 +304,26 @@ _test_switchToParentFrame_success page _ =
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_getWindowRect_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_getWindowRect_success _ =
+  :: WebDriver ()
+_test_getWindowRect_success =
   let
     session = do
       !rect <- getWindowRect
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_setWindowRect_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_setWindowRect_success _ =
+  :: WebDriver ()
+_test_setWindowRect_success =
   let
     session = do
       !rect <- setWindowRect $ Rect
@@ -337,52 +335,52 @@ _test_setWindowRect_success _ =
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_maximizeWindow_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_maximizeWindow_success _ =
+  :: WebDriver ()
+_test_maximizeWindow_success =
   let
     session = do
       !rect <- maximizeWindow
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_minimizeWindow_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_minimizeWindow_success _ =
+  :: WebDriver ()
+_test_minimizeWindow_success =
   let
     session = do
       !rect <- minimizeWindow
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_fullscreenWindow_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_fullscreenWindow_success _ =
+  :: WebDriver ()
+_test_fullscreenWindow_success =
   let
     session = do
       !rect <- fullscreenWindow
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_findElement_success
-  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
-_test_findElement_success page _ =
+  :: FilePath -> WebDriver ()
+_test_findElement_success page =
   let
     session = do
       navigateTo page
@@ -394,13 +392,13 @@ _test_findElement_success page _ =
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_findElements_success
-  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
-_test_findElements_success page _ =
+  :: FilePath -> WebDriver ()
+_test_findElements_success page =
   let
     session = do
       navigateTo page
@@ -427,13 +425,13 @@ _test_findElements_success page _ =
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_findElementFromElement_success
-  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
-_test_findElementFromElement_success page _ =
+  :: FilePath -> WebDriver ()
+_test_findElementFromElement_success page =
   let
     session = do
       navigateTo page
@@ -446,13 +444,13 @@ _test_findElementFromElement_success page _ =
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_findElementsFromElement_success
-  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
-_test_findElementsFromElement_success page _ =
+  :: FilePath -> WebDriver ()
+_test_findElementsFromElement_success page =
   let
     session = do
       navigateTo page
@@ -480,26 +478,26 @@ _test_findElementsFromElement_success page _ =
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_getActiveElement_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_getActiveElement_success _ =
+  :: WebDriver ()
+_test_getActiveElement_success =
   let
     session = do
       !element <- getActiveElement
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_isElementSelected_success
-  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
-_test_isElementSelected_success page _ =
+  :: FilePath -> WebDriver ()
+_test_isElementSelected_success page =
   let
     session = do
       navigateTo page
@@ -508,13 +506,13 @@ _test_isElementSelected_success page _ =
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_getElementAttribute_success
-  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
-_test_getElementAttribute_success page _ =
+  :: FilePath -> WebDriver ()
+_test_getElementAttribute_success page =
   let
     session = do
       navigateTo page
@@ -523,7 +521,7 @@ _test_getElementAttribute_success page _ =
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
@@ -532,8 +530,8 @@ _test_getElementAttribute_success page _ =
 
 
 _test_getElementCssValue_success
-  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
-_test_getElementCssValue_success page _ =
+  :: FilePath -> WebDriver ()
+_test_getElementCssValue_success page =
   let
     session = do
       navigateTo page
@@ -544,13 +542,13 @@ _test_getElementCssValue_success page _ =
         _ -> assertFailure $ AssertionComment $ "expected 'none', got '" ++ text ++ "'"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_getElementText_success
-  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
-_test_getElementText_success page _ =
+  :: FilePath -> WebDriver ()
+_test_getElementText_success page =
   let
     session = do
       navigateTo page
@@ -559,13 +557,13 @@ _test_getElementText_success page _ =
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_getElementTagName_success
-  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
-_test_getElementTagName_success page _ =
+  :: FilePath -> WebDriver ()
+_test_getElementTagName_success page =
   let
     session = do
       navigateTo page
@@ -576,13 +574,13 @@ _test_getElementTagName_success page _ =
         _ -> assertFailure $ AssertionComment $ "expected 'div', got '" ++ text ++ "'"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_getElementRect_success
-  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
-_test_getElementRect_success page _ =
+  :: FilePath -> WebDriver ()
+_test_getElementRect_success page =
   let
     session = do
       navigateTo page
@@ -591,13 +589,13 @@ _test_getElementRect_success page _ =
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_isElementEnabled_success
-  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
-_test_isElementEnabled_success page _ =
+  :: FilePath -> WebDriver ()
+_test_isElementEnabled_success page =
   let
     session = do
       navigateTo page
@@ -606,13 +604,13 @@ _test_isElementEnabled_success page _ =
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_elementClick_success
-  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
-_test_elementClick_success page _ =
+  :: FilePath -> WebDriver ()
+_test_elementClick_success page =
   let
     session = do
       navigateTo page
@@ -621,13 +619,13 @@ _test_elementClick_success page _ =
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_elementClear_success
-  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
-_test_elementClear_success page _ =
+  :: FilePath -> WebDriver ()
+_test_elementClear_success page =
   let
     session = do
       navigateTo page
@@ -636,13 +634,13 @@ _test_elementClear_success page _ =
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_elementSendKeys_success
-  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
-_test_elementSendKeys_success page _ =
+  :: FilePath -> WebDriver ()
+_test_elementSendKeys_success page =
   let
     session = do
       navigateTo page
@@ -651,13 +649,13 @@ _test_elementSendKeys_success page _ =
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_getPageSource_success
-  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
-_test_getPageSource_success page _ =
+  :: FilePath -> WebDriver ()
+_test_getPageSource_success page =
   let
     session = do
       navigateTo page
@@ -665,13 +663,13 @@ _test_getPageSource_success page _ =
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_getPageSourceStealth_success
-  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
-_test_getPageSourceStealth_success page _ =
+  :: FilePath -> WebDriver ()
+_test_getPageSourceStealth_success page =
   let
     session = do
       navigateTo page
@@ -679,7 +677,7 @@ _test_getPageSourceStealth_success page _ =
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
@@ -692,8 +690,8 @@ _test_getPageSourceStealth_success page _ =
 
 
 _test_getAllCookies_success
-  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
-_test_getAllCookies_success page _ =
+  :: FilePath -> WebDriver ()
+_test_getAllCookies_success page =
   let
     session = do
       navigateTo page
@@ -703,13 +701,13 @@ _test_getAllCookies_success page _ =
         (!x):_ -> assertFailure "unexpected cookie"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_getNamedCookie_success
-  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
-_test_getNamedCookie_success page _ =
+  :: FilePath -> WebDriver ()
+_test_getNamedCookie_success page =
   let
     session = do
       navigateTo page
@@ -719,7 +717,7 @@ _test_getNamedCookie_success page _ =
       assertEqual (_cookieValue cookie) (Just "fakeValue") "cookie name"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
@@ -729,8 +727,8 @@ _test_getNamedCookie_success page _ =
 
 
 _test_deleteCookie_success
-  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
-_test_deleteCookie_success page _ =
+  :: FilePath -> WebDriver ()
+_test_deleteCookie_success page =
   let
     session = do
       navigateTo page
@@ -739,26 +737,26 @@ _test_deleteCookie_success page _ =
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_deleteAllCookies_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_deleteAllCookies_success _ =
+  :: WebDriver ()
+_test_deleteAllCookies_success =
   let
     session = do
       () <- deleteAllCookies
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_performActions_keyboard_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_performActions_keyboard_success _ =
+  :: WebDriver ()
+_test_performActions_keyboard_success =
   let
     session = do
       () <- performActions [ press UnidentifiedKey ]
@@ -801,39 +799,39 @@ _test_performActions_keyboard_success _ =
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_performActionsStealth_keyboard_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_performActionsStealth_keyboard_success _ =
+  :: WebDriver ()
+_test_performActionsStealth_keyboard_success =
   let
     session = do
       () <- performActionsStealth [ press EnterKey ]
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_releaseActions_success
-  :: (Effectful m, Typeable m) => m () -> WebDriver m ()
-_test_releaseActions_success _ =
+  :: WebDriver ()
+_test_releaseActions_success =
   let
     session = do
       () <- releaseActions
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_dismissAlert_success
-  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
-_test_dismissAlert_success page _ =
+  :: FilePath -> WebDriver ()
+_test_dismissAlert_success page =
   let
     session = do
       navigateTo page
@@ -848,13 +846,13 @@ _test_dismissAlert_success page _ =
       assertSuccess "yay prompt"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_acceptAlert_success
-  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
-_test_acceptAlert_success page _ =
+  :: FilePath -> WebDriver ()
+_test_acceptAlert_success page =
   let
     session = do
       navigateTo page
@@ -869,13 +867,13 @@ _test_acceptAlert_success page _ =
       assertSuccess "yay prompt"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_getAlertText_success
-  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
-_test_getAlertText_success page _ =
+  :: FilePath -> WebDriver ()
+_test_getAlertText_success page =
   let
     session = do
       navigateTo page
@@ -899,13 +897,13 @@ _test_getAlertText_success page _ =
       acceptAlert
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_sendAlertText_success
-  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
-_test_sendAlertText_success page _ =
+  :: FilePath -> WebDriver ()
+_test_sendAlertText_success page =
   let
     session = do
       navigateTo page
@@ -914,13 +912,13 @@ _test_sendAlertText_success page _ =
       assertSuccess "yay prompt"
       return ()
 
-  in catchError session unexpectedError
+  in  catch session unexpectedError
 
 
 
 _test_takeScreenshot_success
-  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
-_test_takeScreenshot_success page _ =
+  :: FilePath -> WebDriver ()
+_test_takeScreenshot_success page =
   let
     session = do
       navigateTo page
@@ -928,13 +926,13 @@ _test_takeScreenshot_success page _ =
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in catch session unexpectedError
 
 
 
 _test_takeElementScreenshot_success
-  :: (Effectful m, Typeable m) => FilePath -> m () -> WebDriver m ()
-_test_takeElementScreenshot_success page _ =
+  :: FilePath -> WebDriver ()
+_test_takeElementScreenshot_success page =
   let
     session = do
       navigateTo page
@@ -943,4 +941,4 @@ _test_takeElementScreenshot_success page _ =
       assertSuccess "yay"
       return ()
 
-  in catchError session unexpectedError
+  in catch session unexpectedError

@@ -1,5 +1,5 @@
 {- |
-Module      : Web.Api.Http.Assert
+Module      : Web.Api.WebDriver.Assert
 Description : Mini language for making falsifiable assertions.
 Copyright   : 2018, Automattic, Inc.
 License     : GPL-3
@@ -10,9 +10,8 @@ Portability : POSIX
 In this module we define assertions as first class objects and some helper functions for creating and manipulating them.
 -}
 
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE OverloadedStrings #-}
-module Web.Api.Http.Assert (
+{-# LANGUAGE OverloadedStrings, RecordWildCards #-}
+module Web.Api.WebDriver.Assert (
   -- * Assertions
     Assertion()
   , success
@@ -68,6 +67,7 @@ data Assertion = Assertion
   } deriving (Eq, Show)
 
 
+
 -- | Human-readable statement which may be true or false.
 newtype AssertionStatement = AssertionStatement
   { theAssertionStatement :: String
@@ -78,6 +78,7 @@ instance Show AssertionStatement where
 
 instance IsString AssertionStatement where
   fromString = AssertionStatement
+
 
 
 -- | Human-readable explanation for why an assertion is made.
@@ -92,6 +93,7 @@ instance IsString AssertionComment where
   fromString = AssertionComment
 
 
+
 -- | Type representing the result (success or failure) of an evaluated assertion.
 data AssertionResult
   = AssertSuccess | AssertFailure
@@ -100,6 +102,7 @@ data AssertionResult
 -- | Detects successful assertions.
 isSuccess :: Assertion -> Bool
 isSuccess a = AssertSuccess == assertionResult a
+
 
 
 -- | Basic string representation of an assertion.
