@@ -23,7 +23,6 @@ addons:
       - libgmp-dev
       - unzip
       - xvfb
-      - dbus-x11
 
 
 before_install:
@@ -67,5 +66,4 @@ before_script:
 
 
 script:
-- dbus-launch
 - stack --no-terminal test --haddock --no-haddock-deps
