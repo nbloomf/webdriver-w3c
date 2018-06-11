@@ -8,7 +8,6 @@ Hello, and welcome to the wonderful world of browser automation with WebDriver a
 > {-# LANGUAGE OverloadedStrings #-}
 > module Main where
 > 
-> import Web.Api.Http
 > import Web.Api.WebDriver
 > import Test.Tasty.WebDriver
 > 
@@ -57,13 +56,13 @@ My First Browser Automation
 
 Ok! You've got your WebDriver proxy (geckodriver) running in one terminal window, and ghci running in another. Let's start with a simple example to illustrate what we can do, then explain how it works. Read this code block, even if the syntax is meaningless.
 
-> do_a_barrel_roll :: WebDriver IO ()
+> do_a_barrel_roll :: WebDriver ()
 > do_a_barrel_roll = do
 >   fullscreenWindow
 >   navigateTo "https://www.google.com"
 >   performActions [typeString "do a barrel roll"]
 >   performActions [press EnterKey]
->   mPauseInSeconds 7
+>   wait 700000
 >   return ()
 
 Without running that code -- and maybe without being proficient in Haskell -- what do you think it does?
@@ -78,13 +77,13 @@ followed by (enter). You should see a Firefox window open, go fullscreen, and se
 
 > example1 :: IO ()
 > example1 = do
->   runSession defaultWebDriverConfig
+>   execWebDriver defaultWDConfig
 >     (runIsolated defaultFirefoxCapabilities do_a_barrel_roll)
 >   return ()
 
 Let's break down what just happened.
 
-1. `do_a_barrel_roll` is a *WebDriver session*, expressed in the `WebDriver IO` DSL. It's a high-level description for a sequence of browser actions: in this case, "make the window full screen", "navigate to google.com", and so on.
+1. `do_a_barrel_roll` is a *WebDriver session*, expressed in the `WebDriver` DSL. It's a high-level description for a sequence of browser actions: in this case, "make the window full screen", "navigate to google.com", and so on.
 2. `runIsolated` takes a WebDriver session and runs it in a fresh browser instance. The parameters of this instance are specified in `defaultFirefoxCapabilities`.
 3. `runSession` takes a WebDriver session and carries out the steps, using some options specified in `defaultWebDriverConfig`.
 
@@ -115,7 +114,7 @@ It's expected that you're probably interested in using browser automation to run
 
 In addition to the usual browser action commands, you can sprinkle your `WebDriver` sessions with *assertions*. Here's an example.
 
-> what_page_is_this :: WebDriver IO ()
+> what_page_is_this :: WebDriver ()
 > what_page_is_this = do
 >   navigateTo "https://www.google.com"
 >   title <- getTitle
@@ -132,9 +131,9 @@ This is `example2`:
 
 > example2 :: IO ()
 > example2 = do
->   (_, result) <- debugSession defaultWebDriverConfig
+>   (_, result) <- debugWebDriver defaultWDConfig
 >     (runIsolated defaultFirefoxCapabilities what_page_is_this)
->   printSummary $ summarize result
+>   printSummary result
 >   return ()
 
 Here's what happened:
@@ -155,7 +154,7 @@ Alright. If you're writing e2e tests, you probably want to write a *lot* of e2e 
 
 Suppose we've got two WebDriver tests. These are pretty dweeby just for illustration's sake.
 
-> back_button :: WebDriver IO ()
+> back_button :: WebDriver ()
 > back_button = do
 >   navigateTo "https://www.google.com"
 >   navigateTo "https://wordpress.com"
@@ -164,7 +163,7 @@ Suppose we've got two WebDriver tests. These are pretty dweeby just for illustra
 >   assertEqual title "Google" "Behavior of 'back' button from WordPress homepage"
 >   return ()
 > 
-> refresh_page :: WebDriver IO ()
+> refresh_page :: WebDriver ()
 > refresh_page = do
 >   navigateTo "https://www.mozilla.org"
 >   pageRefresh
@@ -191,8 +190,7 @@ in the interpreter. Here's what `example3` looks like:
 > example3 = do
 >   SE.setEnv "TASTY_NUM_THREADS" "1"
 >   defaultMain
->     $ localOption (LogHandle $ Path "/dev/null")
->     $ localOption (AssertionLogHandle $ Path "/dev/null")
+>     $ localOption (SilentLog)
 >     $ test_suite
 
 Here's what happened:

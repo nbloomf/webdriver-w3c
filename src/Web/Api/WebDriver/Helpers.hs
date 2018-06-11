@@ -35,41 +35,41 @@ import qualified Data.ByteString.Lazy.Char8 as BS
 import qualified Data.Digest.Pure.SHA as SHA
   ( showDigest, sha1 )
 
-import Web.Api.Http
+import Web.Api.WebDriver.Endpoints
 import Web.Api.WebDriver.Monad
 import Web.Api.WebDriver.Types
 import Web.Api.WebDriver.Types.Keyboard
-import Web.Api.WebDriver.Endpoints
 
 
 
 -- | If a WebDriver session ends without issuing a delete session command, then the server keeps its session state alive. `cleanupOnError` catches errors and ensures that a `deleteSession` request is sent.
 cleanupOnError
-  :: (Effectful m)
-  => WebDriver m a -- ^ `WebDriver` session that may throw errors
-  -> WebDriver m a
-cleanupOnError x = catchError x (\e -> deleteSession >> throwError e)
+  :: WebDriver a -- ^ `WebDriver` session that may throw errors
+  -> WebDriver a
+cleanupOnError x = do
+  comment "Error detected! Cleaning up..."
+  catch x $ \e ->
+    deleteSession >> throwError e
+
 
 
 -- | Run a WebDriver computation in an isolated browser session. Uses `cleanupOnError` to ensure the session is deleted on the server.
 runIsolated
-  :: (Effectful m)
-  => Capabilities
-  -> WebDriver m a
-  -> WebDriver m ()
+  :: Capabilities
+  -> WebDriver a
+  -> WebDriver ()
 runIsolated caps theSession = cleanupOnError $ do
   session_id <- newSession caps
-  getState >>= (putState . updateClientState (setSessionId (Just session_id)))
+  modifyState $ setSessionId (Just session_id)
   theSession
   deleteSession
-  getState >>= (putState . updateClientState (setSessionId Nothing))
+  modifyState $ setSessionId Nothing
 
 
 -- | Save all cookies for the current domain to a file.
 stashCookies
-  :: (Effectful m)
-  => String -- ^ Passed through SHA1, and the digest is used as the filename.
-  -> WebDriver m ()
+  :: String -- ^ Passed through SHA1, and the digest is used as the filename.
+  -> WebDriver ()
 stashCookies string =
   let file = SHA.showDigest $ SHA.sha1 $ BS.pack string in
   getAllCookies >>= writeCookieFile file
@@ -77,9 +77,8 @@ stashCookies string =
 
 -- | Load cookies from a file saved with `stashCookies`. Returns `False` if the cookie file is missing or cannot be read.
 loadCookies
-  :: (Effectful m)
-  => String -- ^ Passed through SHA1, and the digest is used as the filename.
-  -> WebDriver m Bool
+  :: String -- ^ Passed through SHA1, and the digest is used as the filename.
+  -> WebDriver Bool
 loadCookies string = do
   let file = SHA.showDigest $ SHA.sha1 $ BS.pack string
   contents <- readCookieFile file
@@ -92,30 +91,28 @@ loadCookies string = do
 
 -- | Write cookies to a file under the secrets path. 
 writeCookieFile
-  :: (Effectful m)
-  => FilePath -- ^ File path; relative to @$SECRETS_PATH/cookies/@
+  :: FilePath -- ^ File path; relative to @$SECRETS_PATH/cookies/@
   -> [Cookie]
-  -> WebDriver m ()
+  -> WebDriver ()
 writeCookieFile file cookies = do
-  path <- getEnvironment >>= theClientEnvironment >>= theSecretsPath
+  path <- fromEnv (_secretsPath . _userEnv)
   let fullpath = path ++ "/cookies/" ++ file
   writeFilePath fullpath (Aeson.encode cookies)
 
 
 -- | Read cookies from a file stored with `writeCookieFile`. Returns `Nothing` if the file does not exist.
 readCookieFile
-  :: (Effectful m)
-  => FilePath -- ^ File path; relative to @$SECRETS_PATH/cookies/@
-  -> WebDriver m (Maybe [Cookie])
+  :: FilePath -- ^ File path; relative to @$SECRETS_PATH/cookies/@
+  -> WebDriver (Maybe [Cookie])
 readCookieFile file = do
-  path <- getEnvironment >>= theClientEnvironment >>= theSecretsPath
+  path <- fromEnv (_secretsPath . _userEnv)
   let fullpath = path ++ "/cookies/" ++ file
-  cookieFileExists <- mFileExists fullpath
+  cookieFileExists <- fileExists fullpath
   if cookieFileExists
     then readFilePath fullpath
-      >>= mParseJson
-      >>= constructFromJSON
-      >>= mapM constructFromJSON
+      >>= parseJson
+      >>= constructFromJson
+      >>= mapM constructFromJson
       >>= (return . Just)
     else return Nothing
 
@@ -149,19 +146,17 @@ typeString x = emptyAction
 
 -- | Open a new browser instance; for use with `httpShell`
 openSession
-  :: (Effectful m)
-  => Capabilities
-  -> WebDriver m ()
+  :: Capabilities
+  -> WebDriver ()
 openSession caps = do
   session_id <- newSession caps
-  getState >>= (putState . updateClientState (setSessionId (Just session_id)))
+  modifyState $ setSessionId (Just session_id)
   return ()
 
 -- | Close the current browser instance; for use with `httpShell`.
 closeSession
-  :: (Effectful m)
-  => WebDriver m ()
+  :: WebDriver ()
 closeSession = do
   deleteSession
-  getState >>= (putState . updateClientState (setSessionId Nothing))
+  modifyState $ setSessionId Nothing
   return ()

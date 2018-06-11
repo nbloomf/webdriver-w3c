@@ -24,26 +24,20 @@ import qualified Network.Wreq.Session as WreqS
 import Codec.Picture
 import Codec.Picture.Saving
 
-import Web.Api.Http
-import Web.Api.Http.Effects.Test.Mock
-import Web.Api.Http.Effects.Test.Server
+import Control.Monad.Script.Http.MockIO
+
 import Web.Api.WebDriver
 import Web.Api.WebDriver.Monad.Test.Server.State
 import Web.Api.WebDriver.Monad.Test.Server.Page
 
-instance Effectful (MockIO WebDriverServerState) where
-  toIO x = do
-    session <- WreqS.newSession
-    let
-      init = mockSt defaultWebDriverServer
-        session defaultWebDriverServerState
 
-      (a,_) = runMockIO x init
-    return a
 
-defaultWebDriverServer :: MockServer WebDriverServerState
-defaultWebDriverServer = MockServer
-  { __http_get = \url -> case splitUrl $ stripScheme url of
+defaultWebDriverServer :: MockWorld WebDriverServerState
+defaultWebDriverServer = MockWorld
+  { _files = []
+  , _time = epoch
+  , _serverState = MockServer defaultWebDriverServerState
+  , _httpGet = \url -> case splitUrl $ stripScheme url of
       {- Status -}
       [_,"status"] ->
         get_session_id_status
@@ -135,7 +129,7 @@ defaultWebDriverServer = MockServer
       _ -> error $ "defaultWebDriverServer: get url: " ++ url ++
         "' parsed as " ++ (show $ splitUrl $ stripScheme url)
 
-  , __http_post = \url payload -> case splitUrl $ stripScheme url of
+  , _httpPost = \url payload -> case splitUrl $ stripScheme url of
       {- New Session -}
       [_,"session"] ->
         post_session
@@ -247,7 +241,7 @@ defaultWebDriverServer = MockServer
       _ -> error $ "defaultWebDriverServer: post url: '" ++ url ++
         "' parsed as " ++ (show $ splitUrl $ stripScheme url)
 
-  , __http_delete = \url -> case splitUrl $ stripScheme url of
+  , _httpDelete = \url -> case splitUrl $ stripScheme url of
       {- Delete Session -}
       [_,"session",session_id] ->
         delete_session_id session_id
@@ -295,13 +289,13 @@ splitUrl = unfoldr foo
 {- New Session -}
 
 post_session
-  :: MockResponse WebDriverServerState HttpResponse
+  :: MockNetwork WebDriverServerState HttpResponse
 post_session = do
-  st <- getMockResponseState
+  st <- getMockServer
   case _create_session st of
-    Nothing -> errorMockResponseState _err_session_not_created
+    Nothing -> errorMockNetwork _err_session_not_created
     Just (_id, _st) -> do
-      mutateMockResponseState (const _st)
+      modifyMockServer (const _st)
       return $ _success_with_value $ object
         [ ("sessionId", String $ pack _id)
         ]
@@ -311,7 +305,7 @@ post_session = do
 
 delete_session_id
   :: String
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 delete_session_id session_id = do
   verifyIsActiveSession session_id
   closeTheSession session_id
@@ -321,7 +315,7 @@ delete_session_id session_id = do
 {- Status -}
 
 get_session_id_status
-  :: MockResponse WebDriverServerState HttpResponse
+  :: MockNetwork WebDriverServerState HttpResponse
 get_session_id_status = do
   return $ _success_with_value $ object
     [ ("ready", Bool True)
@@ -333,7 +327,7 @@ get_session_id_status = do
 
 get_session_id_timeouts
   :: String
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 get_session_id_timeouts session_id = do
   verifyIsActiveSession session_id
   return $ _success_with_value $ object
@@ -348,13 +342,13 @@ get_session_id_timeouts session_id = do
 post_session_id_timeouts
   :: String
   -> LB.ByteString
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 post_session_id_timeouts session_id !payload = do
   verifyIsActiveSession session_id
   case decode payload of
-    Nothing -> errorMockResponseState (_err_invalid_argument "Timeouts did not parse")
+    Nothing -> errorMockNetwork (_err_invalid_argument "Timeouts did not parse")
     Just (Object m) -> return _success_with_empty_object
-    Just _ -> errorMockResponseState (_err_invalid_argument "Timeouts must be an object")
+    Just _ -> errorMockNetwork (_err_invalid_argument "Timeouts must be an object")
 
 
 {- Navigate To -}
@@ -362,15 +356,15 @@ post_session_id_timeouts session_id !payload = do
 post_session_id_url
   :: String
   -> LB.ByteString
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 post_session_id_url !session_id !payload = do
   verifyIsActiveSession session_id
   url <- getAProperty "url" payload
-  st <- getMockResponseState
+  st <- getMockServer
   case _load_page url st of
-    Nothing -> errorMockResponseState _err_unknown_error
+    Nothing -> errorMockNetwork _err_unknown_error
     Just _st -> do
-      mutateMockResponseState (const _st)
+      modifyMockServer (const _st)
       return _success_with_empty_object
 
 
@@ -378,10 +372,10 @@ post_session_id_url !session_id !payload = do
 
 get_session_id_url
   :: String
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 get_session_id_url session_id = do
   verifyIsActiveSession session_id
-  url <- fmap _get_current_url $ getMockResponseState
+  url <- fmap _get_current_url $ getMockServer
   return $ _success_with_value $ String $ pack url
 
 
@@ -389,10 +383,10 @@ get_session_id_url session_id = do
 
 post_session_id_back
   :: String
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 post_session_id_back !session_id = do
   verifyIsActiveSession session_id
-  mutateMockResponseState _go_back
+  modifyMockServer _go_back
   return _success_with_empty_object
 
 
@@ -400,10 +394,10 @@ post_session_id_back !session_id = do
 
 post_session_id_forward
   :: String
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 post_session_id_forward !session_id = do
   verifyIsActiveSession session_id
-  mutateMockResponseState _go_forward
+  modifyMockServer _go_forward
   return _success_with_empty_object
 
 
@@ -411,7 +405,7 @@ post_session_id_forward !session_id = do
 
 post_session_id_refresh
   :: String
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 post_session_id_refresh !session_id = do
   verifyIsActiveSession session_id
   return _success_with_empty_object
@@ -421,7 +415,7 @@ post_session_id_refresh !session_id = do
 
 get_session_id_title
   :: String
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 get_session_id_title session_id = do
   verifyIsActiveSession session_id
   return $ _success_with_value $ String $ pack "fake title"
@@ -431,7 +425,7 @@ get_session_id_title session_id = do
 
 get_session_id_window
   :: String
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 get_session_id_window session_id = do
   verifyIsActiveSession session_id
   return $ _success_with_value $ String "window-1"
@@ -441,7 +435,7 @@ get_session_id_window session_id = do
 
 delete_session_id_window
   :: String
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 delete_session_id_window session_id = do
   verifyIsActiveSession session_id
   return $ _success_with_value $ toJSONList [String "window-1"]
@@ -452,7 +446,7 @@ delete_session_id_window session_id = do
 post_session_id_window
   :: String
   -> LB.ByteString
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 post_session_id_window session_id payload = do
   verifyIsActiveSession session_id
   return _success_with_empty_object
@@ -462,7 +456,7 @@ post_session_id_window session_id payload = do
 
 get_session_id_window_handles
   :: String
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 get_session_id_window_handles session_id = do
   verifyIsActiveSession session_id
   return $ _success_with_value $ toJSONList [ String "handle-id" ]
@@ -473,7 +467,7 @@ get_session_id_window_handles session_id = do
 post_session_id_frame
   :: String
   -> LB.ByteString
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 post_session_id_frame session_id !payload = do
   verifyIsActiveSession session_id
   return _success_with_empty_object
@@ -483,7 +477,7 @@ post_session_id_frame session_id !payload = do
 
 post_session_id_frame_parent
   :: String
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 post_session_id_frame_parent session_id = do
   verifyIsActiveSession session_id
   return _success_with_empty_object
@@ -493,7 +487,7 @@ post_session_id_frame_parent session_id = do
 
 get_session_id_window_rect
   :: String
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 get_session_id_window_rect session_id = do
   verifyIsActiveSession session_id
   return $ _success_with_value $ object
@@ -509,7 +503,7 @@ get_session_id_window_rect session_id = do
 post_session_id_window_rect
   :: String
   -> LB.ByteString
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 post_session_id_window_rect session_id payload = do
   verifyIsActiveSession session_id
   return $ _success_with_value $ object
@@ -524,7 +518,7 @@ post_session_id_window_rect session_id payload = do
 
 post_session_id_window_maximize
   :: String
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 post_session_id_window_maximize !session_id = do
   verifyIsActiveSession session_id
   return $ _success_with_value $ object
@@ -539,7 +533,7 @@ post_session_id_window_maximize !session_id = do
 
 post_session_id_window_minimize
   :: String
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 post_session_id_window_minimize !session_id = do
   verifyIsActiveSession session_id
   return $ _success_with_value $ object
@@ -554,7 +548,7 @@ post_session_id_window_minimize !session_id = do
 
 post_session_id_window_fullscreen
   :: String
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 post_session_id_window_fullscreen !session_id = do
   verifyIsActiveSession session_id
   return $ _success_with_value $ object
@@ -570,7 +564,7 @@ post_session_id_window_fullscreen !session_id = do
 post_session_id_element
   :: String
   -> LB.ByteString
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 post_session_id_element session_id payload = do
   verifyIsActiveSession session_id
   strategy <- getAProperty "using" payload
@@ -578,9 +572,9 @@ post_session_id_element session_id payload = do
     "css selector" -> do
       val <- getAProperty "value" payload
       sel <- parseCssSelector val
-      doc <- fmap (contents . _current_page) getMockResponseState
+      doc <- fmap (contents . _current_page) getMockServer
       case cssMatchDocument sel doc of
-        [] -> errorMockResponseState _err_no_such_element
+        [] -> errorMockNetwork _err_no_such_element
         (d:_) -> do
           return $ _success_with_value $ object
             [ ("element-6066-11e4-a52e-4f735466cecf", String (pack $ elementId d))
@@ -596,7 +590,7 @@ post_session_id_element session_id payload = do
 post_session_id_elements
   :: String
   -> LB.ByteString
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 post_session_id_elements session_id payload = do
   verifyIsActiveSession session_id
   return $ _success_with_value $ toJSONList [object
@@ -610,7 +604,7 @@ post_session_id_element_id_element
   :: String
   -> String
   -> LB.ByteString
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 post_session_id_element_id_element session_id element_id payload = do
   verifyIsActiveSession session_id
   return $ _success_with_value $ object
@@ -624,7 +618,7 @@ post_session_id_element_id_elements
   :: String
   -> String
   -> LB.ByteString
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 post_session_id_element_id_elements session_id element_id payload = do
   verifyIsActiveSession session_id
   return $ _success_with_value $ toJSONList [object
@@ -636,7 +630,7 @@ post_session_id_element_id_elements session_id element_id payload = do
 
 get_session_id_element_active
   :: String
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 get_session_id_element_active session_id = do
   verifyIsActiveSession session_id
   return $ _success_with_value $ object
@@ -649,7 +643,7 @@ get_session_id_element_active session_id = do
 get_session_id_element_id_selected
   :: String
   -> String
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 get_session_id_element_id_selected session_id element_id = do
   verifyIsActiveSession session_id
   return $ _success_with_value $ Bool True
@@ -661,7 +655,7 @@ get_session_id_element_id_attribute_name
   :: String
   -> String
   -> String
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 get_session_id_element_id_attribute_name session_id element_id name = do
   verifyIsActiveSession session_id
   return $ _success_with_value $ String "foo"
@@ -672,7 +666,7 @@ get_session_id_element_id_css_name
   :: String
   -> String
   -> String
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 get_session_id_element_id_css_name session_id element_id name = do
   verifyIsActiveSession session_id
   return $ _success_with_value $ String "none"
@@ -683,7 +677,7 @@ get_session_id_element_id_css_name session_id element_id name = do
 get_session_id_element_id_text
   :: String
   -> String
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 get_session_id_element_id_text session_id element_id = do
   verifyIsActiveSession session_id
   return $ _success_with_value $ String "foo"
@@ -694,7 +688,7 @@ get_session_id_element_id_text session_id element_id = do
 get_session_id_element_id_name
   :: String
   -> String
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 get_session_id_element_id_name session_id element_id = do
   verifyIsActiveSession session_id
   doc <- getElementFromId element_id
@@ -706,7 +700,7 @@ get_session_id_element_id_name session_id element_id = do
 get_session_id_element_id_rect
   :: String
   -> String
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 get_session_id_element_id_rect !session_id !element_id = do
   verifyIsActiveSession session_id
   return $ _success_with_value $ object
@@ -719,7 +713,7 @@ get_session_id_element_id_rect !session_id !element_id = do
 get_session_id_element_id_enabled
   :: String
   -> String
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 get_session_id_element_id_enabled session_id element_id = do
   verifyIsActiveSession session_id
   return $ _success_with_value $ Bool True
@@ -727,7 +721,7 @@ get_session_id_element_id_enabled session_id element_id = do
 post_session_id_element_id_click
   :: String
   -> String
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 post_session_id_element_id_click session_id element_id = do
   verifyIsActiveSession session_id
   return _success_with_empty_object
@@ -738,15 +732,15 @@ post_session_id_element_id_click session_id element_id = do
 post_session_id_element_id_clear
   :: String
   -> String
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 post_session_id_element_id_clear session_id element_id = do
   verifyIsActiveSession session_id
   doc <- getElementFromId element_id
   case doc of
-    Text _ -> errorMockResponseState _err_invalid_element_state
+    Text _ -> errorMockNetwork _err_invalid_element_state
     d -> if tagIsClearable (tag d)
       then return _success_with_empty_object
-      else errorMockResponseState _err_invalid_element_state
+      else errorMockNetwork _err_invalid_element_state
 
 
 {- Element Send Keys -}
@@ -755,7 +749,7 @@ post_session_id_element_id_value
   :: String
   -> String
   -> LB.ByteString
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 post_session_id_element_id_value session_id element_id payload = do
   verifyIsActiveSession session_id
   return _success_with_empty_object
@@ -765,7 +759,7 @@ post_session_id_element_id_value session_id element_id payload = do
 
 get_session_id_source
   :: String
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 get_session_id_source session_id = do
   verifyIsActiveSession session_id
   return $ _success_with_value $ String "the source"
@@ -779,7 +773,7 @@ get_session_id_source session_id = do
 
 get_session_id_cookie
   :: String
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 get_session_id_cookie session_id = do
   verifyIsActiveSession session_id
   return $ _success_with_value $ Array $ V.fromList []
@@ -789,7 +783,7 @@ get_session_id_cookie session_id = do
 
 get_session_id_cookie_name
   :: String
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 get_session_id_cookie_name session_id = do
   verifyIsActiveSession session_id
   return $ _success_with_value $ toJSON $ emptyCookie
@@ -800,7 +794,7 @@ get_session_id_cookie_name session_id = do
 post_session_id_cookie
   :: String
   -> LB.ByteString
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 post_session_id_cookie session_id payload = do
   verifyIsActiveSession session_id
   return _success_with_empty_object
@@ -808,14 +802,14 @@ post_session_id_cookie session_id payload = do
 delete_session_id_cookie_name
   :: String
   -> String
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 delete_session_id_cookie_name session_id name = do
   verifyIsActiveSession session_id
   return _success_with_empty_object
 
 delete_session_id_cookie
   :: String
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 delete_session_id_cookie session_id = do
   verifyIsActiveSession session_id
   return _success_with_empty_object
@@ -826,14 +820,14 @@ delete_session_id_cookie session_id = do
 post_session_id_actions
   :: String
   -> LB.ByteString
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 post_session_id_actions !session_id payload = do
   verifyIsActiveSession session_id
   return _success_with_empty_object
 
 delete_session_id_actions
   :: String
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 delete_session_id_actions !session_id = do
   verifyIsActiveSession session_id
   return _success_with_empty_object
@@ -843,7 +837,7 @@ delete_session_id_actions !session_id = do
 
 post_session_id_alert_dismiss
   :: String
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 post_session_id_alert_dismiss session_id = do
   verifyIsActiveSession session_id
   return _success_with_empty_object
@@ -853,7 +847,7 @@ post_session_id_alert_dismiss session_id = do
 
 post_session_id_alert_accept
   :: String
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 post_session_id_alert_accept session_id = do
   verifyIsActiveSession session_id
   return _success_with_empty_object
@@ -863,7 +857,7 @@ post_session_id_alert_accept session_id = do
 
 get_session_id_alert_text
   :: String
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 get_session_id_alert_text session_id = do
   verifyIsActiveSession session_id
   return $ _success_with_value $ String "WOO!!"
@@ -873,7 +867,7 @@ get_session_id_alert_text session_id = do
 
 post_session_id_alert_text
   :: String
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 post_session_id_alert_text session_id = do
   verifyIsActiveSession session_id
   return _success_with_empty_object
@@ -883,7 +877,7 @@ post_session_id_alert_text session_id = do
 
 get_session_id_screenshot
   :: String
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 get_session_id_screenshot !session_id = do
   let
     black :: Int -> Int -> PixelRGB8
@@ -904,7 +898,7 @@ get_session_id_screenshot !session_id = do
 get_session_id_element_id_screenshot
   :: String
   -> String
-  -> MockResponse WebDriverServerState HttpResponse
+  -> MockNetwork WebDriverServerState HttpResponse
 get_session_id_element_id_screenshot session_id element_id = do
   let
     black :: Int -> Int -> PixelRGB8
@@ -930,7 +924,7 @@ _success_with_empty_object = _success_with_value $ object []
 
 _success_with_value :: Value -> HttpResponse
 _success_with_value v =
-  _200_Ok $ encode $ object [ ("value", v ) ]
+  _200ok $ encode $ object [ ("value", v ) ]
 
 
 
@@ -1003,29 +997,29 @@ _err_unknown_error =
 
 
 
-parseCssSelector :: String -> MockResponse WebDriverServerState CssSelector
+parseCssSelector :: String -> MockNetwork WebDriverServerState CssSelector
 parseCssSelector str = case parseCss str of
-  Left err -> errorMockResponseState (_err_invalid_argument $ show err)
+  Left err -> errorMockNetwork (_err_invalid_argument $ show err)
   Right x -> return x
 
-verifyIsActiveSession :: String -> MockResponse WebDriverServerState ()
+verifyIsActiveSession :: String -> MockNetwork WebDriverServerState ()
 verifyIsActiveSession session_id =
-  checkMockResponseState (_is_active_session session_id) _err_invalid_session_id
+  checkMockServer (_is_active_session session_id) _err_invalid_session_id
 
-getElementFromId :: String -> MockResponse WebDriverServerState Document
+getElementFromId :: String -> MockNetwork WebDriverServerState Document
 getElementFromId element_id = do
-  p <- fmap _current_page getMockResponseState
+  p <- fmap _current_page getMockServer
   case getElementById element_id p of
-    Nothing -> errorMockResponseState _err_no_such_element
+    Nothing -> errorMockNetwork _err_no_such_element
     Just doc -> return doc
 
-closeTheSession :: String -> MockResponse WebDriverServerState ()
+closeTheSession :: String -> MockNetwork WebDriverServerState ()
 closeTheSession session_id =
-  mutateMockResponseState (_delete_session session_id)
+  modifyMockServer (_delete_session session_id)
 
-getAProperty :: String -> LB.ByteString -> MockResponse WebDriverServerState String
+getAProperty :: String -> LB.ByteString -> MockNetwork WebDriverServerState String
 getAProperty k payload = do
   let v = payload ^? key (pack k) . _String
   case v of
-    Nothing -> errorMockResponseState $ _err_invalid_argument (show payload)
+    Nothing -> errorMockNetwork $ _err_invalid_argument (show payload)
     Just value -> return $ unpack value

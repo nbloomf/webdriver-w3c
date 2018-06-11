@@ -35,7 +35,9 @@ module Web.Api.WebDriver.Types (
   , defaultFirefoxCapabilities
   , headlessFirefoxCapabilities
   , defaultChromeCapabilities
+  , LogLevel(..)
   , FirefoxOptions(..)
+  , FirefoxLog(..)
   , defaultFirefoxOptions
   , ChromeOptions(..)
   , defaultChromeOptions
@@ -72,25 +74,25 @@ module Web.Api.WebDriver.Types (
   , ResponseErrorCode(..)
   ) where
 
-import Data.Maybe
-  ( catMaybes )
 import Data.Char
   ( toLower )
-import Data.String
-  ( IsString(..) )
-import Data.Text
-  ( Text, pack, unpack )
+import Data.Maybe
+  ( catMaybes )
 import Data.Scientific
   ( Scientific, scientific )
+import Data.String
+  ( IsString(..) )
 import Data.Aeson.Types
   ( ToJSON(..), FromJSON(..), Value(..), KeyValue
   , Pair, (.:?), (.:), (.=), object, typeMismatch )
+import Data.Text
+  ( Text, pack, unpack )
 import Test.QuickCheck
   ( Arbitrary(..), arbitraryBoundedEnum, Gen )
 import Test.QuickCheck.Gen
   ( listOf, oneof )
 
-import Web.Api.Http.Uri
+import Web.Api.WebDriver.Uri
 import Web.Api.WebDriver.Types.Keyboard
 
 
@@ -483,23 +485,27 @@ defaultChromeOptions = ChromeOptions
 data FirefoxOptions = FirefoxOptions
   { _firefoxBinary :: Maybe FilePath -- ^ @binary@
   , _firefoxArgs :: Maybe [String] -- ^ @args@
+  , _firefoxLog :: Maybe FirefoxLog
   } deriving (Eq, Show)
 
 instance FromJSON FirefoxOptions where
   parseJSON (Object v) = FirefoxOptions
     <$> v .:? "binary"
     <*> v .:? "args"
+    <*> v .:? "log"
   parseJSON invalid = typeMismatch "FirefoxOptions" invalid
 
 instance ToJSON FirefoxOptions where
   toJSON FirefoxOptions{..} = object_
     [ "binary" .=? (toJSON <$> _firefoxBinary)
     , "args" .=? (toJSON <$> _firefoxArgs)
+    , "log" .=? (toJSON <$> _firefoxLog)
     ]
 
 instance Arbitrary FirefoxOptions where
   arbitrary = FirefoxOptions
     <$> arbitrary
+    <*> arbitrary
     <*> arbitrary
 
 -- | All members set to `Nothing`.
@@ -507,7 +513,67 @@ defaultFirefoxOptions :: FirefoxOptions
 defaultFirefoxOptions = FirefoxOptions
   { _firefoxBinary = Nothing
   , _firefoxArgs = Nothing
+  , _firefoxLog = Nothing
   }
+
+
+
+-- | See <https://github.com/mozilla/geckodriver#log-object>.
+data FirefoxLog = FirefoxLog
+  { _firefoxLogLevel :: Maybe LogLevel
+  } deriving (Eq, Show)
+
+instance FromJSON FirefoxLog where
+  parseJSON (Object v) = FirefoxLog
+    <$> v .:? "level"
+  parseJSON invalid = typeMismatch "FirefoxLog" invalid
+
+instance ToJSON FirefoxLog where
+  toJSON FirefoxLog{..} = object_
+    [ "level" .=? (toJSON <$> _firefoxLogLevel)
+    ]
+
+instance Arbitrary FirefoxLog where
+  arbitrary = FirefoxLog
+    <$> arbitrary
+
+
+
+-- | See <https://github.com/mozilla/geckodriver#log-object>.
+data LogLevel
+  = LogTrace
+  | LogDebug
+  | LogConfig
+  | LogInfo
+  | LogWarn
+  | LogError
+  | LogFatal
+  deriving (Eq, Show, Enum, Bounded)
+
+instance FromJSON LogLevel where
+  parseJSON (String x) = case x of
+    "trace" -> return LogTrace
+    "debug" -> return LogDebug
+    "config" -> return LogConfig
+    "info" -> return LogInfo
+    "warn" -> return LogWarn
+    "error" -> return LogError
+    "fatal" -> return LogFatal
+    _ -> unrecognizedValue "LogLevel" x
+  parseJSON invalid = typeMismatch "LogLevel" invalid
+
+instance ToJSON LogLevel where
+  toJSON x = case x of
+    LogTrace -> String "trace"
+    LogDebug -> String "debug"
+    LogConfig -> String "config"
+    LogInfo -> String "info"
+    LogWarn -> String "warn"
+    LogError -> String "error"
+    LogFatal -> String "fatal"
+
+instance Arbitrary LogLevel where
+  arbitrary = arbitraryBoundedEnum
 
 
 

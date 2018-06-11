@@ -1,5 +1,5 @@
 {- |
-Module      : Web.Api.Http.Uri
+Module      : Web.Api.WebDriver.Uri
 Description : Types and functions for validating parts of a URI.
 Copyright   : 2018, Automattic, Inc.
 License     : GPL-3
@@ -8,7 +8,7 @@ Stability   : experimental
 Portability : POSIX
 -}
 
-module Web.Api.Http.Uri (
+module Web.Api.WebDriver.Uri (
     Host()
   , mkHost
   , Port()

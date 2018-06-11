@@ -15,7 +15,6 @@ We'll need some imports. These are the usual `tasty` modules:
 
 These are the `webdriver-w3c` modules:
 
-> import Web.Api.Http
 > import Web.Api.WebDriver
 
 And this is the module that integrates the two.
@@ -28,11 +27,11 @@ Define your tests
 
 First things first: to make a WebDriver test suite, we need some WebDriver tests. These are just values of type `WebDriver IO ()`. (Or more generally, `Effectful m => WebDriver m ()`, but that's not important for now.) Here are a few dweeby examples. It's not necessary for the tests to start with `_test` or use snake_case; I'm doing it here out of habit.
 
-> _test_one :: WebDriver IO ()
+> _test_one :: WebDriver ()
 > _test_one = do
 >   navigateTo "https://google.com"
 > 
-> _test_two :: WebDriver IO ()
+> _test_two :: WebDriver ()
 > _test_two = do
 >   navigateTo "https://yahoo.com"
 >   assertSuccess "time travel achieved"

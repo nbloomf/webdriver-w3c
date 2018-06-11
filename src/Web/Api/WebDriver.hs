@@ -9,15 +9,19 @@ Portability : POSIX
 -}
 
 module Web.Api.WebDriver (
-    module Web.Api.WebDriver.Endpoints
+    module Web.Api.WebDriver.Assert
+  , module Web.Api.WebDriver.Endpoints
   , module Web.Api.WebDriver.Helpers
   , module Web.Api.WebDriver.Monad
   , module Web.Api.WebDriver.Types
   , module Web.Api.WebDriver.Types.Keyboard
+  , module Web.Api.WebDriver.Uri
   ) where
 
+import Web.Api.WebDriver.Assert
 import Web.Api.WebDriver.Endpoints
 import Web.Api.WebDriver.Helpers
 import Web.Api.WebDriver.Monad
 import Web.Api.WebDriver.Types
 import Web.Api.WebDriver.Types.Keyboard
+import Web.Api.WebDriver.Uri
