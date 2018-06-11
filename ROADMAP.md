@@ -3,6 +3,8 @@
 * /session/{session id}/element/{element id}/displayed
 * Need a ci test matrix, but have to think about how to prevent combinatorial blowup; dependencies are geckodriver+firefox+chromedriver+chrome, so matrix will get big fast. Compromise: only support one version of the drivers at a time?
 * no_color env variable
+* make WebDriver a monad transformer
+* make endpoints part of WDAct
 
 -- refactor cleanup tasks
 * log lock in tasty is a just; shouldn't be
