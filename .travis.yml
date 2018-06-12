@@ -43,13 +43,15 @@ before_install:
 - wget -L -O firefox.tar.bz2 'https://download.mozilla.org/?product=firefox-latest-ssl&os=linux64&lang=en-US'
 - tar xvf firefox.tar.bz2 -C ~/.local/bin
 - export PATH=$HOME/.local/bin/firefox:$PATH
--
+- 
 - # start remote ends
 - export MOZ_HEADLESS=1
+- export WD_STRESS_TEST_NUM_TESTS="50"
 - xvfb-run -a geckodriver --binary $HOME/.local/bin/firefox/firefox --port 4444 >/dev/null 2>/dev/null &
-- sleep 2
 - xvfb-run -a geckodriver --binary $HOME/.local/bin/firefox/firefox --port 4445 >/dev/null 2>/dev/null &
-- sleep 2
+- xvfb-run -a geckodriver --binary $HOME/.local/bin/firefox/firefox --port 4446 2>/dev/null >/dev/null &
+- xvfb-run -a geckodriver --binary $HOME/.local/bin/firefox/firefox --port 4447 2>/dev/null >/dev/null &
+- xvfb-run -a geckodriver --binary $HOME/.local/bin/firefox/firefox --port 4448 2>/dev/null >/dev/null &
 - chromedriver --port=9515 &
 - chromedriver --port=9516 &
 - sleep 2
@@ -67,3 +69,4 @@ before_script:
 
 script:
 - stack --no-terminal test --haddock --no-haddock-deps
+- stack --no-terminal install webdriver-w3c:wd-parallel-stress-test && stack --no-terminal exec -- wd-parallel-stress-test --wd-remote-ends 'geckodriver https://localhost:4444 https://localhost:4445 https://localhost:4446 https://localhost:4447 https://localhost:4448' --num-threads 5

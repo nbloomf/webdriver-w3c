@@ -69,43 +69,43 @@ check_parseRemoteEndOption = TT.testGroup "parseRemoteEndOption" $
 _parseRemoteEndOption_cases :: [(String, String, Either String RemoteEndPool)]
 _parseRemoteEndOption_cases =
   [ ( "geckodriver+1"
-    , "geckodriver: https://localhost:4444"
+    , "geckodriver https://localhost:4444"
     , Right $ RemoteEndPool $
         MS.fromList [(Geckodriver, [RemoteEnd "localhost" 4444 ""])]
     )
 
   , ( "geckodriver+1 (repeated)"
-    , "geckodriver: https://localhost:4444 https://localhost:4444"
+    , "geckodriver https://localhost:4444 https://localhost:4444"
     , Right $ RemoteEndPool $
         MS.fromList [(Geckodriver, [RemoteEnd "localhost" 4444 ""])]
     )
 
   , ( "geckodriver+2"
-    , "geckodriver: https://localhost:4444 https://localhost:4445"
+    , "geckodriver https://localhost:4444 https://localhost:4445"
     , Right $ RemoteEndPool $
         MS.fromList [(Geckodriver, [RemoteEnd "localhost" 4444 "", RemoteEnd "localhost" 4445 ""])]
     )
 
   , ( "chromedriver+1"
-    , "chromedriver: https://localhost:4444"
+    , "chromedriver https://localhost:4444"
     , Right $ RemoteEndPool $
         MS.fromList [(Chromedriver, [RemoteEnd "localhost" 4444 ""])]
     )
 
   , ( "chromedriver+1 (repeated)"
-    , "chromedriver: https://localhost:4444 https://localhost:4444"
+    , "chromedriver https://localhost:4444 https://localhost:4444"
     , Right $ RemoteEndPool $
         MS.fromList [(Chromedriver, [RemoteEnd "localhost" 4444 ""])]
     )
 
   , ( "chromedriver+2"
-    , "chromedriver: https://localhost:4444 https://localhost:4445"
+    , "chromedriver https://localhost:4444 https://localhost:4445"
     , Right $ RemoteEndPool $
         MS.fromList [(Chromedriver, [RemoteEnd "localhost" 4444 "", RemoteEnd "localhost" 4445 ""])]
     )
 
   , ( "geckodriver+1, chromedriver+1"
-    , "geckodriver: https://localhost:4444 chromedriver: https://localhost:9515"
+    , "geckodriver https://localhost:4444 chromedriver https://localhost:9515"
     , Right $ RemoteEndPool $
         MS.fromList
           [ (Geckodriver, [RemoteEnd "localhost" 4444 ""])

@@ -8,4 +8,7 @@ test:
 demo:
 	./dev/run-demo.sh
 
-.PHONY: docs test demo
+stress:
+	./dev/run-parallel-stress-test.sh
+
+.PHONY: docs test demo stress
