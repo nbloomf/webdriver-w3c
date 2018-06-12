@@ -11,6 +11,7 @@ This module demonstrates how to set up a basic test executable and
 configure it with command line options.
 
 ``` {.sourceCode .literate .haskell}
+{-# LANGUAGE OverloadedStrings #-}
 module Main where
 ```
 
@@ -24,7 +25,6 @@ import Test.Tasty.ExpectedFailure
 These are the `webdriver-w3c` modules:
 
 ``` {.sourceCode .literate .haskell}
-import Web.Api.Http
 import Web.Api.WebDriver
 ```
 
@@ -45,11 +45,11 @@ for the tests to start with `_test` or use snake\_case; I'm doing it
 here out of habit.
 
 ``` {.sourceCode .literate .haskell}
-_test_one :: WebDriver IO ()
+_test_one :: WebDriver ()
 _test_one = do
   navigateTo "https://google.com"
 
-_test_two :: WebDriver IO ()
+_test_two :: WebDriver ()
 _test_two = do
   navigateTo "https://yahoo.com"
   assertSuccess "time travel achieved"

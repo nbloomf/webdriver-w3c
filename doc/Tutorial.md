@@ -12,9 +12,9 @@ can't handle easily, you might find this mildly interesting, maybe.
 noises. Nothing to see here!)
 
 ``` {.sourceCode .literate .haskell}
+{-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import Web.Api.Http
 import Web.Api.WebDriver
 import Test.Tasty.WebDriver
 
@@ -82,13 +82,13 @@ example to illustrate what we can do, then explain how it works. Read
 this code block, even if the syntax is meaningless.
 
 ``` {.sourceCode .literate .haskell}
-do_a_barrel_roll :: WebDriver IO ()
+do_a_barrel_roll :: WebDriver ()
 do_a_barrel_roll = do
   fullscreenWindow
   navigateTo "https://www.google.com"
   performActions [typeString "do a barrel roll"]
   performActions [press EnterKey]
-  mPauseInSeconds 7
+  wait 700000
   return ()
 ```
 
@@ -107,7 +107,7 @@ fullscreen, and search Google for "do a barrel roll".
 ``` {.sourceCode .literate .haskell}
 example1 :: IO ()
 example1 = do
-  runSession defaultWebDriverConfig
+  execWebDriver defaultWDConfig
     (runIsolated defaultFirefoxCapabilities do_a_barrel_roll)
   return ()
 ```
@@ -115,7 +115,7 @@ example1 = do
 Let's break down what just happened.
 
 1.  `do_a_barrel_roll` is a *WebDriver session*, expressed in the
-    `WebDriver IO` DSL. It's a high-level description for a sequence of
+    `WebDriver` DSL. It's a high-level description for a sequence of
     browser actions: in this case, "make the window full screen",
     "navigate to google.com", and so on.
 2.  `runIsolated` takes a WebDriver session and runs it in a fresh
@@ -166,7 +166,7 @@ In addition to the usual browser action commands, you can sprinkle your
 `WebDriver` sessions with *assertions*. Here's an example.
 
 ``` {.sourceCode .literate .haskell}
-what_page_is_this :: WebDriver IO ()
+what_page_is_this :: WebDriver ()
 what_page_is_this = do
   navigateTo "https://www.google.com"
   title <- getTitle
@@ -190,9 +190,9 @@ This is `example2`:
 ``` {.sourceCode .literate .haskell}
 example2 :: IO ()
 example2 = do
-  (_, result) <- debugSession defaultWebDriverConfig
+  (_, result) <- debugWebDriver defaultWDConfig
     (runIsolated defaultFirefoxCapabilities what_page_is_this)
-  printSummary $ summarize result
+  printSummary result
   return ()
 ```
 
@@ -225,7 +225,7 @@ Suppose we've got two WebDriver tests. These are pretty dweeby just for
 illustration's sake.
 
 ``` {.sourceCode .literate .haskell}
-back_button :: WebDriver IO ()
+back_button :: WebDriver ()
 back_button = do
   navigateTo "https://www.google.com"
   navigateTo "https://wordpress.com"
@@ -234,7 +234,7 @@ back_button = do
   assertEqual title "Google" "Behavior of 'back' button from WordPress homepage"
   return ()
 
-refresh_page :: WebDriver IO ()
+refresh_page :: WebDriver ()
 refresh_page = do
   navigateTo "https://www.mozilla.org"
   pageRefresh
@@ -265,8 +265,7 @@ example3 :: IO ()
 example3 = do
   SE.setEnv "TASTY_NUM_THREADS" "1"
   defaultMain
-    $ localOption (LogHandle $ Path "/dev/null")
-    $ localOption (AssertionLogHandle $ Path "/dev/null")
+    $ localOption (SilentLog)
     $ test_suite
 ```
 
