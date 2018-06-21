@@ -6,6 +6,8 @@ License     : GPL-3
 Maintainer  : Nathan Bloomfield (nbloomf@gmail.com)
 Stability   : experimental
 Portability : POSIX
+
+Tasty integration for `WebDriverT` tests.
 -}
 
 {-# LANGUAGE DeriveDataTypeable, RecordWildCards, Rank2Types #-}
@@ -15,8 +17,12 @@ module Test.Tasty.WebDriver (
   -- * Test Case Constructors
   , testCase
   , testCaseM
+  , testCaseT
+  , testCaseTM
   , testCaseWithSetup
   , testCaseWithSetupM
+  , testCaseWithSetupT
+  , testCaseWithSetupTM
 
   -- * Branching
   , ifDriverIs
@@ -29,7 +35,7 @@ module Test.Tasty.WebDriver (
   -- * Options
   , Driver(..)
   , DriverName(..)
-  , SecretsPath(..)
+  , DataPath(..)
   , Deployment(..)
   , DeploymentTier(..)
   , BrowserPath(..)
@@ -56,11 +62,9 @@ import Control.Monad.IO.Class
 import Data.Typeable
   ( Typeable, Proxy(Proxy) )
 import Data.List
-  ( unlines )
+  ( unlines, lookup )
 import System.IO
   ( Handle, stdout, stderr, stdin, openFile, IOMode(..), hClose )
-import System.Exit
-  ( exitFailure )
 import Control.Concurrent
   ( threadDelay )
 import Control.Concurrent.MVar
@@ -69,33 +73,25 @@ import Control.Concurrent.STM
   
 import Control.Lens
   ((.~), (&))
-import Control.Monad.IO.Class
-  ( MonadIO, liftIO )
 import qualified Data.ByteString.Lazy.Char8 as BS
   ( pack )
 import qualified Data.Digest.Pure.SHA as SHA
   ( showDigest, sha1 )
 import Data.IORef
   ( IORef, newIORef, atomicModifyIORef' )
-import Data.List
-  ( unlines )
 import Data.Maybe
   ( fromMaybe )
 import Data.Time.Clock.System
   ( getSystemTime )
-import Data.Typeable
-  ( Typeable, Proxy(Proxy) )
 import Network.HTTP.Client
   ( defaultManagerSettings, managerResponseTimeout, ResponseTimeout(..)
   , responseTimeoutNone )
 import qualified Network.Wreq as Wreq
   ( defaults, manager )
 import qualified System.Environment as SE
-  ( getEnv, getArgs, lookupEnv )
+  ( getEnv, setEnv, getArgs, lookupEnv )
 import System.Exit
   ( exitFailure )
-import System.IO
-  ( Handle, stdout, stderr, stdin, openFile, IOMode(..) )
 import Text.Read
   ( readMaybe )
 
@@ -104,6 +100,7 @@ import qualified Test.Tasty as T
 import qualified Test.Tasty.Providers as TT
 import qualified Test.Tasty.Options as TO
 import qualified Test.Tasty.ExpectedFailure as TE
+import qualified Test.Tasty.Ingredients.ConsoleReporter as TC
 
 import Control.Monad.Script.Http (trivialLogOptions)
 import Web.Api.WebDriver
@@ -114,25 +111,67 @@ import Test.Tasty.WebDriver.Config
 _OPT_LOG_HANDLE :: String
 _OPT_LOG_HANDLE = "wd-log"
 
-_OPT_ASSERT_LOG_HANDLE :: String
-_OPT_ASSERT_LOG_HANDLE = "wd-assertion-log"
-
 _OPT_CONSOLE_OUT :: String
 _OPT_CONSOLE_OUT = "wd-console-out"
 
 _OPT_CONSOLE_IN :: String
 _OPT_CONSOLE_IN = "wd-console-in"
 
+_OPT_COLOR :: String
+_OPT_COLOR = "wd-color"
+
+_OPT_HEADLESS :: String
+_OPT_HEADLESS = "wd-headless"
+
+_OPT_DRIVER :: String
+_OPT_DRIVER = "wd-driver"
+
+_OPT_GECKODRIVER_LOG :: String
+_OPT_GECKODRIVER_LOG = "wd-geckodriver-log"
+
+_OPT_BROWSERPATH :: String
+_OPT_BROWSERPATH = "wd-browserpath"
+
+_OPT_DEPLOYMENT :: String
+_OPT_DEPLOYMENT = "wd-deploy"
+
+_OPT_REMOTE_ENDS :: String
+_OPT_REMOTE_ENDS = "wd-remote-ends"
+
+_OPT_DATA_PATH :: String
+_OPT_DATA_PATH = "wd-data-path"
+
+_OPT_RESPONSE_FORMAT :: String
+_OPT_RESPONSE_FORMAT = "wd-response-format"
+
+_OPT_API_VERSION :: String
+_OPT_API_VERSION = "wd-api-version"
+
+_OPT_VERBOSITY :: String
+_OPT_VERBOSITY = "wd-verbosity"
+
+_OPT_NUM_RETRIES :: String
+_OPT_NUM_RETRIES = "wd-num-retries"
+
+_OPT_DELAY :: String
+_OPT_DELAY = "wd-delay"
+
+_OPT_REMOTE_ENDS_CONFIG :: String
+_OPT_REMOTE_ENDS_CONFIG = "wd-remote-ends-config"
 
 
-data WebDriverTest m = WebDriverTest
+
+data WebDriverTest m eff = WebDriverTest
   { wdTestName :: String
-  , wdTestSession :: WebDriver ()
-  , wdEval :: forall a. P WDAct a -> m a
-  , wdToIO :: forall a. m a -> IO a
+  , wdTestSession :: WebDriverT (m eff) ()
+  , wdEval :: forall a. P WDAct a -> eff a
+  , wdLift :: forall a. eff a -> m eff a
+  , wdToIO :: forall a. m eff a -> IO a
   }
 
-instance (Monad m, Typeable m) => TT.IsTest (WebDriverTest m) where
+
+
+instance (Monad eff, Monad (m eff), Typeable eff, Typeable m) => TT.IsTest (WebDriverTest m eff) where
   testOptions = return
     [ TO.Option (Proxy :: Proxy Driver)
     , TO.Option (Proxy :: Proxy Headless)
@@ -143,7 +182,7 @@ instance (Monad m, Typeable m) => TT.IsTest (WebDriverTest m) where
     , TO.Option (Proxy :: Proxy ConsoleInHandle)
     , TO.Option (Proxy :: Proxy ConsoleOutHandle)
     , TO.Option (Proxy :: Proxy Deployment)
-    , TO.Option (Proxy :: Proxy SecretsPath)
+    , TO.Option (Proxy :: Proxy DataPath)
     , TO.Option (Proxy :: Proxy BrowserPath)
     , TO.Option (Proxy :: Proxy TestDelay)
     , TO.Option (Proxy :: Proxy RemoteEndRef)
@@ -164,7 +203,7 @@ instance (Monad m, Typeable m) => TT.IsTest (WebDriverTest m) where
       ConsoleInHandle cinHandle = TO.lookupOption opts
       TestDelay delay = TO.lookupOption opts
       ConsoleOutHandle coutHandle = TO.lookupOption opts
-      SecretsPath secrets = TO.lookupOption opts
+      DataPath datas = TO.lookupOption opts
       BrowserPath browserPath = TO.lookupOption opts
       RemoteEndRef remotes = TO.lookupOption opts
       NumRetries numRetries = TO.lookupOption opts
@@ -184,10 +223,10 @@ instance (Monad m, Typeable m) => TT.IsTest (WebDriverTest m) where
       caps = case driver of
         Geckodriver -> emptyCapabilities
           { _browserName = Just Firefox
-          , _firefoxOptions = Just $ defaultFirefoxOptions
+          , _firefoxOptions = Just defaultFirefoxOptions
               { _firefoxBinary = browserPath
               , _firefoxArgs = if headless then Just ["-headless"] else Nothing
-              , _firefoxLog = Just $ FirefoxLog
+              , _firefoxLog = Just FirefoxLog
                   { _firefoxLogLevel = Just geckoLogLevel
                   }
               }
@@ -201,9 +240,9 @@ instance (Monad m, Typeable m) => TT.IsTest (WebDriverTest m) where
               }
           }
 
-    secretsPath <- case secrets of
-      "" -> fmap (++ "/.webdriver/secrets") $ SE.getEnv "HOME"
-      spath -> return spath
+    dataPath <- case datas of
+      Nothing -> fmap (++ "/.webdriver") $ SE.getEnv "HOME"
+      Just dpath -> return dpath
 
     remotesRef <- case remotes of
       Just ref -> return ref
@@ -234,46 +273,39 @@ instance (Monad m, Typeable m) => TT.IsTest (WebDriverTest m) where
                 { _sessionId = Nothing
                 }
               }
-            , _environment = R
+            , _environment = defaultWebDriverEnvironment
               { _logHandle = logHandle
               , _logLock = Just logLock
               , _uid = uid
-              , _logOptions = trivialLogOptions
+              , _logOptions = defaultWebDriverLogOptions
                 { _logColor = logColors
                 , _logJson = True
                 , _logHeaders = False
                 , _logSilent = logNoise
-                , _printUserError = printWDError
-                , _printUserLog = printWDLog
                 }
-              , _httpErrorInject = promoteHttpResponseError
               , _env = WDEnv
                 { _remoteHostname = remoteEndHost remote
                 , _remotePort = remoteEndPort remote
                 , _remotePath = remoteEndPath remote
                 , _responseFormat = format
                 , _apiVersion = version
-                , _secretsPath = secretsPath
-                , _vars = MS.fromList []
+                , _dataPath = dataPath
                 , _stdout = coutHandle
                 , _stdin = cinHandle
                 }
               }
             }
 
-        (result, finalState, theLog) <- wdToIO $ execWebDriver config $
+        (result, summary) <- wdToIO $ debugWebDriverT config wdLift $
             title >> attemptLabel attemptNumber >> runIsolated caps wdTestSession
 
         atomically $ releaseRemoteEnd remotesRef driver remote
 
-        let assertions = getAssertions $ logEntries theLog
-
         case result of
           Right _ ->
-            return $ webDriverAssertionsToResult $ summarize assertions
+            return $ webDriverAssertionsToResult summary
           Left err -> if attemptNumber >= numRetries
-            then return $ TT.testFailed $
-              "Unhandled error!\n" ++ printError (printWDError True) err
+            then return $ TT.testFailed $ "Unhandled error!\n" ++ err
             else attempt (attemptNumber + 1)
 
     attempt 1
@@ -288,56 +320,108 @@ webDriverAssertionsToResult x =
 
 
 
--- | Simple WebDriver test case.
+-- | `WebDriver` test case with the default `IO` effect evaluator.
 testCase
   :: TT.TestName
-  -> WebDriver ()
+  -> WebDriver IO () -- ^ The test
   -> TT.TestTree
 testCase name test =
-  testCaseWithSetup name (return ()) return (\_ -> test)
+  testCaseWithSetup name (return ()) return (const test)
 
 
-
--- | Simple WebDriver test case with a custom effect evaluator.
+-- | `WebDriver` test case with a custom effect evaluator.
 testCaseM
-  :: (Monad m, Typeable m)
+  :: (Monad eff, Typeable eff)
   => TT.TestName
-  -> (forall a. P WDAct a -> m a)
-  -> (forall a. m a -> IO a)
-  -> WebDriver ()
+  -> (forall a. P WDAct a -> eff a) -- ^ Evaluator
+  -> (forall a. eff a -> IO a) -- ^ Conversion to `IO`
+  -> WebDriver eff ()
   -> TT.TestTree
 testCaseM name eval toIO test =
-  testCaseWithSetupM name eval toIO (return ()) return (\_ -> test)
+  testCaseWithSetupM name eval toIO (return ()) return (const test)
 
 
+-- | `WebDriverT` test case with the default `IO` effect evaluator.
+testCaseT
+  :: (Monad (m IO), Typeable m)
+  => TT.TestName
+  -> (forall a. IO a -> m IO a) -- ^ Lift effects to the inner monad
+  -> (forall a. m IO a -> IO a) -- ^ Conversion to `IO`
+  -> WebDriverT (m IO) () -- ^ The test
+  -> TT.TestTree
+testCaseT name lift toIO test =
+  testCaseWithSetupT name lift toIO (return ()) return (const test)
 
--- | WebDriver test case with additional setup and teardown phases -- setup runs before the test (for e.g. logging in) and teardown runs after the test (for e.g. deleting temp files).
+
+-- | `WebDriverT` test case with a custom effect evaluator.
+testCaseTM
+  :: (Monad eff, Monad (m eff), Typeable eff, Typeable m)
+  => TT.TestName
+  -> (forall a. P WDAct a -> eff a) -- ^ Evaluator
+  -> (forall a. eff a -> m eff a) -- ^ Lift effects to the inner monad
+  -> (forall a. m eff a -> IO a) -- ^ Conversion to `IO`.
+  -> WebDriverT (m eff) () -- ^ The test
+  -> TT.TestTree
+testCaseTM name eval lift toIO test =
+  testCaseWithSetupTM name eval lift toIO (return ()) return (const test)
+
+
+-- | `WebDriver` test case with additional setup and teardown phases using the default `IO` effect evaluator. Setup runs before the test (for e.g. logging in) and teardown runs after the test (for e.g. deleting temp files).
 testCaseWithSetup
   :: TT.TestName
-  -> WebDriver u -- ^ Setup
-  -> (v -> WebDriver ()) -- ^ Teardown
-  -> (u -> WebDriver v) -- ^ The test
+  -> WebDriver IO u -- ^ Setup
+  -> (v -> WebDriver IO ()) -- ^ Teardown
+  -> (u -> WebDriver IO v) -- ^ The test
   -> TT.TestTree
 testCaseWithSetup name =
   testCaseWithSetupM name (evalIO evalWDAct) id
 
 
-
--- | WebDriver test case with additional setup and teardown phases and a custom effect evaluator. Setup runs before the test (for logging in, say) and teardown runs after the test (for deleting temp files, say). 
+-- | `WebDriver` test case with additional setup and teardown phases and a custom effect evaluator. Setup runs before the test (for e.g. logging in) and teardown runs after the test (for e.g. deleting temp files).
 testCaseWithSetupM
-  :: (Monad m, Typeable m)
+  :: (Monad eff, Typeable eff)
   => TT.TestName
-  -> (forall a. P WDAct a -> m a) -- ^ Evaluator
-  -> (forall a. m a -> IO a) -- ^ Conversion to `IO`.
-  -> WebDriver u -- ^ Setup
-  -> (v -> WebDriver ()) -- ^ Teardown
-  -> (u -> WebDriver v) -- ^ Test
+  -> (forall u. P WDAct u -> eff u) -- ^ Evaluator
+  -> (forall u. eff u -> IO u) -- ^ Conversion to `IO`
+  -> WebDriver eff u -- ^ Setup
+  -> (v -> WebDriver eff ()) -- ^ Teardown
+  -> (u -> WebDriver eff v) -- ^ The test
   -> TT.TestTree
-testCaseWithSetupM name eval toIO setup teardown test =
+testCaseWithSetupM name eval toIO =
+  testCaseWithSetupTM name eval IdentityT (toIO . runIdentityT)
+
+
+-- | `WebDriverT` test case with additional setup and teardown phases using the default `IO` effect evaluator. Setup runs before the test (for e.g. logging in) and teardown runs after the test (for e.g. deleting temp files).
+testCaseWithSetupT
+  :: (Monad (m IO), Typeable m)
+  => TT.TestName
+  -> (forall a. IO a -> m IO a) -- ^ Lift effects to the inner monad
+  -> (forall a. m IO a -> IO a) -- ^ Conversion to `IO`
+  -> WebDriverT (m IO) u -- ^ Setup
+  -> (v -> WebDriverT (m IO) ()) -- ^ Teardown
+  -> (u -> WebDriverT (m IO) v) -- ^ Test
+  -> TT.TestTree
+testCaseWithSetupT name =
+  testCaseWithSetupTM name (evalIO evalWDAct)
+
+
+-- | `WebDriverT` test case with additional setup and teardown phases and a custom effect evaluator. Setup runs before the test (for logging in, say) and teardown runs after the test (for deleting temp files, say). 
+testCaseWithSetupTM
+  :: (Monad eff, Monad (m eff), Typeable eff, Typeable m)
+  => TT.TestName
+  -> (forall a. P WDAct a -> eff a) -- ^ Evaluator
+  -> (forall a. eff a -> m eff a) -- ^ Lift effects to the inner monad
+  -> (forall a. m eff a -> IO a) -- ^ Conversion to `IO`.
+  -> WebDriverT (m eff) u -- ^ Setup
+  -> (v -> WebDriverT (m eff) ()) -- ^ Teardown
+  -> (u -> WebDriverT (m eff) v) -- ^ Test
+  -> TT.TestTree
+testCaseWithSetupTM name eval lift toIO setup teardown test =
   TT.singleTest name WebDriverTest
     { wdTestName = name
     , wdTestSession = setup >>= test >>= teardown
     , wdEval = eval
+    , wdLift = lift
     , wdToIO = toIO
     }
 
@@ -354,11 +438,12 @@ instance TO.IsOption Driver where
     "geckodriver" -> Just $ Driver Geckodriver
     "chromedriver" -> Just $ Driver Chromedriver
     _ -> Nothing
-  optionName = return "wd-driver"
+  optionName = return _OPT_DRIVER
   optionHelp = return "remote end name: (geckodriver), chromedriver"
 
 
 
+-- | Governs whether logs are printed in color
 newtype LogColors
   = LogColors { theLogColors :: Bool }
   deriving Typeable
@@ -366,7 +451,7 @@ newtype LogColors
 instance TO.IsOption LogColors where
   defaultValue = LogColors True
   parseValue = fmap LogColors . TO.safeReadBool
-  optionName = return "wd-color"
+  optionName = return _OPT_COLOR
   optionHelp = return "colored logs: (true), false"
 
 
@@ -379,24 +464,25 @@ newtype Headless
 instance TO.IsOption Headless where
   defaultValue = Headless False
   parseValue = fmap Headless . TO.safeReadBool
-  optionName = return "wd-headless"
+  optionName = return _OPT_HEADLESS
   optionHelp = return "run in headless mode: (false), true"
 
 
 
 -- | Path where secrets are stored.
-newtype SecretsPath
-  = SecretsPath { theSecretsPath :: FilePath }
+newtype DataPath
+  = DataPath { theDataPath :: Maybe FilePath }
   deriving Typeable
 
-instance TO.IsOption SecretsPath where
-  defaultValue = SecretsPath ""
-  parseValue path = Just $ SecretsPath path
-  optionName = return "wd-secrets"
-  optionHelp = return "secrets path: (~/.webdriver/secrets), PATH"
+instance TO.IsOption DataPath where
+  defaultValue = DataPath Nothing
+  parseValue path = Just $ DataPath $ Just path
+  optionName = return _OPT_DATA_PATH
+  optionHelp = return "data path: (~/.webdriver), PATH"
 
 
 
+-- | Verbosity level passed to @geckodriver@
 newtype GeckodriverLog
   = GeckodriverLog { theGeckodriverLog :: LogLevel }
   deriving Typeable
@@ -412,7 +498,7 @@ instance TO.IsOption GeckodriverLog where
     "error" -> Just $ GeckodriverLog LogError
     "fatal" -> Just $ GeckodriverLog LogFatal
     _ -> Nothing
-  optionName = return "wd-geckodriver-log"
+  optionName = return _OPT_GECKODRIVER_LOG
   optionHelp = return "log level passed to geckodriver: trace, debug, config, info, warn, error, fatal"
 
 
@@ -425,7 +511,7 @@ newtype BrowserPath
 instance TO.IsOption BrowserPath where
   defaultValue = BrowserPath Nothing
   parseValue path = Just $ BrowserPath $ Just path
-  optionName = return "wd-browserpath"
+  optionName = return _OPT_BROWSERPATH
   optionHelp = return "path to browser binary: (), PATH"
 
 
@@ -441,7 +527,7 @@ instance TO.IsOption ApiResponseFormat where
     "spec" -> Just $ ApiResponseFormat SpecFormat
     "chromedriver" -> Just $ ApiResponseFormat ChromeFormat
     _ -> Nothing
-  optionName = return "wd-response-format"
+  optionName = return _OPT_RESPONSE_FORMAT
   optionHelp = return "JSON response format: (spec), chromedriver"
 
 
@@ -456,7 +542,7 @@ instance TO.IsOption WebDriverApiVersion where
   parseValue str = case str of
     "cr-2018-03-04" -> Just $ WebDriverApiVersion CR_2018_03_04
     _ -> Nothing
-  optionName = return "wd-api-version"
+  optionName = return _OPT_API_VERSION
   optionHelp = return "WebDriver API version: (cr-2018-03-04)"
 
 
@@ -498,7 +584,7 @@ instance TO.IsOption LogNoiseLevel where
     "noisy" -> Just NoisyLog
     "silent" -> Just SilentLog
     _ -> Nothing
-  optionName = return "wd-verbosity"
+  optionName = return _OPT_VERBOSITY
   optionHelp = return "log verbosity: (noisy), silent"
 
 
@@ -511,7 +597,7 @@ newtype NumRetries
 instance TO.IsOption NumRetries where
   defaultValue = NumRetries 1
   parseValue = fmap NumRetries . readMaybe
-  optionName = return "wd-num-retries"
+  optionName = return _OPT_NUM_RETRIES
   optionHelp = return "number of times to retry a failed test"
 
 
@@ -550,7 +636,7 @@ newtype TestDelay = TestDelay
 instance TO.IsOption TestDelay where
   defaultValue = TestDelay 800000
   parseValue = fmap TestDelay . readMaybe
-  optionName = return "wd-delay"
+  optionName = return _OPT_DELAY
   optionHelp = return "delay between test attempts in ms: (500000), INT"
 
 
@@ -564,7 +650,7 @@ newtype Deployment
 data DeploymentTier
   = DEV -- ^ Local environment
   | TEST -- ^ CI server (for testing the library)
-  | PROD
+  | PROD -- ^ "Production" -- e.g. testing a real site
   deriving (Eq, Show, Typeable)
 
 instance TO.IsOption Deployment where
@@ -574,7 +660,7 @@ instance TO.IsOption Deployment where
     "test" -> Just $ Deployment TEST
     "prod" -> Just $ Deployment PROD
     _ -> Nothing
-  optionName = return "wd-deploy"
+  optionName = return _OPT_DEPLOYMENT
   optionHelp = return "deployment environment: (dev), test, prod"
 
 
@@ -587,7 +673,7 @@ newtype RemoteEndRef = RemoteEndRef
 instance TO.IsOption RemoteEndRef where
   defaultValue = RemoteEndRef Nothing
   parseValue _ = Just $ RemoteEndRef Nothing
-  optionName = return "wd-remote-ends-config"
+  optionName = return _OPT_REMOTE_ENDS_CONFIG
   optionHelp = return "path to remote end config"
 
 
@@ -598,7 +684,7 @@ data RemoteEndOpt = RemoteEndOpt
 instance TO.IsOption RemoteEndOpt where
   defaultValue = RemoteEndOpt
   parseValue _ = Just RemoteEndOpt
-  optionName = return "wd-remote-ends"
+  optionName = return _OPT_REMOTE_ENDS
   optionHelp = return "remote end uris"
 
 
@@ -663,11 +749,27 @@ unlessHeadless f tree = T.askOption checkHeadless
 defaultWebDriverMain :: TT.TestTree -> IO ()
 defaultWebDriverMain tree = do
   logLock <- newMVar ()
-  deploy <- determineDeploymentTier
   pool <- getRemoteEndRef
 
+  -- Determine the deployment tier
+  deploy <- getEnvVarDefaultOption
+    _OPT_DEPLOYMENT (`lookup` [("dev", DEV), ("test", TEST), ("prod", PROD)])
+    "CI" (\str -> Just $ if str == "true" then TEST else DEV)
+    DEV
+  putStrLn $ ">>> Deployment environment is " ++ show deploy
+
+  -- Determine color output preferences
+  colors <- getEnvVarDefaultOption
+    _OPT_COLOR (`lookup` [("true", True), ("false", False)])
+    "NO_COLOR" (\_ -> Just False)
+    True
+  putStrLn $ ">>> Logging " ++ if colors then "with" else "without" ++ " colors"
+
+  if colors
+    then return ()
+    else SE.setEnv "TASTY_COLOR" "never"
+
   logHandle <- getWriteModeHandleOption _OPT_LOG_HANDLE stderr
-  alogHandle <- getWriteModeHandleOption _OPT_ASSERT_LOG_HANDLE stdout
   coutHandle <- getWriteModeHandleOption _OPT_CONSOLE_OUT stdout
   cinHandle <- getReadModeHandleOption _OPT_CONSOLE_IN stdin
 
@@ -676,12 +778,13 @@ defaultWebDriverMain tree = do
     . T.localOption (RemoteEndRef $ Just pool)
     . T.localOption (LogPrinterLock $ Just logLock)
     . T.localOption (LogHandle logHandle)
+    . T.localOption (LogColors colors)
     . T.localOption (ConsoleOutHandle coutHandle)
     . T.localOption (ConsoleInHandle cinHandle)
     $ tree
 
   mapM_ hClose
-    [ logHandle, alogHandle, coutHandle, cinHandle ]
+    [ logHandle, coutHandle, cinHandle ]
 
 
 getWriteModeHandleOption :: String -> Handle -> IO Handle
@@ -711,16 +814,47 @@ getReadModeHandleOption opt theDefault = do
       _ -> openFile path ReadMode
 
 
-determineDeploymentTier :: IO DeploymentTier
-determineDeploymentTier = do
-  putStrLn "Determining deployment environment..."
-  deploy <- do
-    var <- SE.lookupEnv "CI"
-    case var of
-      Just "true" -> return TEST
-      _ -> return DEV
-  putStrLn $ "Deployment environment is " ++ show deploy
-  return deploy
+-- | Get the value of an option that can be controlled by either a command line flag or an environment variable, with the flag taking precedence.
+getEnvVarDefaultOption
+  :: String -- ^ Flag name
+  -> (String -> Maybe a) -- ^ Mapping flag values to option values
+  -> String -- ^ Environment variable name
+  -> (String -> Maybe a) -- ^ Mapping environment variable values to option values
+  -> a -- ^ Default option value (if neither flag nor env var is set)
+  -> IO a
+getEnvVarDefaultOption flag flagMap var varMap def = do
+  args <- SE.getArgs
+  case parseOptionWithArgument ("--" ++ flag) args of
+
+    -- Flag is present, but with no argument given.
+    Nothing -> do
+      putStrLn $ "Error: option '" ++ flag ++ "' is missing a required argument"
+      exitFailure
+
+    -- Flag with argument is present.
+    Just (Just value) ->
+      case flagMap value of
+        Just a -> return a
+        Nothing -> do
+          putStrLn $ "Error: unrecognized value '" ++ value ++ "' for option '--" ++ flag ++ "'."
+          exitFailure
+
+    -- Flag not present; try to use the environment variable.
+    Just Nothing -> do
+      value <- SE.lookupEnv var
+      case value of
+
+        -- Environment variable is set.
+        Just str ->
+          case varMap str of
+            Just a -> return a
+            Nothing -> do
+              putStrLn $ "Error: unrecognized value '" ++ str ++
+                "' for environment variable '" ++ var ++ "'."
+              exitFailure
+
+        -- Environment variable not set; use default.
+        Nothing -> return def
 
 
 
@@ -728,7 +862,13 @@ getRemoteEndRef :: IO (TVar RemoteEndPool)
 getRemoteEndRef = do
   configPool <- fromMaybe mempty <$> getRemoteEndConfigPath
   optionPool <- fromMaybe mempty <$> getRemoteEndOptionString
-  newTVarIO $ mappend configPool optionPool
+  let pool = mappend configPool optionPool
+  if pool == mempty
+    then newTVarIO $ RemoteEndPool $ MS.fromList
+      [ (Geckodriver, [RemoteEnd "localhost" 4444 ""])
+      , (Chromedriver, [RemoteEnd "localhost" 9515 ""])
+      ]
+    else newTVarIO $ mappend configPool optionPool
 
 
 

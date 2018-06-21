@@ -13,7 +13,7 @@ import System.Exit (exitFailure)
 import System.Environment (lookupEnv)
 import Text.Read (readMaybe)
 
-_test :: WebDriver ()
+_test :: (Monad eff) => WebDriver eff ()
 _test = navigateTo "https://google.com"
 
 

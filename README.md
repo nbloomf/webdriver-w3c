@@ -9,11 +9,11 @@ Haskell bindings for the W3C WebDriver API
 What is it?
 -----------
 
-[WebDriver](https://www.w3.org/TR/webdriver/) is an HTTP API for interacting with a web browser remotely. It is on track to become a W3C specification and based on a decade's worth of hard won wisdom gained by the [Selenium](https://www.seleniumhq.org/) community.
-
-`webdriver-w3c` is a Haskell library providing bindings to the WebDriver API, enabling us to write Haskell programs that control web browsers. It is actively tested against `geckodriver` and `chromedriver`, as well as a fake remote end implementation.
+`webdriver-w3c` is a Haskell library providing bindings to the WebDriver API, enabling us to write Haskell programs that control web browsers. It is actively tested against `geckodriver` and `chromedriver`, as well as a fake remote end implementation. It is implemented as a monad transformer.
 
 Also included is an integration with the [tasty](https://hackage.haskell.org/package/tasty) test framework.
+
+[WebDriver](https://www.w3.org/TR/webdriver/) is an HTTP API for interacting with a web browser remotely. It is on track to become a W3C specification and based on work done by the [Selenium](https://www.seleniumhq.org/) community.
 
 
 Who is it for?

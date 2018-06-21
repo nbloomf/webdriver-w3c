@@ -20,6 +20,7 @@ import Test.Tasty.WebDriver
 
 import Test.Tasty
 import qualified System.Environment as SE
+import Control.Monad
 
 main :: IO ()
 main = return ()
@@ -33,11 +34,7 @@ To follow along, you're going to need a few things.
 1.  [Stack](https://docs.haskellstack.org/en/stable/README/). Stack is a
     build tool for Haskell projects. It compiles our programs, runs
     tests, processes documentation, generates code coverage reports, and
-    keeps project dependencies under control. If you've never worked
-    with Haskell before, stack is all you really need to get started --
-    it can download anything else it needs (compilers, libraries, etc.)
-    on the fly. If you've used Haskell but not stack, you're in for a
-    treat. :)
+    keeps project dependencies under control.
 2.  A copy of this repository
 3.  A web browser; this tutorial assumes you're using Firefox.
 4.  A WebDriver proxy server for your browser. For Firefox this is
@@ -46,7 +43,7 @@ To follow along, you're going to need a few things.
     we'll get to that.
 
 Next, start your proxy server. For geckodriver on unix-like OSs, that is
-done with the `geckodriver` command. You should see a line that looks
+done with the `geckodriver &` command. You should see a line that looks
 something like this:
 
     1521524046173   geckodriver INFO    Listening on 127.0.0.1:4444
@@ -54,13 +51,17 @@ something like this:
 Leave that program running. Just leave it alone.
 
 Finally, in another shell window, navigate to the directory holding this
-repo and say `stack ghci`. Well, don't *say* that, out loud. Type it. :)
-This might take a while the first time while stack downloads the
-compiler and libraries it needs. When it finishes, this command opens a
-Haskell interpreter with `webdriver-w3c` loaded so we can play with it.
-You'll know everything is okay if you see a line like
+repo and say
 
-    Ok, 16 modules loaded.
+    stack ghci webdriver-w3c:webdriver-w3c-intro
+
+Well, don't *say* that, out loud. Type it. :) This might take a while
+the first time while stack downloads the compiler and libraries it
+needs. When it finishes, this command opens a Haskell interpreter with
+`webdriver-w3c` loaded so we can play with it. You'll know everything is
+okay if you see a line like
+
+    Ok, one module loaded.
 
 followed by a `λ:` prompt. To be sure, try typing in `return` and then
 hit (enter). If you see this scary error message:
@@ -82,13 +83,13 @@ example to illustrate what we can do, then explain how it works. Read
 this code block, even if the syntax is meaningless.
 
 ``` {.sourceCode .literate .haskell}
-do_a_barrel_roll :: WebDriver ()
+do_a_barrel_roll :: WebDriver IO ()
 do_a_barrel_roll = do
   fullscreenWindow
   navigateTo "https://www.google.com"
   performActions [typeString "do a barrel roll"]
   performActions [press EnterKey]
-  wait 700000
+  wait 5000000
   return ()
 ```
 
@@ -107,7 +108,7 @@ fullscreen, and search Google for "do a barrel roll".
 ``` {.sourceCode .literate .haskell}
 example1 :: IO ()
 example1 = do
-  execWebDriver defaultWDConfig
+  execWebDriver defaultWebDriverConfig
     (runIsolated defaultFirefoxCapabilities do_a_barrel_roll)
   return ()
 ```
@@ -121,26 +122,26 @@ Let's break down what just happened.
 2.  `runIsolated` takes a WebDriver session and runs it in a fresh
     browser instance. The parameters of this instance are specified in
     `defaultFirefoxCapabilities`.
-3.  `runSession` takes a WebDriver session and carries out the steps,
+3.  `execWebDriver` takes a WebDriver session and carries out the steps,
     using some options specified in `defaultWebDriverConfig`.
 
 You probably also noticed a bunch of noise got printed to your terminal:
-this is the log. WebDriver sessions keep track of all requests and
-responses, as well as a bunch of other information, to help with
-debugging. By default the logs are printed to stderr but this is
+this is the log. WebDriver sessions keep track of a bunch of info to
+help with debugging, like all requests and responses and all raised
+errors. By default the logs are printed to stderr but this is
 configurable.
 
-So what can you do in a WebDriver session? Well, anything you want with
-`liftIO`. But this library provides some built in commands:
+So what can you do in a WebDriver session? Not much -- but this is by
+design. The library includes:
 
--   A binding for each endpoint in the WebDriver spec (almost: the last
-    handful are coming soon)
+-   A binding for each endpoint in the WebDriver spec
 -   Some basic functions for reading and writing files, reading and
-    writing at the console, getting random data, and making arbitrary
-    HTTP requests
+    writing at the console, and making arbitrary HTTP requests
 
-Right now the best place to learn about these is the generated Haddock
-documentation.
+This plus Haskell's `do` notation make for a tidy EDSL for running
+browsers. Notably, a `WebDriver` session cannot do arbitrary `IO` by
+default, and `WebDriver` sessions are pure values. (There is an escape
+hatch for this restriction.)
 
 Behind the Scenes
 -----------------
@@ -153,20 +154,47 @@ and their internal API.
 
 This is the role geckodriver is playing in our examples so far: deep
 down, our code is making HTTP requests to geckodriver, and geckodriver
-is passing these requests on to Firefox itself.
+is passing these requests on to Firefox.
+
+This library is also tested against Chrome via chromedriver. To do that,
+using `chromedriver`'s default settings, we need to make a couple of
+adjustments to the examples: replace
+
+    defaultWebDriverConfig
+
+by
+
+    defaultWebDriverConfig
+      { _env = defaultWDEnv
+        { _remotePort = 9515
+        , _responseFormat = ChromeFormat
+        }
+      }
+
+and replace
+
+    defaultFirefoxCapabilities
+
+by
+
+    defaultChromeCapabilities
+
+(By the way - `defaultWebDriverConfig` has type `WebDriverConfig`, and
+includes knobs for tweaking almost everything about how our sessions
+run.)
 
 Making Assertions
 -----------------
 
 It's expected that you're probably interested in using browser
 automation to run end-to-end tests on some web application -- and
-webdriver-w3c has some extra bits built in to make this simpler.
+`webdriver-w3c` has some extra bits built in to make this simpler.
 
 In addition to the usual browser action commands, you can sprinkle your
 `WebDriver` sessions with *assertions*. Here's an example.
 
 ``` {.sourceCode .literate .haskell}
-what_page_is_this :: WebDriver ()
+what_page_is_this :: (Monad eff) => WebDriver eff ()
 what_page_is_this = do
   navigateTo "https://www.google.com"
   title <- getTitle
@@ -174,7 +202,21 @@ what_page_is_this = do
   return ()
 ```
 
-What do you think this code does? Let's try it: type
+Note the signature: `(Monad eff) => WebDriver eff ()` instead of
+`WebDriver IO ()`. What's happening here is that `WebDriver` is
+parameterized by the monad that effects (like writing to files and
+making HTTP requests) take place in. These effects are "run" by an
+explicit evaluator that, for the default configuration, happens to use
+`IO`, but both the effect monad and the evaluator are configurable. By
+swapping out `IO` for another type we can, for example, run our tests
+against a mock Internet, and swapping out the evaluator we might have a
+"dry run" evaluator that doesn't actually do anything, but logs what it
+would have done. It's good practice to make our `WebDriver` code
+maximally flexible by using an effect parameter like `eff` instead of
+the concrete `IO` unless there's a good reason not to.
+
+Anyway, back to the example. What do you think this code does? Let's try
+it: type
 
     example2
 
@@ -190,7 +232,7 @@ This is `example2`:
 ``` {.sourceCode .literate .haskell}
 example2 :: IO ()
 example2 = do
-  (_, result) <- debugWebDriver defaultWDConfig
+  (_, result) <- debugWebDriver defaultWebDriverConfig
     (runIsolated defaultFirefoxCapabilities what_page_is_this)
   printSummary result
   return ()
@@ -202,9 +244,9 @@ Here's what happened:
     `do_a_barrel_roll`, this time including an assertion: that the title
     of some web page is "Welcome to Lycos!".
 2.  `runIsolated` runs `what_page_is_this` in a fresh browser instance.
-3.  `debugSession` works just like `runSession`, except that it collects
-    the results of any assertion statements and returns them (this is
-    `result`).
+3.  `debugWebDriver` works much like `execWebDriver`, except that it
+    collects the results of any assertion statements and summarizes them
+    (this is `result`).
 4.  `printSummary` takes the assertion results and prints them out all
     pretty like.
 
@@ -225,7 +267,7 @@ Suppose we've got two WebDriver tests. These are pretty dweeby just for
 illustration's sake.
 
 ``` {.sourceCode .literate .haskell}
-back_button :: WebDriver ()
+back_button :: (Monad eff) => WebDriver eff ()
 back_button = do
   navigateTo "https://www.google.com"
   navigateTo "https://wordpress.com"
@@ -234,7 +276,7 @@ back_button = do
   assertEqual title "Google" "Behavior of 'back' button from WordPress homepage"
   return ()
 
-refresh_page :: WebDriver ()
+refresh_page :: (Monad eff) => WebDriver eff ()
 refresh_page = do
   navigateTo "https://www.mozilla.org"
   pageRefresh
@@ -264,7 +306,7 @@ in the interpreter. Here's what `example3` looks like:
 example3 :: IO ()
 example3 = do
   SE.setEnv "TASTY_NUM_THREADS" "1"
-  defaultMain
+  defaultWebDriverMain
     $ localOption (SilentLog)
     $ test_suite
 ```
@@ -272,46 +314,148 @@ example3 = do
 Here's what happened:
 
 1.  `test_suite` is a Tasty tree of individual `WebDriver` test cases.
-2.  `defaultMain` is a Tasty function that runs test trees. In this case
-    we've also used `localOption` to tweak how the tests run. Sending
-    the logs to `/dev/null` keeps the output less cluttered.
-3.  Tasty gives us lots of nice things for free, like pretty printing
-    test results, timings, and more.
+2.  `defaultWebDriverMain` is a Tasty function that runs test trees. In
+    this case we've also used `localOption` to tweak how the tests run
+    -- suppressing the usual session log output.
+3.  Tasty gave us lots of nice things for free, like pretty printing
+    test results and timings.
 
 Other test case constructors and test options are available. For now the
-best place to see what's possible is the haddoc documentation for
+best place to see what's possible is the haddock documentation for
 `Test.Tasty.WebDriver`.
 
-Also the test suite for `webdriver-w3c` itself uses the Tasty
-integration.
+The test suite for `webdriver-w3c` itself uses the Tasty integration.
+There is also a function, `checkWebDriver`, that can be used to build
+tests with QuickCheck, if you don't find that idea abominable. :)
 
-Using `WebDriver` Interactively
--------------------------------
+We need more power!
+-------------------
 
-One more feature of the library is handy when we're writing tests: you
-can run a WebDriver session interactively from inside ghci. Two
-additional commands are needed for this: `wdshInit` and `httpShell`.
+The vanilla `WebDriver` is designed to help you control a browser with
+*batteries included*, but it has limitations. It can't possibly
+anticipate all the different ways you might want to control your tests,
+and it can't do arbitrary `IO`. But we have a powerful and very general
+escape hatch: `WebDriver` is a special case of the `WebDriverT` monad
+transformer.
 
-Start by typing the following two commands in the interpreter.
+The actual definition of `WebDriver` is
 
-    λ: ref <- wdshInit defaultWebDriverConfig
-    λ: let sh = httpShell ref
+    type WebDriver eff a = WebDriverT (IdentityT eff) a
 
-Now `sh` is a function that runs WebDriver sessions inside an implicit
-context stored in `ref`, and overwrites `ref` with updated state after
-the session runs. The bottom line is that we can run WebDriver commands
-one at a time in the interpreter -- just prefix them with `sh $`. Try
-this sequence of commands.
+where `IdentityT` is the *inner monad* in transformer terms -- actually
+it's an inner monad transformer, on the effect monad `eff`. By swapping
+out `IdentityT` for another transformer we can add features specific to
+our application.
 
-    λ: -- open a new firefox instance
-    λ: sh $ openSession defaultFirefoxCapabilities
-    λ: -- open google.com
-    λ: sh $ navigateTo "https://google.com"
-    λ: sh $ performActions [typeString "do a barrel roll"]
-    λ: sh $ closeSession
+Here's a typical example. Say you're testing a site with two deployment
+tiers -- "test" and "production". For the most part the same test suite
+should run against both tiers, but there are minor differences. Say the
+base URLs are slightly different; maybe production lives at
+`example.com` while test lives at `test.example.com`. Also while
+developing a new feature some parts of the test suite should only run on
+the test tier, maybe controlled by a feature flag.
 
-This is handy for building new tests, as we can inspect the browser
-state (say with developer tools) after each step.
+What we need is some extra read-only state to pass around. We can do
+this with a `ReaderT` transformer. To avoid adding a dependency on a
+whole transformer library, lets roll our own:
+
+``` {.sourceCode .literate .haskell}
+data ReaderT r eff a = ReaderT
+  { runReaderT :: r -> eff a
+  }
+
+instance (Monad eff) => Monad (ReaderT r eff) where
+  return x = ReaderT $ \_ -> return x
+
+  x >>= f = ReaderT $ \r -> do
+    a <- runReaderT x r
+    runReaderT (f a) r
+
+instance (Monad eff) => Applicative (ReaderT r eff) where
+  pure = return
+  (<*>) = ap
+
+instance (Monad eff) => Functor (ReaderT r eff) where
+  fmap f x = x >>= (return . f)
+
+liftReaderT :: (Monad eff) => eff a -> ReaderT r eff a
+liftReaderT x = ReaderT $ \_ -> x
+
+reader :: (Monad eff) => (r -> a) -> ReaderT r eff a
+reader f = ReaderT $ \r -> return $ f r
+```
+
+Now our actual state might look something like this:
+
+``` {.sourceCode .literate .haskell}
+data MyEnv = MyEnv
+  { tier :: Tier
+  , featureFlag :: Bool
+  }
+
+data Tier = Test | Production
+
+env :: Tier -> MyEnv
+env t = MyEnv
+  { tier = t
+  , featureFlag = False
+  }
+```
+
+And we can augment `WebDriverT` with our reader transformer.
+
+``` {.sourceCode .literate .haskell}
+type MyWebDriver eff a = WebDriverT (ReaderT MyEnv eff) a
+```
+
+Now we can build values in `MyWebDriver` using the same API as before,
+using the extra features of the inner monad with `liftWebDriverT`.
+
+``` {.sourceCode .literate .haskell}
+custom_environment :: (Monad eff) => MyWebDriver eff ()
+custom_environment = do
+  theTier <- liftWebDriverT $ reader tier
+  case theTier of
+    Test -> navigateTo "http://google.com"
+    Production -> navigateTo "http://yahoo.com"
+```
+
+To actually run sessions using our custom monad stack we need to make a
+few adjustments. First, we use `execWebDriverT` instead of
+`execWebDriver`. This function takes one extra argument corresponding to
+`lift` for the inner transformer.
+
+Second, we need to supply a function that "runs" the inner transformer
+(in this case `ReaderT eff a`) to `IO`.
+
+``` {.sourceCode .literate .haskell}
+execReaderT :: r -> ReaderT r IO a -> IO a
+execReaderT r x = runReaderT x r
+```
+
+Running our custom WebDriver monad is then straightforward.
+
+``` {.sourceCode .literate .haskell}
+example4 :: Tier -> IO ()
+example4 t = do
+  execReaderT (env t) $
+    execWebDriverT defaultWebDriverConfig liftReaderT
+      (runIsolated defaultFirefoxCapabilities custom_environment)
+  return ()
+```
+
+Try it out with
+
+    example4 Test
+    example4 Production
+
+We can similarly use a custom inner monad to check assertions and with
+the tasty integration; there are analogous `debugWebDriverT` and
+`testCaseT` functions.
+
+`ReaderT` is just one option for the inner monad transformer. We could
+put mutable state, delimited continuations, or even another HTTP API
+monad in there. Use your imagination!
 
 Where to Learn More
 -------------------

@@ -13,13 +13,15 @@ import qualified Test.Tasty.ExpectedFailure as TE
 
 
 unexpectedError
-  :: WDError
-  -> WebDriver ()
+  :: (Monad eff)
+  => WDError
+  -> WebDriver eff ()
 unexpectedError e = assertFailure $ AssertionComment $ "Unexpected error:\n" ++ show e
 
 
 successfulExit
-  :: (String -> WebDriver () -> T.TestTree)
+  :: (Monad eff)
+  => (String -> WebDriver eff () -> T.TestTree)
   -> FilePath
   -> T.TestTree
 successfulExit buildTestCase dir =
@@ -97,7 +99,7 @@ successfulExit buildTestCase dir =
 
 
 _test_sessionStatus_success
-  :: FilePath -> WebDriver ()
+  :: (Monad eff) => FilePath -> WebDriver eff ()
 _test_sessionStatus_success page =
   let
     session = do
@@ -111,7 +113,7 @@ _test_sessionStatus_success page =
 
 
 _test_getTimeouts_success
-  :: WebDriver ()
+  :: (Monad eff) => WebDriver eff ()
 _test_getTimeouts_success =
   let
     session = do
@@ -124,7 +126,7 @@ _test_getTimeouts_success =
 
 
 _test_setTimeouts_success
-  :: WebDriver ()
+  :: (Monad eff) => WebDriver eff ()
 _test_setTimeouts_success =
   let
     session = do
@@ -137,7 +139,7 @@ _test_setTimeouts_success =
 
 
 _test_navigateTo_success
-  :: FilePath -> WebDriver ()
+  :: (Monad eff) => FilePath -> WebDriver eff ()
 _test_navigateTo_success page =
   let
     session = do
@@ -150,7 +152,7 @@ _test_navigateTo_success page =
 
 
 _test_navigateToStealth_success
-  :: FilePath -> WebDriver ()
+  :: (Monad eff) => FilePath -> WebDriver eff ()
 _test_navigateToStealth_success page =
   let
     session = do
@@ -163,7 +165,7 @@ _test_navigateToStealth_success page =
 
 
 _test_getCurrentUrl_success
-  :: WebDriver ()
+  :: (Monad eff) => WebDriver eff ()
 _test_getCurrentUrl_success =
   let
     session = do
@@ -176,7 +178,7 @@ _test_getCurrentUrl_success =
 
 
 _test_goBack_success
-  :: WebDriver ()
+  :: (Monad eff) => WebDriver eff ()
 _test_goBack_success =
   let
     session = do
@@ -189,7 +191,7 @@ _test_goBack_success =
 
 
 _test_goForward_success
-  :: WebDriver ()
+  :: (Monad eff) => WebDriver eff ()
 _test_goForward_success =
   let
     session = do
@@ -202,7 +204,7 @@ _test_goForward_success =
 
 
 _test_pageRefresh_success
-  :: WebDriver ()
+  :: (Monad eff) => WebDriver eff ()
 _test_pageRefresh_success =
   let
     session = do
@@ -215,7 +217,7 @@ _test_pageRefresh_success =
 
 
 _test_getTitle_success
-  :: WebDriver ()
+  :: (Monad eff) => WebDriver eff ()
 _test_getTitle_success =
   let
     session = do
@@ -228,7 +230,7 @@ _test_getTitle_success =
 
 
 _test_getWindowHandle_success
-  :: WebDriver ()
+  :: (Monad eff) => WebDriver eff ()
 _test_getWindowHandle_success =
   let
     session = do
@@ -245,7 +247,7 @@ _test_getWindowHandle_success =
 
 
 _test_switchToWindow_success
-  :: WebDriver ()
+  :: (Monad eff) => WebDriver eff ()
 _test_switchToWindow_success =
   let
     session = do
@@ -262,7 +264,7 @@ _test_switchToWindow_success =
 
 
 _test_getWindowHandles_success
-  :: FilePath -> WebDriver ()
+  :: (Monad eff) => FilePath -> WebDriver eff ()
 _test_getWindowHandles_success page =
   let
     session = do
@@ -281,7 +283,7 @@ _test_getWindowHandles_success page =
 
 
 _test_switchToFrame_success
-  :: FilePath -> WebDriver ()
+  :: (Monad eff) => FilePath -> WebDriver eff ()
 _test_switchToFrame_success page =
   let
     session = do
@@ -295,7 +297,7 @@ _test_switchToFrame_success page =
 
 
 _test_switchToParentFrame_success
-  :: FilePath -> WebDriver ()
+  :: (Monad eff) => FilePath -> WebDriver eff ()
 _test_switchToParentFrame_success page =
   let
     session = do
@@ -309,7 +311,7 @@ _test_switchToParentFrame_success page =
 
 
 _test_getWindowRect_success
-  :: WebDriver ()
+  :: (Monad eff) => WebDriver eff ()
 _test_getWindowRect_success =
   let
     session = do
@@ -322,7 +324,7 @@ _test_getWindowRect_success =
 
 
 _test_setWindowRect_success
-  :: WebDriver ()
+  :: (Monad eff) => WebDriver eff ()
 _test_setWindowRect_success =
   let
     session = do
@@ -340,7 +342,7 @@ _test_setWindowRect_success =
 
 
 _test_maximizeWindow_success
-  :: WebDriver ()
+  :: (Monad eff) => WebDriver eff ()
 _test_maximizeWindow_success =
   let
     session = do
@@ -353,7 +355,7 @@ _test_maximizeWindow_success =
 
 
 _test_minimizeWindow_success
-  :: WebDriver ()
+  :: (Monad eff) => WebDriver eff ()
 _test_minimizeWindow_success =
   let
     session = do
@@ -366,7 +368,7 @@ _test_minimizeWindow_success =
 
 
 _test_fullscreenWindow_success
-  :: WebDriver ()
+  :: (Monad eff) => WebDriver eff ()
 _test_fullscreenWindow_success =
   let
     session = do
@@ -379,7 +381,7 @@ _test_fullscreenWindow_success =
 
 
 _test_findElement_success
-  :: FilePath -> WebDriver ()
+  :: (Monad eff) => FilePath -> WebDriver eff ()
 _test_findElement_success page =
   let
     session = do
@@ -397,7 +399,7 @@ _test_findElement_success page =
 
 
 _test_findElements_success
-  :: FilePath -> WebDriver ()
+  :: (Monad eff) => FilePath -> WebDriver eff ()
 _test_findElements_success page =
   let
     session = do
@@ -430,7 +432,7 @@ _test_findElements_success page =
 
 
 _test_findElementFromElement_success
-  :: FilePath -> WebDriver ()
+  :: (Monad eff) => FilePath -> WebDriver eff ()
 _test_findElementFromElement_success page =
   let
     session = do
@@ -449,7 +451,7 @@ _test_findElementFromElement_success page =
 
 
 _test_findElementsFromElement_success
-  :: FilePath -> WebDriver ()
+  :: (Monad eff) => FilePath -> WebDriver eff ()
 _test_findElementsFromElement_success page =
   let
     session = do
@@ -483,7 +485,7 @@ _test_findElementsFromElement_success page =
 
 
 _test_getActiveElement_success
-  :: WebDriver ()
+  :: (Monad eff) => WebDriver eff ()
 _test_getActiveElement_success =
   let
     session = do
@@ -496,7 +498,7 @@ _test_getActiveElement_success =
 
 
 _test_isElementSelected_success
-  :: FilePath -> WebDriver ()
+  :: (Monad eff) => FilePath -> WebDriver eff ()
 _test_isElementSelected_success page =
   let
     session = do
@@ -511,7 +513,7 @@ _test_isElementSelected_success page =
 
 
 _test_getElementAttribute_success
-  :: FilePath -> WebDriver ()
+  :: (Monad eff) => FilePath -> WebDriver eff ()
 _test_getElementAttribute_success page =
   let
     session = do
@@ -530,7 +532,7 @@ _test_getElementAttribute_success page =
 
 
 _test_getElementCssValue_success
-  :: FilePath -> WebDriver ()
+  :: (Monad eff) => FilePath -> WebDriver eff ()
 _test_getElementCssValue_success page =
   let
     session = do
@@ -547,7 +549,7 @@ _test_getElementCssValue_success page =
 
 
 _test_getElementText_success
-  :: FilePath -> WebDriver ()
+  :: (Monad eff) => FilePath -> WebDriver eff ()
 _test_getElementText_success page =
   let
     session = do
@@ -562,7 +564,7 @@ _test_getElementText_success page =
 
 
 _test_getElementTagName_success
-  :: FilePath -> WebDriver ()
+  :: (Monad eff) => FilePath -> WebDriver eff ()
 _test_getElementTagName_success page =
   let
     session = do
@@ -579,7 +581,7 @@ _test_getElementTagName_success page =
 
 
 _test_getElementRect_success
-  :: FilePath -> WebDriver ()
+  :: (Monad eff) => FilePath -> WebDriver eff ()
 _test_getElementRect_success page =
   let
     session = do
@@ -594,7 +596,7 @@ _test_getElementRect_success page =
 
 
 _test_isElementEnabled_success
-  :: FilePath -> WebDriver ()
+  :: (Monad eff) => FilePath -> WebDriver eff ()
 _test_isElementEnabled_success page =
   let
     session = do
@@ -609,7 +611,7 @@ _test_isElementEnabled_success page =
 
 
 _test_elementClick_success
-  :: FilePath -> WebDriver ()
+  :: (Monad eff) => FilePath -> WebDriver eff ()
 _test_elementClick_success page =
   let
     session = do
@@ -624,7 +626,7 @@ _test_elementClick_success page =
 
 
 _test_elementClear_success
-  :: FilePath -> WebDriver ()
+  :: (Monad eff) => FilePath -> WebDriver eff ()
 _test_elementClear_success page =
   let
     session = do
@@ -639,7 +641,7 @@ _test_elementClear_success page =
 
 
 _test_elementSendKeys_success
-  :: FilePath -> WebDriver ()
+  :: (Monad eff) => FilePath -> WebDriver eff ()
 _test_elementSendKeys_success page =
   let
     session = do
@@ -654,7 +656,7 @@ _test_elementSendKeys_success page =
 
 
 _test_getPageSource_success
-  :: FilePath -> WebDriver ()
+  :: (Monad eff) => FilePath -> WebDriver eff ()
 _test_getPageSource_success page =
   let
     session = do
@@ -668,7 +670,7 @@ _test_getPageSource_success page =
 
 
 _test_getPageSourceStealth_success
-  :: FilePath -> WebDriver ()
+  :: (Monad eff) => FilePath -> WebDriver eff ()
 _test_getPageSourceStealth_success page =
   let
     session = do
@@ -690,7 +692,7 @@ _test_getPageSourceStealth_success page =
 
 
 _test_getAllCookies_success
-  :: FilePath -> WebDriver ()
+  :: (Monad eff) => FilePath -> WebDriver eff ()
 _test_getAllCookies_success page =
   let
     session = do
@@ -706,7 +708,7 @@ _test_getAllCookies_success page =
 
 
 _test_getNamedCookie_success
-  :: FilePath -> WebDriver ()
+  :: (Monad eff) => FilePath -> WebDriver eff ()
 _test_getNamedCookie_success page =
   let
     session = do
@@ -727,7 +729,7 @@ _test_getNamedCookie_success page =
 
 
 _test_deleteCookie_success
-  :: FilePath -> WebDriver ()
+  :: (Monad eff) => FilePath -> WebDriver eff ()
 _test_deleteCookie_success page =
   let
     session = do
@@ -742,7 +744,7 @@ _test_deleteCookie_success page =
 
 
 _test_deleteAllCookies_success
-  :: WebDriver ()
+  :: (Monad eff) => WebDriver eff ()
 _test_deleteAllCookies_success =
   let
     session = do
@@ -755,7 +757,7 @@ _test_deleteAllCookies_success =
 
 
 _test_performActions_keyboard_success
-  :: WebDriver ()
+  :: (Monad eff) => WebDriver eff ()
 _test_performActions_keyboard_success =
   let
     session = do
@@ -804,7 +806,7 @@ _test_performActions_keyboard_success =
 
 
 _test_performActionsStealth_keyboard_success
-  :: WebDriver ()
+  :: (Monad eff) => WebDriver eff ()
 _test_performActionsStealth_keyboard_success =
   let
     session = do
@@ -817,7 +819,7 @@ _test_performActionsStealth_keyboard_success =
 
 
 _test_releaseActions_success
-  :: WebDriver ()
+  :: (Monad eff) => WebDriver eff ()
 _test_releaseActions_success =
   let
     session = do
@@ -830,7 +832,7 @@ _test_releaseActions_success =
 
 
 _test_dismissAlert_success
-  :: FilePath -> WebDriver ()
+  :: (Monad eff) => FilePath -> WebDriver eff ()
 _test_dismissAlert_success page =
   let
     session = do
@@ -851,7 +853,7 @@ _test_dismissAlert_success page =
 
 
 _test_acceptAlert_success
-  :: FilePath -> WebDriver ()
+  :: (Monad eff) => FilePath -> WebDriver eff ()
 _test_acceptAlert_success page =
   let
     session = do
@@ -872,7 +874,7 @@ _test_acceptAlert_success page =
 
 
 _test_getAlertText_success
-  :: FilePath -> WebDriver ()
+  :: (Monad eff) => FilePath -> WebDriver eff ()
 _test_getAlertText_success page =
   let
     session = do
@@ -902,7 +904,7 @@ _test_getAlertText_success page =
 
 
 _test_sendAlertText_success
-  :: FilePath -> WebDriver ()
+  :: (Monad eff) => FilePath -> WebDriver eff ()
 _test_sendAlertText_success page =
   let
     session = do
@@ -917,7 +919,7 @@ _test_sendAlertText_success page =
 
 
 _test_takeScreenshot_success
-  :: FilePath -> WebDriver ()
+  :: (Monad eff) => FilePath -> WebDriver eff ()
 _test_takeScreenshot_success page =
   let
     session = do
@@ -931,7 +933,7 @@ _test_takeScreenshot_success page =
 
 
 _test_takeElementScreenshot_success
-  :: FilePath -> WebDriver ()
+  :: (Monad eff) => FilePath -> WebDriver eff ()
 _test_takeElementScreenshot_success page =
   let
     session = do

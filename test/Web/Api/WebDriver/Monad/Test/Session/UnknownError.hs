@@ -14,15 +14,16 @@ import qualified Test.Tasty.ExpectedFailure as TE
 
 
 unknownError
-  :: WDError
-  -> WebDriver ()
+  :: (Monad eff)
+  => WDError
+  -> WebDriver eff ()
 unknownError e = case e of
   ResponseError UnknownError _ _ _ _ -> assertSuccess "yay!"
   _ -> assertFailure "Expecting 'unknown error'"
 
 
 unknownErrorExit
-  :: (String -> WebDriver () -> T.TestTree)
+  :: (Monad eff) => (String -> WebDriver eff () -> T.TestTree)
   -> FilePath
   -> T.TestTree
 unknownErrorExit buildTestCase path = T.testGroup "Unknown Error"
@@ -33,7 +34,7 @@ unknownErrorExit buildTestCase path = T.testGroup "Unknown Error"
 
 
 _test_navigateTo_unknown_error
-  :: WebDriver ()
+  :: (Monad eff) => WebDriver eff ()
 _test_navigateTo_unknown_error =
   let
     session = do

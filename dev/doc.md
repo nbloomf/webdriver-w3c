@@ -18,13 +18,15 @@ For building `webdriver-w3c` itself or your own projects, I recommend [stack](ht
 Structure of the Library
 ------------------------
 
-The heart of the library is the `WebDriver` monad, which handles network requests, logging, errors, and other state. The bulk of the API consists of functions into this monad -- one for each endpoint in the WebDriver spec.
+The heart of the library is the `WebDriverT` monad transformer, which handles network requests, logging, errors, and other state. The bulk of the API consists of functions into this monad -- one for each endpoint in the WebDriver spec.
+
+`WebDriverT` is a specialization of `HttpT` from the `script-monad` library. Under the hood, it is a hand-rolled stack of error, reader, writer, state, and prompt monads.
 
 
 About Parallelism
 -----------------
 
-If you have a large suite of tests, webdriver-w3c can speed up execution by running the tests in parallel. In fact, running the tests in parallel is no more complicated than running them sequentially. To take advantage of this you'll need to do two things:
+If you have a large suite of tests, `webdriver-w3c` can speed up execution by running the tests in parallel. In fact, thanks to `tasty`, running the tests in parallel is no more complicated than running them sequentially. To take advantage of this you'll need to do two things:
 
 First: set the `--num-threads` option or the `TASTY_NUM_THREADS` environment variable higher than 1; this is the number of tests to be run simultaneously. (This also requires compiling your binary with `-threaded -rtsopts -with-rtsopts=-N`; see the [tasty documentation](https://github.com/feuerbach/tasty#running-tests-in-parallel) for details).
 
@@ -59,4 +61,4 @@ Tests for this library fall into two buckets: API tests, where the correct behav
 
 The API test suite consists of a list of WebDriver scripts in the [test/Web/Api/WebDriver/Monad/Test/Session](https://github.com/nbloomf/webdriver-w3c/tree/master/test/Web/Api/WebDriver/Monad/Test/Session) directory. These tests are divided into files by expected result; e.g. [Success](https://github.com/nbloomf/webdriver-w3c/blob/master/test/Web/Api/WebDriver/Monad/Test/Session/Success.hs) consists of the scripts that should succeed, [UnknownError](https://github.com/nbloomf/webdriver-w3c/blob/master/test/Web/Api/WebDriver/Monad/Test/Session/UnknownError.hs) consists of the scripts that should fail with "unknown error", and so on.
 
-API test scripts are run against two drivers: [geckodriver](https://github.com/mozilla/geckodriver) and a mocked remote end implementation. Later versions will also test against Chrome. The code for the mocked remote end is mainly in and under the [test/Web/Api/WebDriver/Monad/Test/Server](https://github.com/nbloomf/webdriver-w3c/blob/master/test/Web/Api/WebDriver/Monad/Test/Server.hs) namespace, with additional scaffolding under [test/Web/Api/Http/Effects/Test/Mock](https://github.com/nbloomf/webdriver-w3c/blob/master/test/Web/Api/Http/Effects/Test/Mock.hs).
+API test scripts are run against [geckodriver](https://github.com/mozilla/geckodriver) and [chromedriver](http://chromedriver.chromium.org/), as well as a mocked remote end implementation. The code for the mocked remote end is mainly in and under the [test/Web/Api/WebDriver/Monad/Test/Server](https://github.com/nbloomf/webdriver-w3c/blob/master/test/Web/Api/WebDriver/Monad/Test/Server.hs) namespace.

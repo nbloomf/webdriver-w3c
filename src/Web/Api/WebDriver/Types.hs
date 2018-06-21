@@ -519,7 +519,7 @@ defaultFirefoxOptions = FirefoxOptions
 
 
 -- | See <https://github.com/mozilla/geckodriver#log-object>.
-data FirefoxLog = FirefoxLog
+newtype FirefoxLog = FirefoxLog
   { _firefoxLogLevel :: Maybe LogLevel
   } deriving (Eq, Show)
 

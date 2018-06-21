@@ -9,23 +9,13 @@ Portability : POSIX
 -}
 
 module Web.Api.WebDriver.Helpers (
-  -- * Running Sessions
-    cleanupOnError
-  , runIsolated
-
   -- * Secrets
-  , stashCookies
+    stashCookies
   , loadCookies
-  , writeCookieFile
-  , readCookieFile
 
   -- * Actions
   , press
   , typeString
-
-  -- * Shell
-  , openSession
-  , closeSession
   ) where
 
 import qualified Data.Aeson as Aeson
@@ -42,32 +32,13 @@ import Web.Api.WebDriver.Types.Keyboard
 
 
 
--- | If a WebDriver session ends without issuing a delete session command, then the server keeps its session state alive. `cleanupOnError` catches errors and ensures that a `deleteSession` request is sent.
-cleanupOnError
-  :: WebDriver a -- ^ `WebDriver` session that may throw errors
-  -> WebDriver a
-cleanupOnError x = catchError x $ \e ->
-  deleteSession >> throwError e
-
-
-
--- | Run a WebDriver computation in an isolated browser session. Uses `cleanupOnError` to ensure the session is deleted on the server.
-runIsolated
-  :: Capabilities
-  -> WebDriver a
-  -> WebDriver ()
-runIsolated caps theSession = cleanupOnError $ do
-  session_id <- newSession caps
-  modifyState $ setSessionId (Just session_id)
-  theSession
-  deleteSession
-  modifyState $ setSessionId Nothing
 
 
 -- | Save all cookies for the current domain to a file.
 stashCookies
-  :: String -- ^ Passed through SHA1, and the digest is used as the filename.
-  -> WebDriver ()
+  :: (Monad m)
+  => String -- ^ Passed through SHA1, and the digest is used as the filename.
+  -> WebDriverT m ()
 stashCookies string =
   let file = SHA.showDigest $ SHA.sha1 $ BS.pack string in
   getAllCookies >>= writeCookieFile file
@@ -75,8 +46,9 @@ stashCookies string =
 
 -- | Load cookies from a file saved with `stashCookies`. Returns `False` if the cookie file is missing or cannot be read.
 loadCookies
-  :: String -- ^ Passed through SHA1, and the digest is used as the filename.
-  -> WebDriver Bool
+  :: (Monad m)
+  => String -- ^ Passed through SHA1, and the digest is used as the filename.
+  -> WebDriverT m Bool
 loadCookies string = do
   let file = SHA.showDigest $ SHA.sha1 $ BS.pack string
   contents <- readCookieFile file
@@ -89,22 +61,24 @@ loadCookies string = do
 
 -- | Write cookies to a file under the secrets path. 
 writeCookieFile
-  :: FilePath -- ^ File path; relative to @$SECRETS_PATH/cookies/@
+  :: (Monad m)
+  => FilePath -- ^ File path; relative to @$DATA_PATH\/secrets\/cookies\/@
   -> [Cookie]
-  -> WebDriver ()
+  -> WebDriverT m ()
 writeCookieFile file cookies = do
-  path <- fromEnv (_secretsPath . _env)
-  let fullpath = path ++ "/cookies/" ++ file
+  path <- fromEnv (_dataPath . _env)
+  let fullpath = path ++ "/secrets/cookies/" ++ file
   writeFilePath fullpath (Aeson.encode cookies)
 
 
 -- | Read cookies from a file stored with `writeCookieFile`. Returns `Nothing` if the file does not exist.
 readCookieFile
-  :: FilePath -- ^ File path; relative to @$SECRETS_PATH/cookies/@
-  -> WebDriver (Maybe [Cookie])
+  :: (Monad m)
+  => FilePath -- ^ File path; relative to @$DATA_PATH\/secrets\/cookies\/@
+  -> WebDriverT m (Maybe [Cookie])
 readCookieFile file = do
-  path <- fromEnv (_secretsPath . _env)
-  let fullpath = path ++ "/cookies/" ++ file
+  path <- fromEnv (_dataPath . _env)
+  let fullpath = path ++ "/secrets/cookies/" ++ file
   cookieFileExists <- fileExists fullpath
   if cookieFileExists
     then readFilePath fullpath
@@ -139,22 +113,3 @@ typeString x = emptyAction
   , _inputSourceId = Just "kbd"
   , _actionItems = map keypress x
   }
-
-
-
--- | Open a new browser instance; for use with `httpShell`
-openSession
-  :: Capabilities
-  -> WebDriver ()
-openSession caps = do
-  session_id <- newSession caps
-  modifyState $ setSessionId (Just session_id)
-  return ()
-
--- | Close the current browser instance; for use with `httpShell`.
-closeSession
-  :: WebDriver ()
-closeSession = do
-  deleteSession
-  modifyState $ setSessionId Nothing
-  return ()
