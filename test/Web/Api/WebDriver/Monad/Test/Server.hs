@@ -24,7 +24,8 @@ import qualified Network.Wreq.Session as WreqS
 import Codec.Picture
 import Codec.Picture.Saving
 
-import Control.Monad.Script.Http.MockIO
+import Data.MockIO
+import Data.MockIO.FileSystem
 
 import Web.Api.WebDriver
 import Web.Api.WebDriver.Monad.Test.Server.State
@@ -34,7 +35,7 @@ import Web.Api.WebDriver.Monad.Test.Server.Page
 
 defaultWebDriverServer :: MockWorld WebDriverServerState
 defaultWebDriverServer = MockWorld
-  { _files = []
+  { _files = emptyFileSystem
   , _time = epoch
   , _serverState = MockServer defaultWebDriverServerState
   , _httpGet = \url -> case splitUrl $ stripScheme url of
@@ -1003,8 +1004,11 @@ parseCssSelector str = case parseCss str of
   Right x -> return x
 
 verifyIsActiveSession :: String -> MockNetwork WebDriverServerState ()
-verifyIsActiveSession session_id =
-  checkMockServer (_is_active_session session_id) _err_invalid_session_id
+verifyIsActiveSession session_id = do
+  st <- getMockServer
+  if _is_active_session session_id st
+    then return ()
+    else errorMockNetwork _err_invalid_session_id
 
 getElementFromId :: String -> MockNetwork WebDriverServerState Document
 getElementFromId element_id = do

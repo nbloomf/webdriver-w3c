@@ -15,10 +15,10 @@ import qualified Test.Tasty.ExpectedFailure as TE
 
 
 invalidElementState
-  :: E WDError
+  :: WDError
   -> WebDriver ()
 invalidElementState e = case e of
-  E (ResponseError InvalidElementState _ _ _ _) -> assertSuccess "yay!"
+  ResponseError InvalidElementState _ _ _ _ -> assertSuccess "yay!"
   err -> assertFailure $
     AssertionComment $ "Expecting 'invalid element state' but got: " ++ show err
 
@@ -45,7 +45,7 @@ _test_elementClear_invalid_element_state page =
       navigateTo page
       !element <- findElement CssSelector "body"
       elementClear element
-      throwError $ E $ UnexpectedResult IsSuccess "Expecting 'invalid_element_state'"
+      throwError $ UnexpectedResult IsSuccess "Expecting 'invalid_element_state'"
       return ()
 
-  in catch session invalidElementState
+  in catchError session invalidElementState

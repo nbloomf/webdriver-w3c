@@ -22,9 +22,9 @@ main = do
   var <- lookupEnv "WD_STRESS_TEST_NUM_TESTS"
 
   k <- case var >>= readMaybe of
-    Nothing -> printError
+    Nothing -> showError
     Just m -> if m <= 0
-      then printError
+      then showError
       else return m 
 
   defaultWebDriverMain $
@@ -33,7 +33,7 @@ main = do
       [ testCase ("navigate to google.com #" ++ show i) _test | i <- [1..k] ]
 
 
-printError :: IO a
-printError = do
+showError :: IO a
+showError = do
   putStrLn "WD_STRESS_TEST_NUM_TESTS must be a positive integer."
   exitFailure

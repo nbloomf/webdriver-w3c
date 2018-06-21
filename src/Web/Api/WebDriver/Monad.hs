@@ -20,15 +20,20 @@ module Web.Api.WebDriver.Monad (
 
   -- * Errors
   , Http.E(..)
-  , Http.printE
   , Http.JsonError(..)
   , WDError(..)
   , throwError
-  , catch
   , throwJsonError
+  , throwHttpException
+  , throwIOException
+  , catchError
+  , catchJsonError
+  , catchHttpException
+  , catchIOException
   , expect
   , printWDError
   , promoteHttpResponseError
+  , Http.printError
 
   -- * Environment
   , Http.R(..)
@@ -44,7 +49,7 @@ module Web.Api.WebDriver.Monad (
   -- * Logs
   , WDLog(..)
   , printWDLog
-  , log
+  , logEntry
   , comment
   , wait
   , getAssertions
@@ -62,6 +67,7 @@ module Web.Api.WebDriver.Monad (
   , evalWDAct
   , evalWDActMockIO
   , Http.evalIO
+  , Http.evalMockIO
 
   -- * API
   , parseJson
@@ -88,13 +94,9 @@ module Web.Api.WebDriver.Monad (
   , theRemoteUrl
   , theRemoteUrlWithSession
 
-  -- * Shell
-  , wdInit
-  , wdHttp
-
   -- * Testing
   , checkWebDriverM
-  , checkWebDriverMockIO
+  -- , checkWebDriverMockIO
 ) where
 
 import Prelude hiding (log, readFile, writeFile)
@@ -122,20 +124,22 @@ import qualified Data.ByteString.Lazy.Char8 as LC
 import Data.IORef
   ( IORef, newIORef, readIORef, writeIORef )
 import qualified Data.Map.Strict as M
-  ( Map )
+  ( Map, fromList )
 import Data.Text
   ( pack, unpack, Text )
 import qualified Network.HTTP.Client as N
   ( HttpException(..), HttpExceptionContent(..) )
 import Network.Wreq
-  ( Status, statusMessage, statusCode, responseStatus )
+  ( Status, statusMessage, statusCode, responseStatus, defaults )
 import System.Directory
   ( doesFileExist )
 import System.IO
-  ( Handle, hGetLine, hSetEcho, hGetEcho, hFlush )
+  ( Handle, hGetLine, hSetEcho, hGetEcho, hFlush, stdout, stdin )
+import Test.QuickCheck
+  ( Property )
 
 import qualified Control.Monad.Script.Http as Http
-import qualified Control.Monad.Script.Http.MockIO as Mock
+import qualified Data.MockIO as Mock
 
 import Web.Api.WebDriver.Types
 import Web.Api.WebDriver.Assert
@@ -165,35 +169,19 @@ debugWebDriver config session = do
   (result, _, w) <- execWebDriver config session
   return (result, summarize $ getAssertions $ Http.logEntries w)
 
--- | Execute a `WebDriver` session, mapping the result to `IO`. Used for testing.
 checkWebDriverM
-  :: (Monad m)
-  => WebDriverConfig m
-  -> (forall a. m a -> IO a)
-  -> ((Either (Http.E WDError) t, Http.S WDState, Http.W WDError WDLog) -> q)
+  :: (Monad eff)
+  => WebDriverConfig eff
+  -> (eff (Either (Http.E WDError) t, Http.S WDState, Http.W WDError WDLog) -> IO q) -- ^ Condense to `IO`
+  -> (q -> Bool) -- ^ Result check
   -> WebDriver t
-  -> IO q
-checkWebDriverM config toIO check =
-  Mock.checkHttpM
+  -> Property
+checkWebDriverM config cond check =
+  Http.checkHttpM
     (_initialState config)
     (_environment config)
     (_evaluator config)
-    toIO check . unWD
-
--- | Execute a `WebDriver` session in `Mock.MockIO`. Used for testing.
-checkWebDriverMockIO
-  :: WebDriverConfig (Mock.MockIO u)
-  -> Mock.MockWorld u
-  -> (((Either (Http.E WDError) t, Http.S WDState, Http.W WDError WDLog), Mock.MockWorld u) -> q)
-  -> WebDriver t
-  -> q
-checkWebDriverMockIO config world check =
-  Mock.checkHttpMockIO
-    (_initialState config)
-    (_environment config)
-    world
-    (_evaluator config)
-    check . unWD
+    cond check . unWD
 
 data WebDriverConfig m = WDConfig
   { _initialState :: Http.S WDState
@@ -201,11 +189,41 @@ data WebDriverConfig m = WDConfig
   , _evaluator :: (forall a. Http.P WDAct a -> m a)
   }
 
-defaultWDConfig :: WebDriverConfig IO
-defaultWDConfig = WDConfig
-  { _initialState = undefined
-  , _environment = undefined
-  , _evaluator = undefined
+defaultWDConfig :: MVar () -> WebDriverConfig IO
+defaultWDConfig lock = WDConfig
+  { _initialState = Http.S
+    { Http._httpOptions = defaults
+    , Http._httpSession = Nothing
+    , Http._userState = WDState
+      { _sessionId = Nothing
+      }
+    }
+  , _environment = Http.R
+    { Http._logHandle = stdin
+    , Http._logLock = Just lock
+    , Http._uid = ""
+    , Http._logOptions = Http.trivialLogOptions
+      { Http._logColor = True
+      , Http._logJson = True
+      , Http._logHeaders = False
+      , Http._logSilent = False
+      , Http._printUserError = printWDError
+      , Http._printUserLog = printWDLog
+      }
+    , Http._httpErrorInject = promoteHttpResponseError
+    , Http._env = WDEnv
+      { _remoteHostname = "localhost"
+      , _remotePort = 4444
+      , _remotePath = ""
+      , _responseFormat = SpecFormat
+      , _apiVersion = CR_2018_03_04
+      , _secretsPath = ""
+      , _vars = M.fromList []
+      , _stdout = stdout
+      , _stdin = stdin
+      }
+    }
+  , _evaluator = Http.evalIO undefined -- evalWDAct
   }
 
 instance Functor WebDriver where
@@ -228,8 +246,8 @@ fromEnv f = WD $ Http.reader f
 modifyState :: (Http.S WDState -> Http.S WDState) -> WebDriver ()
 modifyState f = WD $ Http.modify f
 
-log :: WDLog -> WebDriver ()
-log = WD . Http.log
+logEntry :: WDLog -> WebDriver ()
+logEntry = WD . Http.logEntry
 
 -- | Write a comment to the log.
 comment :: String -> WebDriver ()
@@ -238,14 +256,29 @@ comment = WD . Http.comment
 wait :: Int -> WebDriver ()
 wait = WD . Http.wait
 
-throwError :: Http.E WDError -> WebDriver a
+throwError :: WDError -> WebDriver a
 throwError = WD . Http.throwError
 
-catch :: WebDriver a -> (Http.E WDError -> WebDriver a) -> WebDriver a
-catch x h = WD $ Http.catch (unWD x) (unWD . h)
+catchError :: WebDriver a -> (WDError -> WebDriver a) -> WebDriver a
+catchError x h = WD $ Http.catchError (unWD x) (unWD . h)
 
 throwJsonError :: Http.JsonError -> WebDriver a
 throwJsonError = WD . Http.throwJsonError
+
+throwHttpException :: N.HttpException -> WebDriver a
+throwHttpException = WD . Http.throwHttpException
+
+throwIOException :: IOException -> WebDriver a
+throwIOException = WD . Http.throwIOException
+
+catchJsonError :: WebDriver a -> (Http.JsonError -> WebDriver a) -> WebDriver a
+catchJsonError x h = WD $ Http.catchJsonError (unWD x) (unWD . h)
+
+catchHttpException :: WebDriver a -> (N.HttpException -> WebDriver a) -> WebDriver a
+catchHttpException x h = WD $ Http.catchHttpException (unWD x) (unWD . h)
+
+catchIOException :: WebDriver a -> (IOException -> WebDriver a) -> WebDriver a
+catchIOException x h = WD $ Http.catchIOException (unWD x) (unWD . h)
 
 parseJson :: ByteString -> WebDriver Value
 parseJson = WD . Http.parseJson
@@ -374,9 +407,9 @@ data WDAct a where
 -- | Url of the remote WebDriver server.
 theRemoteUrl :: WebDriver String
 theRemoteUrl = do
-  host <- fromEnv (_remoteHostname . Http._userEnv)
-  port <- fromEnv (_remotePort . Http._userEnv)
-  path <- fromEnv (_remotePath . Http._userEnv)
+  host <- fromEnv (_remoteHostname . Http._env)
+  port <- fromEnv (_remotePort . Http._env)
+  path <- fromEnv (_remotePath . Http._env)
   return $ concat [ "http://", host, ":", show port, path]
 
 -- | Url of the remote WebDriver server, with session ID.
@@ -385,7 +418,7 @@ theRemoteUrlWithSession
 theRemoteUrlWithSession = do
   st <- fromState (_sessionId . Http._userState)
   case st of
-    Nothing -> throwError $ Http.E NoSession
+    Nothing -> throwError NoSession
     Just session_id -> do
       baseUrl <- theRemoteUrl
       return $ concat [ baseUrl, "/session/", session_id ]
@@ -394,7 +427,7 @@ theRemoteUrlWithSession = do
 expect :: (Eq a, Show a) => a -> a -> WebDriver a
 expect x y = if x == y
   then return y
-  else throwError $ Http.E $ UnexpectedValue $
+  else throwError $ UnexpectedValue $
     "expected " ++ show x ++ " but got " ++ show y
 
 -- | Promote semantic HTTP exceptions to typed errors.
@@ -447,26 +480,26 @@ promptForString
   :: String -- ^ Prompt text
   -> WebDriver String
 promptForString prompt = do
-  outH <- fromEnv (_stdout . Http._userEnv)
-  inH <- fromEnv (_stdin . Http._userEnv)
+  outH <- fromEnv (_stdout . Http._env)
+  inH <- fromEnv (_stdin . Http._env)
   hPutStrLn outH prompt
   result <- WD $ Http.prompt $ Http.P $ HGetLine inH
   case result of
     Right string -> return string
-    Left e -> throwError $ Http.E_IO e
+    Left e -> throwIOException e
 
 -- | Prompt for input on `stdin`, but do not echo the typed characters back to the terminal -- handy for getting suuper secret info.
 promptForSecret
   :: String -- ^ Prompt text
   -> WebDriver String
 promptForSecret prompt = do
-  outH <- fromEnv (_stdout . Http._userEnv)
-  inH <- fromEnv (_stdin . Http._userEnv)
+  outH <- fromEnv (_stdout . Http._env)
+  inH <- fromEnv (_stdin . Http._env)
   hPutStrLn outH prompt
   result <- WD $ Http.prompt $ Http.P $ HGetLineNoEcho inH
   case result of
     Right string -> return string
-    Left e -> throwError $ Http.E_IO e
+    Left e -> throwIOException e
 
 -- | Captures `IOException`s
 readFilePath :: FilePath -> WebDriver ByteString
@@ -474,7 +507,7 @@ readFilePath path = do
   result <- WD $ Http.prompt $ Http.P $ ReadFilePath path
   case result of
     Right bytes -> return bytes
-    Left e -> throwError $ Http.E_IO e
+    Left e -> throwIOException e
 
 -- | Captures `IOException`s
 writeFilePath :: FilePath -> ByteString -> WebDriver ()
@@ -482,7 +515,7 @@ writeFilePath path bytes = do
   result <- WD $ Http.prompt $ Http.P $ WriteFilePath path bytes
   case result of
     Right () -> return ()
-    Left e -> throwError $ Http.E_IO e
+    Left e -> throwIOException e
 
 -- | Captures `IOException`s
 fileExists :: FilePath -> WebDriver Bool
@@ -490,7 +523,7 @@ fileExists path = do
   result <- WD $ Http.prompt $ Http.P $ FileExists path
   case result of
     Right p -> return p
-    Left e -> throwError $ Http.E_IO e
+    Left e -> throwIOException e
 
 -- | Set the session id of a `WDState`.
 setSessionId :: Maybe String -> Http.S WDState -> Http.S WDState
@@ -516,7 +549,7 @@ evalWDAct act = case act of
     return secret
 
 instance Assert WebDriver where
-  assert = log . LogAssertion
+  assert = logEntry . LogAssertion
 
 -- | Standard `Mock.MockIO` evaluator for `WDAct`.
 evalWDActMockIO :: WDAct a -> Mock.MockIO u a
@@ -530,24 +563,3 @@ evalWDActMockIO act = case act of
   HGetLine handle -> error "evalWDActMockIO: HGetLine not defined"
 
   HGetLineNoEcho handle -> error "evalWDActMockIO: HGetLineNoEcho not defined"
-
-
-
--- | Initialize the configuration for a `WebDriver` shell session.
-wdInit
-  :: WebDriverConfig IO
-  -> IO (IORef (WebDriverConfig IO))
-wdInit config = newIORef config
-
--- | Interpret a step in a `WebDriver` shell session.
-wdHttp
-  :: IORef (WebDriverConfig IO)
-  -> WebDriver a
-  -> IO a
-wdHttp ref wd = do
-  config <- readIORef ref
-  (result, st, _) <- execWebDriver config wd
-  writeIORef ref config { _initialState = st }
-  case result of
-    Left e -> error $ Http.printE show e
-    Right ok -> return ok

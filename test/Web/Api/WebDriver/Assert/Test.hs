@@ -13,7 +13,8 @@ import Control.Concurrent (MVar)
 import qualified Network.Wreq as Wreq
 import qualified Data.Map as MS
 
-import Control.Monad.Script.Http.MockIO
+import Data.MockIO
+import Control.Monad.Script.Http
 import Web.Api.WebDriver.Monad.Test.Server
 
 import Web.Api.WebDriver
@@ -47,17 +48,18 @@ defaultState = S
 defaultEnv :: MVar () -> R WDError WDLog WDEnv
 defaultEnv lock = R
   { _logHandle = stdout
-  , _logLock = lock
+  , _logLock = Just lock
   , _uid = ""
-  , _logOptions = LogOptions
+  , _logOptions = trivialLogOptions
     { _logColor = True
     , _logJson = True
+    , _logHeaders = False
     , _logSilent = True
     , _printUserError = printWDError
     , _printUserLog = printWDLog
     }
   , _httpErrorInject = promoteHttpResponseError
-  , _userEnv = WDEnv
+  , _env = WDEnv
     { _remoteHostname = "localhost"
     , _remotePort = 4444
     , _remotePath = ""
@@ -102,7 +104,8 @@ testMock
   -> (String, WebDriver (), t)
   -> TT.TestTree
 testMock lock f =
-  checkCase (mockConfig lock) (mockIOtoIO defaultWebDriverServer) f
+  checkCase (mockConfig lock)
+  (\x -> return $ fst $ runMockIO x defaultWebDriverServer) f
 
 checkCase
   :: (Monad m, Show t, Eq t)
@@ -113,11 +116,11 @@ checkCase
   -> TT.TestTree
 checkCase config eval f (name,http,expect) =
   HU.testCase name $ do
-    p <- checkWebDriverM config eval
-      (hasLogEntriesWith (\w -> expect == (f $ getAssertions w))) http
-    case p of
-      Nothing -> return ()
-      Just actual -> HU.assertFailure $
+    (_,_,w) <- eval $ execWebDriver config http
+    let actual = f $ getAssertions $ logEntries w
+    if expect == actual
+      then return ()
+      else HU.assertFailure $
         "\n\ngot:\n " ++ show actual ++ "\n\nbut expected:\n" ++ show expect
 
 

@@ -14,10 +14,10 @@ import qualified Test.Tasty.ExpectedFailure as TE
 
 
 unknownError
-  :: E WDError
+  :: WDError
   -> WebDriver ()
 unknownError e = case e of
-  E (ResponseError UnknownError _ _ _ _) -> assertSuccess "yay!"
+  ResponseError UnknownError _ _ _ _ -> assertSuccess "yay!"
   _ -> assertFailure "Expecting 'unknown error'"
 
 
@@ -38,7 +38,7 @@ _test_navigateTo_unknown_error =
   let
     session = do
       navigateTo "https://fake.example"
-      throwError $ E $ UnexpectedResult IsSuccess "Expecting 'unknown error'"
+      throwError $ UnexpectedResult IsSuccess "Expecting 'unknown error'"
       return ()
 
-  in catch session unknownError
+  in catchError session unknownError

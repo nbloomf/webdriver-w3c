@@ -105,6 +105,7 @@ import qualified Test.Tasty.Providers as TT
 import qualified Test.Tasty.Options as TO
 import qualified Test.Tasty.ExpectedFailure as TE
 
+import Control.Monad.Script.Http (trivialLogOptions)
 import Web.Api.WebDriver
 import Test.Tasty.WebDriver.Config
 
@@ -235,17 +236,18 @@ instance (Monad m, Typeable m) => TT.IsTest (WebDriverTest m) where
               }
             , _environment = R
               { _logHandle = logHandle
-              , _logLock = logLock
+              , _logLock = Just logLock
               , _uid = uid
-              , _logOptions = LogOptions
+              , _logOptions = trivialLogOptions
                 { _logColor = logColors
                 , _logJson = True
+                , _logHeaders = False
                 , _logSilent = logNoise
                 , _printUserError = printWDError
                 , _printUserLog = printWDLog
                 }
               , _httpErrorInject = promoteHttpResponseError
-              , _userEnv = WDEnv
+              , _env = WDEnv
                 { _remoteHostname = remoteEndHost remote
                 , _remotePort = remoteEndPort remote
                 , _remotePath = remoteEndPath remote
@@ -271,7 +273,7 @@ instance (Monad m, Typeable m) => TT.IsTest (WebDriverTest m) where
             return $ webDriverAssertionsToResult $ summarize assertions
           Left err -> if attemptNumber >= numRetries
             then return $ TT.testFailed $
-              "Unhandled error: " ++ printE (printWDError True) err
+              "Unhandled error!\n" ++ printError (printWDError True) err
             else attempt (attemptNumber + 1)
 
     attempt 1

@@ -202,7 +202,7 @@ newSession'
   -> WebDriver SessionId
 newSession' f caps = do
   baseUrl <- theRemoteUrl
-  format <- fromEnv (_responseFormat . _userEnv)
+  format <- fromEnv (_responseFormat . _env)
   let
     !payload = encode $ f $ object
       [ "capabilities" .= object
@@ -238,7 +238,7 @@ sessionStatus
  :: WebDriver (Bool, String)
 sessionStatus = do
   baseUrl <- theRemoteUrl
-  format <- fromEnv (_responseFormat . _userEnv)
+  format <- fromEnv (_responseFormat . _env)
   r <- httpGet (baseUrl ++ "/status")
     >>= (return . _responseBody)
     >>= parseJson
@@ -669,7 +669,7 @@ getElementAttribute element name = do
     Null -> return (Left False)
     String "true" -> return (Left True)
     String attr -> return (Right $ unpack attr)
-    _ -> throwJsonError JsonError
+    _ -> throwJsonError $ JsonError "Invalid element attribute response"
 
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-element-property>.
@@ -1016,7 +1016,7 @@ getAlertText = do
   case msg of
     Null -> return Nothing
     String text -> return $ Just (unpack text)
-    _ -> throwJsonError JsonError
+    _ -> throwJsonError $ JsonError "Invalid alert text response"
 
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#send-alert-text>.
@@ -1047,7 +1047,7 @@ takeScreenshot = do
     >>= (return . B64.decode . encodeUtf8)
   case result of
     Right img -> return img
-    Left str -> throwError $ E $ ImageDecodeError str
+    Left str -> throwError $ ImageDecodeError str
 
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#take-element-screenshot>.
@@ -1066,7 +1066,7 @@ takeElementScreenshot element = do
     >>= (return . B64.decode . encodeUtf8)
   case result of
     Right img -> return img
-    Left str -> throwError $ E $ ImageDecodeError str
+    Left str -> throwError $ ImageDecodeError str
 
 
 -- | Detect empty responses by response format. Necessary because chromedriver is not strictly spec compliant.
@@ -1079,5 +1079,5 @@ expectEmptyObject format value = case format of
 theRequestContext :: WebDriver (String, ResponseFormat)
 theRequestContext = do
   baseUrl <- theRemoteUrlWithSession
-  format <- fromEnv (_responseFormat . _userEnv)
+  format <- fromEnv (_responseFormat . _env)
   return (baseUrl, format)

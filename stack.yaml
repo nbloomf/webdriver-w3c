@@ -5,5 +5,5 @@ packages:
 
 - location:
     git: https://github.com/nbloomf/script-monad.git
-    commit: d415606adbb8be99d0b33433d095896588cf79ab
+    commit: e9c4b37de9225d1f71e90cc035f9c4fd472e756f
   extra-dep: true

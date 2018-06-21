@@ -46,7 +46,7 @@ import Web.Api.WebDriver.Types.Keyboard
 cleanupOnError
   :: WebDriver a -- ^ `WebDriver` session that may throw errors
   -> WebDriver a
-cleanupOnError x = catch x $ \e ->
+cleanupOnError x = catchError x $ \e ->
   deleteSession >> throwError e
 
 
@@ -93,7 +93,7 @@ writeCookieFile
   -> [Cookie]
   -> WebDriver ()
 writeCookieFile file cookies = do
-  path <- fromEnv (_secretsPath . _userEnv)
+  path <- fromEnv (_secretsPath . _env)
   let fullpath = path ++ "/cookies/" ++ file
   writeFilePath fullpath (Aeson.encode cookies)
 
@@ -103,7 +103,7 @@ readCookieFile
   :: FilePath -- ^ File path; relative to @$SECRETS_PATH/cookies/@
   -> WebDriver (Maybe [Cookie])
 readCookieFile file = do
-  path <- fromEnv (_secretsPath . _userEnv)
+  path <- fromEnv (_secretsPath . _env)
   let fullpath = path ++ "/cookies/" ++ file
   cookieFileExists <- fileExists fullpath
   if cookieFileExists

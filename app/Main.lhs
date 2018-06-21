@@ -10,6 +10,7 @@ Hello, and welcome to the wonderful world of browser automation with WebDriver a
 > 
 > import Web.Api.WebDriver
 > import Test.Tasty.WebDriver
+> import Control.Concurrent.MVar
 > 
 > import Test.Tasty
 > import qualified System.Environment as SE
@@ -29,7 +30,7 @@ To follow along, you're going to need a few things.
 3. A web browser; this tutorial assumes you're using Firefox.
 4. A WebDriver proxy server for your browser. For Firefox this is [geckodriver](https://github.com/mozilla/geckodriver). Don't sweat it if you don't know what "WebDriver proxy server" means right now, we'll get to that.
 
-Next, start your proxy server. For geckodriver on unix-like OSs, that is done with the `geckodriver` command. You should see a line that looks something like this:
+Next, start your proxy server. For geckodriver on unix-like OSs, that is done with the `geckodriver &` command. You should see a line that looks something like this:
 
     1521524046173	geckodriver	INFO	Listening on 127.0.0.1:4444
 
@@ -77,7 +78,8 @@ followed by (enter). You should see a Firefox window open, go fullscreen, and se
 
 > example1 :: IO ()
 > example1 = do
->   execWebDriver defaultWDConfig
+>   lock <- newMVar ()
+>   execWebDriver (defaultWDConfig lock)
 >     (runIsolated defaultFirefoxCapabilities do_a_barrel_roll)
 >   return ()
 
@@ -131,7 +133,8 @@ This is `example2`:
 
 > example2 :: IO ()
 > example2 = do
->   (_, result) <- debugWebDriver defaultWDConfig
+>   lock <- newMVar ()
+>   (_, result) <- debugWebDriver (defaultWDConfig lock)
 >     (runIsolated defaultFirefoxCapabilities what_page_is_this)
 >   printSummary result
 >   return ()
@@ -212,8 +215,10 @@ One more feature of the library is handy when we're writing tests: you can run a
 
 Start by typing the following two commands in the interpreter.
 
-    λ: ref <- wdshInit defaultWebDriverConfig
-    λ: let sh = httpShell ref
+    λ: import Control.Concurrent.MVar
+    λ: lock <- newMVar ()
+    λ: ref <- wdInit $ defaultWDConfig lock
+    λ: let sh = wdHttp ref
 
 Now `sh` is a function that runs WebDriver sessions inside an implicit context stored in `ref`, and overwrites `ref` with updated state after the session runs. The bottom line is that we can run WebDriver commands one at a time in the interpreter -- just prefix them with `sh $`. Try this sequence of commands.
 

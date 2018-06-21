@@ -9,7 +9,7 @@ import System.IO
 
 import Test.Tasty (TestTree(), testGroup, localOption, Timeout(NoTimeout))
 
-import Control.Monad.Script.Http.MockIO
+import Data.MockIO
 
 import Web.Api.WebDriver
 import Test.Tasty.WebDriver
@@ -43,7 +43,9 @@ tests path = testGroup "Web.Api.WebDriver.Monad"
 
 
 testCaseMockIO :: String -> WebDriver () -> TestTree
-testCaseMockIO name = testCaseM name (evalMockIO evalWDActMockIO) (mockIOtoIO defaultWebDriverServer)
+testCaseMockIO name = testCaseM name
+  (evalMockIO evalWDActMockIO)
+  (\x -> return $ fst $ runMockIO x defaultWebDriverServer)
 
 endpointTests
   :: (String -> WebDriver () -> TestTree)

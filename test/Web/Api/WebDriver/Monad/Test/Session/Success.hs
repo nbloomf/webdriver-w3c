@@ -13,7 +13,7 @@ import qualified Test.Tasty.ExpectedFailure as TE
 
 
 unexpectedError
-  :: E WDError
+  :: WDError
   -> WebDriver ()
 unexpectedError e = assertFailure $ AssertionComment $ "Unexpected error:\n" ++ show e
 
@@ -106,7 +106,7 @@ _test_sessionStatus_success page =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -119,7 +119,7 @@ _test_getTimeouts_success =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -132,7 +132,7 @@ _test_setTimeouts_success =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -145,7 +145,7 @@ _test_navigateTo_success page =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -158,7 +158,7 @@ _test_navigateToStealth_success page =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -171,7 +171,7 @@ _test_getCurrentUrl_success =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -184,7 +184,7 @@ _test_goBack_success =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -197,7 +197,7 @@ _test_goForward_success =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -210,7 +210,7 @@ _test_pageRefresh_success =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -223,7 +223,7 @@ _test_getTitle_success =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -236,7 +236,7 @@ _test_getWindowHandle_success =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -257,7 +257,7 @@ _test_switchToWindow_success =
           assertSuccess "yay"
           return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -276,7 +276,7 @@ _test_getWindowHandles_success page =
           assertSuccess "yay"
           return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -290,7 +290,7 @@ _test_switchToFrame_success page =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -304,7 +304,7 @@ _test_switchToParentFrame_success page =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -317,7 +317,7 @@ _test_getWindowRect_success =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -335,7 +335,7 @@ _test_setWindowRect_success =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -348,7 +348,7 @@ _test_maximizeWindow_success =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -361,7 +361,7 @@ _test_minimizeWindow_success =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -374,7 +374,7 @@ _test_fullscreenWindow_success =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -392,7 +392,7 @@ _test_findElement_success page =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -425,7 +425,7 @@ _test_findElements_success page =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -444,7 +444,7 @@ _test_findElementFromElement_success page =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -478,7 +478,7 @@ _test_findElementsFromElement_success page =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -491,7 +491,7 @@ _test_getActiveElement_success =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -506,7 +506,7 @@ _test_isElementSelected_success page =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -521,7 +521,7 @@ _test_getElementAttribute_success page =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -542,7 +542,7 @@ _test_getElementCssValue_success page =
         _ -> assertFailure $ AssertionComment $ "expected 'none', got '" ++ text ++ "'"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -557,7 +557,7 @@ _test_getElementText_success page =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -574,7 +574,7 @@ _test_getElementTagName_success page =
         _ -> assertFailure $ AssertionComment $ "expected 'div', got '" ++ text ++ "'"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -589,7 +589,7 @@ _test_getElementRect_success page =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -604,7 +604,7 @@ _test_isElementEnabled_success page =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -619,7 +619,7 @@ _test_elementClick_success page =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -634,7 +634,7 @@ _test_elementClear_success page =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -649,7 +649,7 @@ _test_elementSendKeys_success page =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -663,7 +663,7 @@ _test_getPageSource_success page =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -677,7 +677,7 @@ _test_getPageSourceStealth_success page =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -701,7 +701,7 @@ _test_getAllCookies_success page =
         (!x):_ -> assertFailure "unexpected cookie"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -717,7 +717,7 @@ _test_getNamedCookie_success page =
       assertEqual (_cookieValue cookie) (Just "fakeValue") "cookie name"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -737,7 +737,7 @@ _test_deleteCookie_success page =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -750,7 +750,7 @@ _test_deleteAllCookies_success =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -799,7 +799,7 @@ _test_performActions_keyboard_success =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -812,7 +812,7 @@ _test_performActionsStealth_keyboard_success =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -825,7 +825,7 @@ _test_releaseActions_success =
       assertSuccess "yay"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -846,7 +846,7 @@ _test_dismissAlert_success page =
       assertSuccess "yay prompt"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -867,7 +867,7 @@ _test_acceptAlert_success page =
       assertSuccess "yay prompt"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -897,7 +897,7 @@ _test_getAlertText_success page =
       acceptAlert
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -912,7 +912,7 @@ _test_sendAlertText_success page =
       assertSuccess "yay prompt"
       return ()
 
-  in  catch session unexpectedError
+  in  catchError session unexpectedError
 
 
 
@@ -926,7 +926,7 @@ _test_takeScreenshot_success page =
       assertSuccess "yay"
       return ()
 
-  in catch session unexpectedError
+  in catchError session unexpectedError
 
 
 
@@ -941,4 +941,4 @@ _test_takeElementScreenshot_success page =
       assertSuccess "yay"
       return ()
 
-  in catch session unexpectedError
+  in catchError session unexpectedError
