@@ -268,7 +268,8 @@ Here's what happened:
 
 1. `test_suite` is a Tasty tree of individual `WebDriver` test cases.
 2. `defaultWebDriverMain` is a Tasty function that runs test trees. In this case we've also used `localOption` to tweak how the tests run -- suppressing the usual session log output.
-3. Tasty gave us lots of nice things for free, like pretty printing test results and timings.
+
+Tasty gave us lots of nice things for free, like pretty printing test results and timings.
 
     λ: example3
     >>> Deployment environment is DEV

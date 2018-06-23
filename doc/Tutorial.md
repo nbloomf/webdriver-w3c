@@ -358,14 +358,20 @@ Here's what happened:
 2.  `defaultWebDriverMain` is a Tasty function that runs test trees. In
     this case we've also used `localOption` to tweak how the tests run
     -- suppressing the usual session log output.
-3.  Tasty gave us lots of nice things for free, like pretty printing
-    test results and timings.
 
-    λ: example3 \>\>\> Deployment environment is DEV \>\>\> Logging with
-    colors All Tests Back Button: OK (7.23s) 1 assertion(s) Refresh:
-    FAIL (4.29s) Invalid Assertion assertion: "Internet for people, not
-    profit \\8212 Mozilla" is equal to "Mozilla's Epic HomePage on the
-    Internets" comment: Refresh mozilla.org
+Tasty gave us lots of nice things for free, like pretty printing test
+results and timings.
+
+    λ: example3
+    >>> Deployment environment is DEV
+    >>> Logging with colors
+    All Tests
+      Back Button: OK (7.23s)
+        1 assertion(s)
+      Refresh:     FAIL (4.29s)
+        Invalid Assertion 
+        assertion: "Internet for people, not profit \8212 Mozilla" is equal to "Mozilla's Epic HomePage on the Internets" 
+        comment: Refresh mozilla.org
 
     1 out of 2 tests failed (11.53s)
 
