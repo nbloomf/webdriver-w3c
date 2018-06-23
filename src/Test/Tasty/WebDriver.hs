@@ -763,7 +763,7 @@ defaultWebDriverMain tree = do
     _OPT_COLOR (`lookup` [("true", True), ("false", False)])
     "NO_COLOR" (\_ -> Just False)
     True
-  putStrLn $ ">>> Logging " ++ if colors then "with" else "without" ++ " colors"
+  putStrLn $ ">>> Logging " ++ (if colors then "with" else "without") ++ " colors"
 
   if colors
     then return ()
