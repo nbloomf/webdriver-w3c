@@ -14,7 +14,7 @@ category:       web, webdriver, testing
 synopsis:       Bindings to the WebDriver API
 
 extra-source-files:
-  ChangeLog.md
+  CHANGELOG.md
   README.md
 
 source-repository head
