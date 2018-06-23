@@ -214,7 +214,7 @@ Here's what happened:
 3. `debugWebDriver` works much like `execWebDriver`, except that it collects the results of any assertion statements and summarizes them (this is `result`).
 4. `printSummary` takes the assertion results and prints them out all pretty like.
 
-So what kinds of assertions can be made? The best place to learn about these is in the generated Haddock documentation.
+Documentation on assertions is on [Hackage](https://hackage.haskell.org/package/webdriver-w3c-0.0.1/docs/Web-Api-WebDriver-Assert.html).
 
 
 
@@ -284,7 +284,7 @@ Tasty gave us lots of nice things for free, like pretty printing test results an
 
     1 out of 2 tests failed (11.53s)
 
-Other test case constructors and test options are available. For now the best place to see what's possible is the haddock documentation for `Test.Tasty.WebDriver`.
+Other test case constructors and test options are available; see [Hackage](https://hackage.haskell.org/package/webdriver-w3c-0.0.1/docs/Test-Tasty-WebDriver.html) for the details.
 
 The test suite for `webdriver-w3c` itself uses the Tasty integration. There is also a function, `checkWebDriver`, that can be used to build tests with QuickCheck, if you don't find that idea abominable. :)
 
@@ -387,8 +387,4 @@ We can similarly use a custom inner monad to check assertions and with the tasty
 Where to Learn More
 -------------------
 
-The canonical source is the generated haddock documentation. Until this is uploaded to hackage, the only way to get the docs is to run
-
-    stack haddock
-
-in this directory and point your browser to the local URL that command emits under "Updating Haddock index for local packages and dependencies in..."
+For now the canonical documentation is the haddock annotations on [Hackage](https://hackage.haskell.org/package/webdriver-w3c).
