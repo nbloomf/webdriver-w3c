@@ -125,8 +125,49 @@ Let's break down what just happened.
 3.  `execWebDriver` takes a WebDriver session and carries out the steps,
     using some options specified in `defaultWebDriverConfig`.
 
-You probably also noticed a bunch of noise got printed to your terminal:
-this is the log. WebDriver sessions keep track of a bunch of info to
+You probably also noticed a bunch of noise got printed to your terminal
+starting with something like this:
+
+    λ: example1
+    2018-06-23 15:19:46 Request POST http://localhost:4444/session
+    {
+        "capabilities": {
+            "alwaysMatch": {
+                "browserName": "firefox"
+            }
+        },
+        "desiredCapabilities": {
+            "browserName": "firefox"
+        }
+    }
+    2018-06-23 15:19:48 Response
+    {
+        "value": {
+            "sessionId": "383edca7-3054-0544-8c1e-cc64099462de",
+            "capabilities": {
+                "moz:webdriverClick": true,
+                "platformVersion": "17.4.0",
+                "moz:headless": false,
+                "moz:useNonSpecCompliantPointerOrigin": false,
+                "browserVersion": "60.0.2",
+                "rotatable": false,
+                "pageLoadStrategy": "normal",
+                "moz:profile": "/var/folders/td/sxyy9wl919740vddr49g8nth0000gn/T/rust_mozprofile.aleh5JscOwwI",
+                "moz:accessibilityChecks": false,
+                "moz:processID": 88470,
+                "platformName": "darwin",
+                "timeouts": {
+                    "implicit": 0,
+                    "script": 30000,
+                    "pageLoad": 300000
+                },
+                "acceptInsecureCerts": false,
+                "browserName": "firefox"
+            }
+        }
+    }
+
+This is the log. WebDriver sessions keep track of a bunch of info to
 help with debugging, like all requests and responses and all raised
 errors. By default the logs are printed to stderr but this is
 configurable.
@@ -319,6 +360,14 @@ Here's what happened:
     -- suppressing the usual session log output.
 3.  Tasty gave us lots of nice things for free, like pretty printing
     test results and timings.
+
+    λ: example3 \>\>\> Deployment environment is DEV \>\>\> Logging with
+    colors All Tests Back Button: OK (7.23s) 1 assertion(s) Refresh:
+    FAIL (4.29s) Invalid Assertion assertion: "Internet for people, not
+    profit \\8212 Mozilla" is equal to "Mozilla's Epic HomePage on the
+    Internets" comment: Refresh mozilla.org
+
+    1 out of 2 tests failed (11.53s)
 
 Other test case constructors and test options are available. For now the
 best place to see what's possible is the haddock documentation for
