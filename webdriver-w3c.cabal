@@ -9,11 +9,13 @@ copyright:      2018 Automattic, Inc.
 license:        GPL-3
 license-file:   LICENSE
 build-type:     Simple
-cabal-version: >= 1.20
+cabal-version:  1.20
 category:       web, webdriver, testing
 synopsis:       Bindings to the WebDriver API
 
-
+extra-source-files:
+  ChangeLog.md
+  README.md
 
 source-repository head
   type: git
