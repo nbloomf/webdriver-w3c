@@ -42,13 +42,14 @@ tests path = testGroup "Web.Api.WebDriver.Monad"
 
 
 
-testCaseMockIO :: String -> WebDriver () -> TestTree
+testCaseMockIO :: String -> WebDriver (MockIO WebDriverServerState) () -> TestTree
 testCaseMockIO name = testCaseM name
   (evalMockIO evalWDActMockIO)
   (\x -> return $ fst $ runMockIO x defaultWebDriverServer)
 
 endpointTests
-  :: (String -> WebDriver () -> TestTree)
+  :: (Monad eff)
+  => (String -> WebDriver eff () -> TestTree)
   -> FilePath
   -> [TestTree]
 endpointTests buildTestCase path =

@@ -1,25 +1,9 @@
-* Chromedriver compatibility: several tests are ignored for chromedriver due to spec-noncompliance. Some of these can be fixed -- notably the findElement tests -- by figuring out how to interpret chromedriver's responses.
-* Stealth commands should not log request/response details. We should test that this is the case.
-* /session/{session id}/element/{element id}/displayed
-* Need a ci test matrix, but have to think about how to prevent combinatorial blowup; dependencies are geckodriver+firefox+chromedriver+chrome, so matrix will get big fast. Compromise: only support one version of the drivers at a time?
-* no_color env variable
-* make WebDriver a monad transformer
-* make endpoints part of WDAct
+TODO
+====
 
--- refactor cleanup tasks
-* cleanup response headers in log
-* log lock in tasty is a just; shouldn't be
-* make log printing more configurable in http
-* default webdriver config?
-* mock server as an option
-* deal with timeouts
-* logprinterlock option is wrong
-* if a color option is set
-    then use it.
-    else if $NO_COLOR is set
-      then use it
-      else use color
-* swap out _vars in environment for a string. what to call it? (environment is taken)
+
+NEXT
+====
 * artifact directory; use adjustoption in the testcase builders, with an extra argument
   for the directory name, to describe a hierarchy for saving test artifacts (stdout, logs,
   screenshots) and also getting mocked input (stdin, reference screenshots, etc).
@@ -37,6 +21,14 @@
     |
     +> run_1970_01_01_01_00_00
        +> test_artifact_hierarchy
+
+
+SOMEDAY
+=======
+* Chromedriver compatibility: several tests are ignored for chromedriver due to spec-noncompliance. Some of these can be fixed -- notably the findElement tests -- by figuring out how to interpret chromedriver's responses.
+* /session/{session id}/element/{element id}/displayed
+* Need a ci test matrix, but have to think about how to prevent combinatorial blowup; dependencies are geckodriver+firefox+chromedriver+chrome, so matrix will get big fast. Compromise: only support one version of the drivers at a time?
+
 
 Notes on ignored tests
 - getAlertText on headless geckodriver

@@ -7,7 +7,7 @@ Maintainer  : Nathan Bloomfield (nbloomf@gmail.com)
 Stability   : experimental
 Portability : POSIX
 
-The `WebDriver` type is a specialization of `Http` with additional context relevant to the WebDriver spec.
+A monad and monad transformer for 
 -}
 
 {-# LANGUAGE GADTs, Rank2Types, OverloadedStrings #-}
@@ -15,91 +15,85 @@ module Web.Api.WebDriver.Monad (
     WebDriver
   , execWebDriver
   , debugWebDriver
-  , WebDriverConfig(..)
-  , defaultWDConfig
+  , checkWebDriver
 
-  -- * Errors
-  , Http.E(..)
-  , Http.JsonError(..)
-  , WDError(..)
+  , WebDriverT()
+  , execWebDriverT
+  , debugWebDriverT
+  , checkWebDriverT
+  , liftWebDriverT
+  , IdentityT(..)
+
+  , evalWDAct
+  , Http.evalIO
+  , evalWDActMockIO
+  , Http.evalMockIO
+
+  -- * Config
+  , WebDriverConfig(..)
+  , defaultWebDriverConfig
+  , defaultWebDriverState
+  , defaultWebDriverEnvironment
+  , defaultWDEnv
+  , defaultWebDriverLogOptions
+
+  -- * API
+  , fromState
+  , modifyState
+  , fromEnv
+  , comment
+  , wait
   , throwError
   , throwJsonError
   , throwHttpException
   , throwIOException
+  , expect
+  , assert
   , catchError
   , catchJsonError
   , catchHttpException
   , catchIOException
-  , expect
-  , printWDError
-  , promoteHttpResponseError
-  , Http.printError
-
-  -- * Environment
-  , Http.R(..)
-  , Http.LogOptions(..)
-  , WDEnv(..)
-  , ResponseFormat(..)
-  , ApiVersion(..)
-  , fromEnv
-  , Outcome(..)
-  , Http.Url
-  , Http.HttpResponse(..)
-
-  -- * Logs
-  , WDLog(..)
-  , printWDLog
-  , logEntry
-  , comment
-  , wait
-  , getAssertions
-  , Http.logEntries
-
-  -- * State
-  , Http.S(..)
-  , WDState(..)
-  , fromState
-  , modifyState
-
-  -- * Effects
-  , Http.P(..)
-  , WDAct(..)
-  , evalWDAct
-  , evalWDActMockIO
-  , Http.evalIO
-  , Http.evalMockIO
-
-  -- * API
   , parseJson
   , lookupKeyJson
   , constructFromJson
-
   , httpGet
   , httpSilentGet
   , httpPost
   , httpSilentPost
   , httpDelete
   , httpSilentDelete
-
   , hPutStrLn
   , hPutStrLnBlocking
-
   , readFilePath
   , writeFilePath
   , fileExists
 
-  , setSessionId
+  -- * Types
+  , Http.E(..)
+  , Http.JsonError(..)
+  , WDError(..)
+  , Http.R(..)
+  , Http.LogOptions(..)
+  , WDEnv(..)
+  , ResponseFormat(..)
+  , ApiVersion(..)
+  , Outcome(..)
+  , Http.Url
+  , Http.HttpResponse(..)
+  , WDLog(..)
+  , Http.P(..)
+  , WDAct(..)
+  , Http.S(..)
+  , WDState(..)
 
-  -- * Helpers
-  , theRemoteUrl
-  , theRemoteUrlWithSession
-
-  -- * Testing
-  , checkWebDriverM
-  -- , checkWebDriverMockIO
+  -- * Logs
+  , getAssertions
+  , Http.logEntries
 ) where
 
-import Prelude hiding (log, readFile, writeFile)
+
+
+import Prelude hiding (readFile, writeFile)
 
 import Control.Concurrent.MVar
   ( MVar )
@@ -121,6 +115,8 @@ import Data.ByteString.Lazy
   ( ByteString, readFile, writeFile )
 import qualified Data.ByteString.Lazy.Char8 as LC
   ( unpack, pack )
+import Data.Functor.Identity
+  ( Identity(..) )
 import Data.IORef
   ( IORef, newIORef, readIORef, writeIORef )
 import qualified Data.Map.Strict as M
@@ -135,159 +131,303 @@ import System.Directory
   ( doesFileExist )
 import System.IO
   ( Handle, hGetLine, hSetEcho, hGetEcho, hFlush, stdout, stdin )
+import System.IO.Error
+  ( eofErrorType, doesNotExistErrorType, mkIOError )
 import Test.QuickCheck
   ( Property )
 
 import qualified Control.Monad.Script.Http as Http
 import qualified Data.MockIO as Mock
+import qualified Data.MockIO.FileSystem as FS
 
 import Web.Api.WebDriver.Types
 import Web.Api.WebDriver.Assert
 
 
 
--- | Wrapper type around `Http.Http`; a stack of error, reader, writer, state, and prompt monads.
-newtype WebDriver a = WD
-  { unWD :: Http.Http WDError WDEnv WDLog WDState WDAct a }
+
+
+-- | Wrapper type around `Http.HttpT`; a stack of error, reader, writer, state, and prompt monads.
+newtype WebDriverT m a = WDT
+  { unWDT :: Http.HttpT WDError WDEnv WDLog WDState WDAct m a }
+
+instance Functor (WebDriverT m) where
+  fmap f = WDT . fmap f . unWDT
+
+instance Applicative (WebDriverT m) where
+  pure = return
+  (<*>) = ap
+
+instance Monad (WebDriverT m) where
+  return = WDT . return
+  (WDT x) >>= f = WDT (x >>= (unWDT . f))
+
+-- | Lift a value from the inner monad
+liftWebDriverT :: (Monad m) => m a -> WebDriverT m a
+liftWebDriverT = WDT . Http.liftHttpT
+
+-- | Type representing configuration settings for a WebDriver session
+data WebDriverConfig eff = WDConfig
+  { _initialState :: Http.S WDState
+  , _environment :: Http.R WDError WDLog WDEnv
+  , _evaluator :: forall a. Http.P WDAct a -> eff a
+  }
+
+-- | Default `IO` effects
+defaultWebDriverConfig :: WebDriverConfig IO
+defaultWebDriverConfig = WDConfig
+  { _initialState = defaultWebDriverState
+  , _environment = defaultWebDriverEnvironment
+  , _evaluator = Http.evalIO evalWDAct
+  }
+
+defaultWebDriverState :: Http.S WDState
+defaultWebDriverState = Http.S
+  { Http._httpOptions = defaults
+  , Http._httpSession = Nothing
+  , Http._userState = WDState
+    { _sessionId = Nothing
+    }
+  }
+
+defaultWebDriverEnvironment :: Http.R WDError WDLog WDEnv
+defaultWebDriverEnvironment = Http.R
+  { Http._logHandle = stdout
+  , Http._logLock = Nothing
+  , Http._uid = ""
+  , Http._logOptions = defaultWebDriverLogOptions
+  , Http._httpErrorInject = promoteHttpResponseError
+  , Http._env = defaultWDEnv
+  }
+
+-- | Uses default geckodriver settings
+defaultWDEnv :: WDEnv
+defaultWDEnv = WDEnv
+  { _remoteHostname = "localhost"
+  , _remotePort = 4444
+  , _remotePath = ""
+  , _dataPath = ""
+  , _responseFormat = SpecFormat
+  , _apiVersion = CR_2018_03_04
+  , _stdin = stdin
+  , _stdout = stdout
+  }
+
+-- | Noisy, JSON, in color, without headers.
+defaultWebDriverLogOptions :: Http.LogOptions WDError WDLog
+defaultWebDriverLogOptions = Http.trivialLogOptions
+  { Http._logColor = True
+  , Http._logJson = True
+  , Http._logHeaders = False
+  , Http._logSilent = False
+  , Http._printUserError = printWDError
+  , Http._printUserLog = printWDLog
+  }
+
+
+
+-- | Execute a `WebDriverT` session.
+execWebDriverT
+  :: (Monad eff, Monad (m eff))
+  => WebDriverConfig eff
+  -> (forall u. eff u -> m eff u) -- ^ Lift effects to the inner monad
+  -> WebDriverT (m eff) a
+  -> m eff (Either (Http.E WDError) a, Http.S WDState, Http.W WDError WDLog)
+execWebDriverT config lift = Http.execHttpTM
+  (_initialState config) (_environment config) (_evaluator config) lift . unWDT
+
+-- | Execute a `WebDriverT` session, returning an assertion summary with the result.
+debugWebDriverT
+  :: (Monad eff, Monad (m eff))
+  => WebDriverConfig eff
+  -> (forall u. eff u -> m eff u) -- ^ Lift effects to the inner monad
+  -> WebDriverT (m eff) a
+  -> m eff (Either String a, AssertionSummary)
+debugWebDriverT config lift session = do
+  (result, _, w) <- execWebDriverT config lift session
+  let output = case result of
+        Right a -> Right a
+        Left e -> Left $ Http.printError (printWDError True) e
+  return (output, summarize $ getAssertions $ Http.logEntries w)
+
+-- | For testing with QuickCheck.
+checkWebDriverT
+  :: (Monad eff, Monad (m eff))
+  => WebDriverConfig eff
+  -> (forall u. eff u -> m eff u) -- ^ Lift effects to the inner monad
+  -> (m eff (Either (Http.E WDError) t, Http.S WDState, Http.W WDError WDLog) -> IO q) -- ^ Condense to `IO`
+  -> (q -> Bool) -- ^ Result check
+  -> WebDriverT (m eff) t
+  -> Property
+checkWebDriverT config lift cond check =
+  Http.checkHttpTM
+    (_initialState config)
+    (_environment config)
+    (_evaluator config)
+    lift cond check . unWDT
+
+
+
+
+
+-- | `WebDriverT` over `IdentityT`.
+type WebDriver eff a = WebDriverT (IdentityT eff) a
+
+-- | The identity monad transformer.
+newtype IdentityT m a = IdentityT { runIdentityT :: m a }
+
+instance (Monad m) => Monad (IdentityT m) where
+  return = IdentityT . return
+  x >>= f = IdentityT $ runIdentityT x >>= (runIdentityT . f)
+
+instance (Functor m) => Functor (IdentityT m) where
+  fmap f = IdentityT . fmap f . runIdentityT
+
+instance (Monad m) => Applicative (IdentityT m) where
+  pure = return
+  (<*>) = ap
+
+
 
 -- | Execute a `WebDriver` session.
 execWebDriver
- :: (Monad m)
- => WebDriverConfig m
- -> WebDriver a
- -> m (Either (Http.E WDError) a, Http.S WDState, Http.W WDError WDLog)
-execWebDriver config = Http.execHttpM
-  (_initialState config) (_environment config) (_evaluator config) . unWD
+  :: (Monad eff)
+  => WebDriverConfig eff
+  -> WebDriver eff a
+  -> eff (Either (Http.E WDError) a, Http.S WDState, Http.W WDError WDLog)
+execWebDriver config = runIdentityT . execWebDriverT config IdentityT
 
 -- | Execute a `WebDriver` session, returning an assertion summary with the result.
 debugWebDriver
-  :: (Monad m)
-  => WebDriverConfig m
-  -> WebDriver a
-  -> m (Either (Http.E WDError) a, AssertionSummary)
+  :: (Monad eff)
+  => WebDriverConfig eff
+  -> WebDriver eff a
+  -> eff (Either String a, AssertionSummary)
 debugWebDriver config session = do
   (result, _, w) <- execWebDriver config session
-  return (result, summarize $ getAssertions $ Http.logEntries w)
+  let output = case result of
+        Right a -> Right a
+        Left e -> Left $ Http.printError (printWDError True) e
+  return (output, summarize $ getAssertions $ Http.logEntries w)
 
-checkWebDriverM
+-- | For testing with QuickCheck
+checkWebDriver
   :: (Monad eff)
   => WebDriverConfig eff
   -> (eff (Either (Http.E WDError) t, Http.S WDState, Http.W WDError WDLog) -> IO q) -- ^ Condense to `IO`
   -> (q -> Bool) -- ^ Result check
-  -> WebDriver t
+  -> WebDriver eff t
   -> Property
-checkWebDriverM config cond check =
-  Http.checkHttpM
-    (_initialState config)
-    (_environment config)
-    (_evaluator config)
-    cond check . unWD
+checkWebDriver config cond = checkWebDriverT config IdentityT (cond . runIdentityT)
 
-data WebDriverConfig m = WDConfig
-  { _initialState :: Http.S WDState
-  , _environment :: Http.R WDError WDLog WDEnv
-  , _evaluator :: (forall a. Http.P WDAct a -> m a)
-  }
 
-defaultWDConfig :: MVar () -> WebDriverConfig IO
-defaultWDConfig lock = WDConfig
-  { _initialState = Http.S
-    { Http._httpOptions = defaults
-    , Http._httpSession = Nothing
-    , Http._userState = WDState
-      { _sessionId = Nothing
-      }
-    }
-  , _environment = Http.R
-    { Http._logHandle = stdin
-    , Http._logLock = Just lock
-    , Http._uid = ""
-    , Http._logOptions = Http.trivialLogOptions
-      { Http._logColor = True
-      , Http._logJson = True
-      , Http._logHeaders = False
-      , Http._logSilent = False
-      , Http._printUserError = printWDError
-      , Http._printUserLog = printWDLog
-      }
-    , Http._httpErrorInject = promoteHttpResponseError
-    , Http._env = WDEnv
-      { _remoteHostname = "localhost"
-      , _remotePort = 4444
-      , _remotePath = ""
-      , _responseFormat = SpecFormat
-      , _apiVersion = CR_2018_03_04
-      , _secretsPath = ""
-      , _vars = M.fromList []
-      , _stdout = stdout
-      , _stdin = stdin
-      }
-    }
-  , _evaluator = Http.evalIO undefined -- evalWDAct
-  }
 
-instance Functor WebDriver where
-  fmap f = WD . fmap f . unWD
+-- | Get a computed value from the state
+fromState :: (Http.S WDState -> a) -> WebDriverT m a
+fromState = WDT . Http.gets
 
-instance Applicative WebDriver where
-  pure = return
-  (<*>) = ap
+-- | Mutate the state
+modifyState :: (Http.S WDState -> Http.S WDState) -> WebDriverT m ()
+modifyState = WDT . Http.modify
 
-instance Monad WebDriver where
-  return = WD . return
-  (WD x) >>= f = WD (x >>= (unWD . f))
+-- | Get a computed value from the environment
+fromEnv :: (Http.R WDError WDLog WDEnv -> a) -> WebDriverT m a
+fromEnv = WDT . Http.reader
 
-fromState :: (Http.S WDState -> a) -> WebDriver a
-fromState f = WD $ Http.gets f
-
-fromEnv :: (Http.R WDError WDLog WDEnv -> a) -> WebDriver a
-fromEnv f = WD $ Http.reader f
-
-modifyState :: (Http.S WDState -> Http.S WDState) -> WebDriver ()
-modifyState f = WD $ Http.modify f
-
-logEntry :: WDLog -> WebDriver ()
-logEntry = WD . Http.logEntry
+logEntry :: WDLog -> WebDriverT m ()
+logEntry = WDT . Http.logEntry
 
 -- | Write a comment to the log.
-comment :: String -> WebDriver ()
-comment = WD . Http.comment
+comment :: String -> WebDriverT m ()
+comment = WDT . Http.comment
 
-wait :: Int -> WebDriver ()
-wait = WD . Http.wait
+-- | In milliseconds
+wait :: Int -> WebDriverT m ()
+wait = WDT . Http.wait
 
-throwError :: WDError -> WebDriver a
-throwError = WD . Http.throwError
+throwError :: WDError -> WebDriverT m a
+throwError = WDT . Http.throwError
 
-catchError :: WebDriver a -> (WDError -> WebDriver a) -> WebDriver a
-catchError x h = WD $ Http.catchError (unWD x) (unWD . h)
+throwJsonError :: Http.JsonError -> WebDriverT m a
+throwJsonError = WDT . Http.throwJsonError
 
-throwJsonError :: Http.JsonError -> WebDriver a
-throwJsonError = WD . Http.throwJsonError
+throwHttpException :: N.HttpException -> WebDriverT m a
+throwHttpException = WDT . Http.throwHttpException
 
-throwHttpException :: N.HttpException -> WebDriver a
-throwHttpException = WD . Http.throwHttpException
+throwIOException :: IOException -> WebDriverT m a
+throwIOException = WDT . Http.throwIOException
 
-throwIOException :: IOException -> WebDriver a
-throwIOException = WD . Http.throwIOException
+-- | Rethrows other error types
+catchError :: WebDriverT m a -> (WDError -> WebDriverT m a) -> WebDriverT m a
+catchError x h = WDT $ Http.catchError (unWDT x) (unWDT . h)
 
-catchJsonError :: WebDriver a -> (Http.JsonError -> WebDriver a) -> WebDriver a
-catchJsonError x h = WD $ Http.catchJsonError (unWD x) (unWD . h)
+-- | Rethrows other error types
+catchJsonError :: WebDriverT m a -> (Http.JsonError -> WebDriverT m a) -> WebDriverT m a
+catchJsonError x h = WDT $ Http.catchJsonError (unWDT x) (unWDT . h)
 
-catchHttpException :: WebDriver a -> (N.HttpException -> WebDriver a) -> WebDriver a
-catchHttpException x h = WD $ Http.catchHttpException (unWD x) (unWD . h)
+-- | Rethrows other error types
+catchHttpException :: WebDriverT m a -> (N.HttpException -> WebDriverT m a) -> WebDriverT m a
+catchHttpException x h = WDT $ Http.catchHttpException (unWDT x) (unWDT . h)
 
-catchIOException :: WebDriver a -> (IOException -> WebDriver a) -> WebDriver a
-catchIOException x h = WD $ Http.catchIOException (unWD x) (unWD . h)
+-- | Rethrows other error types
+catchIOException :: WebDriverT m a -> (IOException -> WebDriverT m a) -> WebDriverT m a
+catchIOException x h = WDT $ Http.catchIOException (unWDT x) (unWDT . h)
 
-parseJson :: ByteString -> WebDriver Value
-parseJson = WD . Http.parseJson
+-- | May throw a `JsonError`.
+parseJson :: ByteString -> WebDriverT m Value
+parseJson = WDT . Http.parseJson
 
-lookupKeyJson :: Text -> Value -> WebDriver Value
-lookupKeyJson key = WD . Http.lookupKeyJson key
+-- | May throw a `JsonError`.
+lookupKeyJson :: Text -> Value -> WebDriverT m Value
+lookupKeyJson key = WDT . Http.lookupKeyJson key
 
-constructFromJson :: (FromJSON a) => Value -> WebDriver a
-constructFromJson = WD . Http.constructFromJson
+-- | May throw a `JsonError`.
+constructFromJson :: (FromJSON a) => Value -> WebDriverT m a
+constructFromJson = WDT . Http.constructFromJson
+
+-- | Capures `HttpException`s.
+httpGet :: Http.Url -> WebDriverT m Http.HttpResponse
+httpGet = WDT . Http.httpGet
+
+-- | Does not write request or response info to the log, except to note that a request occurred. Capures `HttpException`s.
+httpSilentGet :: Http.Url -> WebDriverT m Http.HttpResponse
+httpSilentGet = WDT . Http.httpSilentGet
+
+-- | Capures `HttpException`s.
+httpPost :: Http.Url -> ByteString -> WebDriverT m Http.HttpResponse
+httpPost url = WDT . Http.httpPost url
+
+-- | Does not write request or response info to the log, except to note that a request occurred. Capures `HttpException`s.
+httpSilentPost :: Http.Url -> ByteString -> WebDriverT m Http.HttpResponse
+httpSilentPost url = WDT . Http.httpSilentPost url
+
+-- | Capures `HttpException`s.
+httpDelete :: Http.Url -> WebDriverT m Http.HttpResponse
+httpDelete = WDT . Http.httpDelete
+
+-- | Does not write request or response info to the log, except to note that a request occurred. Capures `HttpException`s.
+httpSilentDelete :: Http.Url -> WebDriverT m Http.HttpResponse
+httpSilentDelete = WDT . Http.httpSilentDelete
+
+-- | Capures `IOException`s.
+hPutStrLn :: Handle -> String -> WebDriverT m ()
+hPutStrLn h = WDT . Http.hPutStrLn h
+
+-- | Capures `IOException`s.
+hPutStrLnBlocking :: MVar () -> Handle -> String -> WebDriverT m ()
+hPutStrLnBlocking lock h = WDT . Http.hPutStrLnBlocking lock h
+
+promptWDAct :: WDAct a -> WebDriverT m a
+promptWDAct = WDT . Http.prompt . Http.P
+
+
+
+instance Assert (WebDriverT m) where
+  assert = logEntry . LogAssertion
+
+
+
+
 
 -- | Filter the assertions from a `WebDriver` log.
 getAssertions :: [WDLog] -> [Assertion]
@@ -298,44 +438,15 @@ getAssertions xs = get xs
       LogAssertion a -> a : get ws
       _ -> get ws
 
--- | Capures `HttpException`s.
-httpGet :: Http.Url -> WebDriver Http.HttpResponse
-httpGet = WD . Http.httpGet
-
--- | Does not write request or response info to the log, except to note that a request occurred. Capures `HttpException`s.
-httpSilentGet :: Http.Url -> WebDriver Http.HttpResponse
-httpSilentGet = WD . Http.httpSilentGet
-
--- | Capures `HttpException`s.
-httpPost :: Http.Url -> ByteString -> WebDriver Http.HttpResponse
-httpPost url = WD . Http.httpPost url
-
--- | Does not write request or response info to the log, except to note that a request occurred. Capures `HttpException`s.
-httpSilentPost :: Http.Url -> ByteString -> WebDriver Http.HttpResponse
-httpSilentPost url = WD . Http.httpSilentPost url
-
--- | Capures `HttpException`s.
-httpDelete :: Http.Url -> WebDriver Http.HttpResponse
-httpDelete = WD . Http.httpDelete
-
--- | Does not write request or response info to the log, except to note that a request occurred. Capures `HttpException`s.
-httpSilentDelete :: Http.Url -> WebDriver Http.HttpResponse
-httpSilentDelete = WD . Http.httpSilentDelete
-
--- | Capures `HttpException`s.
-hPutStrLn :: Handle -> String -> WebDriver ()
-hPutStrLn h = WD. Http.hPutStrLn h
-
--- | Capures `HttpException`s.
-hPutStrLnBlocking :: MVar () -> Handle -> String -> WebDriver ()
-hPutStrLnBlocking lock h = WD. Http.hPutStrLnBlocking lock h
-
 
 
 -- | Errors specific to WebDriver sessions.
 data WDError
   = NoSession
-  | ResponseError ResponseErrorCode String String (Maybe Value) Status -- ^ See <https://w3c.github.io/webdriver/webdriver-spec.html#handling-errors>
+
+  -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#handling-errors>
+  | ResponseError ResponseErrorCode String String (Maybe Value) Status
+
   | UnableToConnect
   | RemoteEndTimeout
   | UnhandledHttpException N.HttpException
@@ -346,13 +457,24 @@ data WDError
 
 -- | Read-only environment variables specific to WebDriver.
 data WDEnv = WDEnv
-  { _remoteHostname :: String -- ^ Hostname of the remote WebDriver server
-  , _remotePort :: Int -- ^ Port of the remote WebDriver server
-  , _remotePath :: String -- ^ Extra path for the remote WebDriver server
-  , _secretsPath :: FilePath -- ^ Path where secret data is stored
-  , _vars :: M.Map String String -- ^ Named constants; this makes it possible to e.g. run the same WebDriver session against both a test and production environment on different hosts.
-  , _responseFormat :: ResponseFormat -- ^ Flag for the format of HTTP responses from the remote end. E.g., chromedriver reponses are not spec-compliant.
-  , _apiVersion :: ApiVersion -- ^ Version of the WebDriver specification.
+  { -- | Hostname of the remote WebDriver server
+    _remoteHostname :: String
+
+    -- | Port of the remote WebDriver server
+  , _remotePort :: Int
+
+    -- | Extra path for the remote WebDriver server
+  , _remotePath :: String
+
+    -- | Path where secret data is stored
+  , _dataPath :: FilePath
+
+    -- | Flag for the format of HTTP responses from the remote end. Needed because not all remote ends are spec-compliant.
+  , _responseFormat :: ResponseFormat
+
+    -- | Version of the WebDriver specification.
+  , _apiVersion :: ApiVersion
+
   , _stdin :: Handle
   , _stdout :: Handle
   }
@@ -404,27 +526,12 @@ data WDAct a where
 
 
 
--- | Url of the remote WebDriver server.
-theRemoteUrl :: WebDriver String
-theRemoteUrl = do
-  host <- fromEnv (_remoteHostname . Http._env)
-  port <- fromEnv (_remotePort . Http._env)
-  path <- fromEnv (_remotePath . Http._env)
-  return $ concat [ "http://", host, ":", show port, path]
-
--- | Url of the remote WebDriver server, with session ID.
-theRemoteUrlWithSession
-  :: WebDriver String
-theRemoteUrlWithSession = do
-  st <- fromState (_sessionId . Http._userState)
-  case st of
-    Nothing -> throwError NoSession
-    Just session_id -> do
-      baseUrl <- theRemoteUrl
-      return $ concat [ baseUrl, "/session/", session_id ]
-
 -- | For validating responses. Throws an `UnexpectedValue` error if the two arguments are not equal according to their `Eq` instance.
-expect :: (Eq a, Show a) => a -> a -> WebDriver a
+expect
+  :: (Monad m, Eq a, Show a)
+  => a
+  -> a
+  -> WebDriverT m a
 expect x y = if x == y
   then return y
   else throwError $ UnexpectedValue $
@@ -477,57 +584,67 @@ printWDError json e = case e of
 
 -- | Prompt for input on `stdin`.
 promptForString
-  :: String -- ^ Prompt text
-  -> WebDriver String
+  :: (Monad m)
+  => String -- ^ Prompt text
+  -> WebDriverT m String
 promptForString prompt = do
   outH <- fromEnv (_stdout . Http._env)
   inH <- fromEnv (_stdin . Http._env)
   hPutStrLn outH prompt
-  result <- WD $ Http.prompt $ Http.P $ HGetLine inH
+  result <- promptWDAct $ HGetLine inH
   case result of
     Right string -> return string
     Left e -> throwIOException e
 
 -- | Prompt for input on `stdin`, but do not echo the typed characters back to the terminal -- handy for getting suuper secret info.
 promptForSecret
-  :: String -- ^ Prompt text
-  -> WebDriver String
+  :: (Monad m)
+  => String -- ^ Prompt text
+  -> WebDriverT m String
 promptForSecret prompt = do
   outH <- fromEnv (_stdout . Http._env)
   inH <- fromEnv (_stdin . Http._env)
   hPutStrLn outH prompt
-  result <- WD $ Http.prompt $ Http.P $ HGetLineNoEcho inH
+  result <- promptWDAct $ HGetLineNoEcho inH
   case result of
     Right string -> return string
     Left e -> throwIOException e
 
 -- | Captures `IOException`s
-readFilePath :: FilePath -> WebDriver ByteString
+readFilePath
+  :: (Monad m)
+  => FilePath
+  -> WebDriverT m ByteString
 readFilePath path = do
-  result <- WD $ Http.prompt $ Http.P $ ReadFilePath path
+  result <- promptWDAct $ ReadFilePath path
   case result of
     Right bytes -> return bytes
     Left e -> throwIOException e
 
 -- | Captures `IOException`s
-writeFilePath :: FilePath -> ByteString -> WebDriver ()
+writeFilePath
+  :: (Monad m)
+  => FilePath
+  -> ByteString
+  -> WebDriverT m ()
 writeFilePath path bytes = do
-  result <- WD $ Http.prompt $ Http.P $ WriteFilePath path bytes
+  result <- promptWDAct $ WriteFilePath path bytes
   case result of
     Right () -> return ()
     Left e -> throwIOException e
 
 -- | Captures `IOException`s
-fileExists :: FilePath -> WebDriver Bool
+fileExists
+  :: (Monad m)
+  => FilePath
+  -> WebDriverT m Bool
 fileExists path = do
-  result <- WD $ Http.prompt $ Http.P $ FileExists path
+  result <- promptWDAct $ FileExists path
   case result of
     Right p -> return p
     Left e -> throwIOException e
 
--- | Set the session id of a `WDState`.
-setSessionId :: Maybe String -> Http.S WDState -> Http.S WDState
-setSessionId x st = st { Http._userState = (Http._userState st) { _sessionId = x } }
+
 
 -- | Standard `IO` evaluator for `WDAct`.
 evalWDAct :: WDAct a -> IO a
@@ -548,18 +665,50 @@ evalWDAct act = case act of
     hSetEcho handle echo
     return secret
 
-instance Assert WebDriver where
-  assert = logEntry . LogAssertion
+
 
 -- | Standard `Mock.MockIO` evaluator for `WDAct`.
 evalWDActMockIO :: WDAct a -> Mock.MockIO u a
 evalWDActMockIO act = case act of
-  ReadFilePath path -> error "evalWDActMockIO: ReadFilePath not defined"
+  ReadFilePath path -> do
+    Mock.incrementTimer 1
+    world <- Mock.getMockWorld
+    let result = FS.getLines (Left path) $ Mock._files world
+    case result of
+      Nothing -> do
+        return $ Left $ mkIOError doesNotExistErrorType "" Nothing (Just path)
+      Just lns -> return $ Right $ LC.pack $ unlines lns
 
-  WriteFilePath path bytes -> error "evalWDActMockIO: WriteFilePath not defined"
+  WriteFilePath path bytes -> do
+    Mock.incrementTimer 1
+    fmap Right $ Mock.modifyMockWorld $ \w -> w
+      { Mock._files = FS.writeLines (Left path) [LC.unpack bytes] $ Mock._files w }
 
-  FileExists path -> error "evalWDActMockIO: FileExists not defined"
+  FileExists path -> do
+    Mock.incrementTimer 1
+    world <- Mock.getMockWorld
+    return $ Right $ FS.fileExists (Left path) $ Mock._files world
 
-  HGetLine handle -> error "evalWDActMockIO: HGetLine not defined"
+  HGetLine handle -> do
+    Mock.incrementTimer 1
+    world <- Mock.getMockWorld
+    let dne = mkIOError doesNotExistErrorType "" (Just handle) Nothing
+    let eof = mkIOError eofErrorType "" (Just handle) Nothing
+    let result = FS.readLine dne eof (Right handle) $ Mock._files world
+    case result of
+      Left err -> return $ Left err
+      Right (str, fs) -> do
+        Mock.modifyMockWorld $ \w -> w { Mock._files = fs }
+        return $ Right str
 
-  HGetLineNoEcho handle -> error "evalWDActMockIO: HGetLineNoEcho not defined"
+  HGetLineNoEcho handle -> do
+    Mock.incrementTimer 1
+    world <- Mock.getMockWorld
+    let dne = mkIOError doesNotExistErrorType "" (Just handle) Nothing
+    let eof = mkIOError eofErrorType "" (Just handle) Nothing
+    let result = FS.readLine dne eof (Right handle) $ Mock._files world
+    case result of
+      Left err -> return $ Left err
+      Right (str, fs) -> do
+        Mock.modifyMockWorld $ \w -> w { Mock._files = fs }
+        return $ Right str

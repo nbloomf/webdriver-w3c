@@ -45,11 +45,11 @@ for the tests to start with `_test` or use snake\_case; I'm doing it
 here out of habit.
 
 ``` {.sourceCode .literate .haskell}
-_test_one :: WebDriver ()
+_test_one :: (Monad eff) => WebDriver eff ()
 _test_one = do
   navigateTo "https://google.com"
 
-_test_two :: WebDriver ()
+_test_two :: (Monad eff) => WebDriver eff ()
 _test_two = do
   navigateTo "https://yahoo.com"
   assertSuccess "time travel achieved"

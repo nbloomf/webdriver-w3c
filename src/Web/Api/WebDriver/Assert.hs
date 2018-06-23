@@ -49,6 +49,8 @@ import Data.List
   ( unwords, isInfixOf )
 import Data.String
   ( IsString, fromString )
+import Test.QuickCheck
+  ( Arbitrary(..) )
 
 
 
@@ -79,6 +81,9 @@ instance Show AssertionStatement where
 instance IsString AssertionStatement where
   fromString = AssertionStatement
 
+instance Arbitrary AssertionStatement where
+  arbitrary = AssertionStatement <$> arbitrary
+
 
 
 -- | Human-readable explanation for why an assertion is made.
@@ -92,12 +97,20 @@ instance Show AssertionComment where
 instance IsString AssertionComment where
   fromString = AssertionComment
 
+instance Arbitrary AssertionComment where
+  arbitrary = AssertionComment <$> arbitrary
+
 
 
 -- | Type representing the result (success or failure) of an evaluated assertion.
 data AssertionResult
   = AssertSuccess | AssertFailure
   deriving (Eq, Show)
+
+instance Arbitrary AssertionResult where
+  arbitrary = do
+    p <- arbitrary
+    return $ if p then AssertSuccess else AssertFailure
 
 -- | Detects successful assertions.
 isSuccess :: Assertion -> Bool
@@ -265,15 +278,17 @@ data AssertionSummary = AssertionSummary
   { numSuccesses :: Integer
   , numFailures :: Integer
   , failures :: [Assertion]
+  , successes :: [Assertion]
   } deriving (Eq, Show)
 
 instance Monoid AssertionSummary where
-  mempty = AssertionSummary 0 0 []
+  mempty = AssertionSummary 0 0 [] []
 
   mappend x y = AssertionSummary
     { numSuccesses = numSuccesses x + numSuccesses y
     , numFailures = numFailures x + numFailures y
     , failures = failures x ++ failures y
+    , successes = successes x ++ successes y
     }
 
 -- | Summarize a single assertion.
@@ -282,6 +297,7 @@ summary x = AssertionSummary
   { numSuccesses = if isSuccess x then 1 else 0
   , numFailures = if isSuccess x then 0 else 1
   , failures = if isSuccess x then [] else [x]
+  , successes = if isSuccess x then [x] else []
   }
 
 -- | Summarize a list of `Assertion`s.

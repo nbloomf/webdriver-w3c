@@ -4,6 +4,7 @@ module Web.Api.WebDriver.Assert.Test (
 ) where
 
 import System.IO
+import Data.String
 
 import qualified Test.Tasty as TT (TestTree(), testGroup)
 import qualified Test.Tasty.QuickCheck as QC (testProperty)
@@ -25,244 +26,278 @@ import Web.Api.WebDriver.Monad.Test.Server
 tests :: MVar () -> TT.TestTree
 tests lock = TT.testGroup "Web.Api.WebDriver.Assert"
   [ TT.testGroup "Mock"
-    [ checkAssertionCases (testMock lock id)
-    , checkAssertionSummaryCases (testMock lock summarize)
+    [ assertionTestCases (mockConfig lock) condMockIO
     ]
   , TT.testGroup "Real"
-    [ checkAssertionCases (testReal lock id)
-    , checkAssertionSummaryCases (testReal lock summarize)
+    [ assertionTestCases (realConfig lock) condIO
     ]
   ]
 
 
 
-defaultState :: S WDState
-defaultState = S
-  { _httpOptions = Wreq.defaults
-  , _httpSession = Nothing
-  , _userState = WDState
-    { _sessionId = Nothing
-    }
-  }
-
-defaultEnv :: MVar () -> R WDError WDLog WDEnv
-defaultEnv lock = R
-  { _logHandle = stdout
-  , _logLock = Just lock
-  , _uid = ""
-  , _logOptions = trivialLogOptions
-    { _logColor = True
-    , _logJson = True
-    , _logHeaders = False
-    , _logSilent = True
-    , _printUserError = printWDError
-    , _printUserLog = printWDLog
-    }
-  , _httpErrorInject = promoteHttpResponseError
-  , _env = WDEnv
-    { _remoteHostname = "localhost"
-    , _remotePort = 4444
-    , _remotePath = ""
-    , _responseFormat = SpecFormat
-    , _apiVersion = CR_2018_03_04
-    , _secretsPath = ""
-    , _vars = MS.fromList []
-    , _stdout = stdout
-    , _stdin = stdin
-    }
-  }
+condIO
+  :: IO (Either (E WDError) t, S WDState, W WDError WDLog)
+  -> IO AssertionSummary
+condIO x = do
+  (_,_,w) <- x
+  return $ summarize $ getAssertions $ logEntries w
 
 realConfig :: MVar () -> WebDriverConfig IO
 realConfig lock = WDConfig
-  { _initialState = defaultState
-  , _environment = defaultEnv lock
+  { _initialState = defaultWebDriverState
+  , _environment = defaultWebDriverEnvironment
+    { _logLock = Just lock
+    , _logOptions = defaultWebDriverLogOptions
+      { _logSilent = True
+      }
+    }
   , _evaluator = evalIO evalWDAct
   }
+
+
+
+condMockIO
+  :: MockIO WebDriverServerState (Either (E WDError) t, S WDState, W WDError WDLog)
+  -> IO AssertionSummary
+condMockIO x = do
+  let ((_,_,w),_) = runMockIO x defaultWebDriverServer
+  return $ summarize $ getAssertions $ logEntries w
 
 mockConfig :: MVar () -> WebDriverConfig (MockIO WebDriverServerState)
 mockConfig lock = WDConfig
   { _evaluator = evalMockIO evalWDActMockIO
-  , _initialState = defaultState
-  , _environment = defaultEnv lock
+  , _initialState = defaultWebDriverState
+  , _environment = defaultWebDriverEnvironment
+    { _logLock = Just lock
+    , _logOptions = defaultWebDriverLogOptions
+      { _logSilent = True
+      }
+    }
   }
 
 
 
-testReal
-  :: (Show t, Eq t)
-  => MVar ()
-  -> ([Assertion] -> t)
-  -> (String, WebDriver (), t)
+
+
+assertionTestCases
+  :: (Monad eff)
+  => WebDriverConfig eff
+  -> (eff (Either (E WDError) (), S WDState, W WDError WDLog) -> IO AssertionSummary)
   -> TT.TestTree
-testReal lock f =
-  checkCase (realConfig lock) id f
+assertionTestCases config cond = TT.testGroup "Assertions"
+  [ QC.testProperty "assertSuccess" $
+    checkWebDriver config cond
+      (== summarize [success "Success!" "yay!"]) $
+      do
+        assertSuccess "yay!"
 
-testMock
-  :: (Show t, Eq t)
-  => MVar ()
-  -> ([Assertion] -> t)
-  -> (String, WebDriver (), t)
-  -> TT.TestTree
-testMock lock f =
-  checkCase (mockConfig lock)
-  (\x -> return $ fst $ runMockIO x defaultWebDriverServer) f
+  , QC.testProperty "assertFailure" $
+    checkWebDriver config cond
+      (== summarize [failure "Failure :(" "oh no"]) $
+      do
+        assertFailure "oh no"
 
-checkCase
-  :: (Monad m, Show t, Eq t)
-  => WebDriverConfig m
-  -> (forall a. m a -> IO a)
-  -> ([Assertion] -> t)
-  -> (String, WebDriver (), t)
-  -> TT.TestTree
-checkCase config eval f (name,http,expect) =
-  HU.testCase name $ do
-    (_,_,w) <- eval $ execWebDriver config http
-    let actual = f $ getAssertions $ logEntries w
-    if expect == actual
-      then return ()
-      else HU.assertFailure $
-        "\n\ngot:\n " ++ show actual ++ "\n\nbut expected:\n" ++ show expect
+  , QC.testProperty "assertTrue (success)" $ \msg ->
+    checkWebDriver config cond
+      (== summarize [success "True is True" msg]) $
+      do
+        assertTrue True msg
 
+  , QC.testProperty "assertTrue (failure)" $ \msg ->
+    checkWebDriver config cond
+      (== summarize [failure "False is True" msg]) $
+      do
+        assertTrue False msg
 
+  , QC.testProperty "assertFalse (success)" $ \msg ->
+    checkWebDriver config cond
+      (== summarize [success "False is False" msg]) $
+      do
+        assertFalse False msg
 
-checkAssertionCases
-  :: ((String, WebDriver (), [Assertion]) -> TT.TestTree)
-  -> TT.TestTree
-checkAssertionCases check =
-  TT.testGroup "assertions" $ map check _assertionCases
+  , QC.testProperty "assertFalse (failure)" $ \msg ->
+    checkWebDriver config cond
+      (== summarize [failure "True is False" msg]) $
+      do
+        assertFalse True msg
 
-checkAssertionSummaryCases
-  :: ((String, WebDriver (), AssertionSummary) -> TT.TestTree)
-  -> TT.TestTree
-checkAssertionSummaryCases check =
-  TT.testGroup "assertions" $ map check _assertionSummaryCases
+  , QC.testProperty "assertEqual (Int, success)" $ \k ->
+    checkWebDriver config cond
+      (== summarize
+        [success
+          (fromString $ show k ++ " is equal to " ++ show k)
+          (fromString $ show k)
+        ]
+      ) $
+      do
+        assertEqual (k :: Int) k (fromString $ show k)
 
+  , QC.testProperty "assertEqual (Int, failure)" $ \k ->
+    checkWebDriver config cond
+      (== summarize
+        [failure
+          (fromString $ show (k+1) ++ " is equal to " ++ show k)
+          (fromString $ show k)
+        ]
+      ) $
+      do
+        assertEqual (k+1 :: Int) k (fromString $ show k)
 
+  , QC.testProperty "assertEqual (String, success)" $ \str ->
+    checkWebDriver config cond
+      (== summarize
+        [success
+          (fromString $ show str ++ " is equal to " ++ show str)
+          (fromString str)
+        ]
+      ) $
+      do
+        assertEqual (str :: String) str (fromString str)
 
-_assertionCases :: [(String, WebDriver (), [Assertion])]
-_assertionCases =
-  [ ( "assertSuccess"
-    , assertSuccess "yay!"
-    , [success "Success!" "yay!"]
-    )
+  , QC.testProperty "assertEqual (String, failure)" $ \str ->
+    checkWebDriver config cond
+      (== summarize
+        [failure
+          (fromString $ show (str++"?") ++ " is equal to " ++ show str)
+          (fromString str)
+        ]
+      ) $
+      do
+        assertEqual (str++"?" :: String) str (fromString str)
 
-  , ( "assertFailure"
-    , assertFailure "oh no"
-    , [failure "Failure :(" "oh no"]
-    )
+  , QC.testProperty "assertNotEqual (Int, success)" $ \k ->
+    checkWebDriver config cond
+      (== summarize
+        [success
+          (fromString $ show (k+1) ++ " is not equal to " ++ show k)
+          (fromString $ show k)
+        ]
+      ) $
+      do
+        assertNotEqual (k+1 :: Int) k (fromString $ show k)
 
-  , ( "assertTrue (success)"
-    , assertTrue True "test"
-    , [success "True is True" "test"]
-    )
+  , QC.testProperty "assertNotEqual (Int, failure)" $ \k ->
+    checkWebDriver config cond
+      (== summarize
+        [failure
+          (fromString $ show k ++ " is not equal to " ++ show k)
+          (fromString $ show k)
+        ]
+      ) $
+      do
+        assertNotEqual (k :: Int) k (fromString $ show k)
 
-  , ( "assertTrue (failure)"
-    , assertTrue False "test"
-    , [failure "False is True" "test"]
-    )
+  , QC.testProperty "assertNotEqual (String, success)" $ \str ->
+    checkWebDriver config cond
+      (== summarize
+        [success
+          (fromString $ show (str++"?") ++ " is not equal to " ++ show str)
+          (fromString str)
+        ]
+      ) $
+      do
+        assertNotEqual (str++"?" :: String) str (fromString str)
 
-  , ( "assertFalse (success)"
-    , assertFalse False "test"
-    , [success "False is False" "test"]
-    )
+  , QC.testProperty "assertNotEqual (String, failure)" $ \str ->
+    checkWebDriver config cond
+      (== summarize
+        [failure
+          (fromString $ show str ++ " is not equal to " ++ show str)
+          (fromString str)
+        ]
+      ) $
+      do
+        assertNotEqual (str :: String) str (fromString str)
 
-  , ( "assertFalse (failure)"
-    , assertFalse True "test"
-    , [failure "True is False" "test"]
-    )
+    , QC.testProperty "assertIsSubstring (success)" $ \str1 str2 ->
+    checkWebDriver config cond
+      (== summarize
+        [success
+          (fromString $ show str1 ++ " is a substring of " ++ show (str2++str1++str2))
+          (fromString str1)
+        ]
+      ) $
+      do
+        assertIsSubstring (str1 :: String) (str2++str1++str2) (fromString str1)
 
-  , ( "assertEqual (Int, success)"
-    , assertEqual (1::Int) (1::Int) "test"
-    , [success "1 is equal to 1" "test"]
-    )
+    , QC.testProperty "assertIsSubstring (failure)" $ \c str1 str2 ->
+    let str3 = filter (/= c) str2 in
+    checkWebDriver config cond
+      (== summarize
+        [failure
+          (fromString $ show (c:str1) ++ " is a substring of " ++ show str3)
+          (fromString str1)
+        ]
+      ) $
+      do
+        assertIsSubstring (c:str1 :: String) (str3) (fromString str1)
 
-  , ( "assertEqual (Int, failure)"
-    , assertEqual (2::Int) (1::Int) "test"
-    , [failure "2 is equal to 1" "test"]
-    )
+    , QC.testProperty "assertIsNotSubstring (success)" $ \c str1 str2 ->
+    let str3 = filter (/= c) str2 in
+    checkWebDriver config cond
+      (== summarize
+        [success
+          (fromString $ show (c:str1) ++ " is not a substring of " ++ show str3)
+          (fromString str1)
+        ]
+      ) $
+      do
+        assertIsNotSubstring (c:str1 :: String) (str3) (fromString str1)
 
-  , ( "assertEqual (String, success)"
-    , assertEqual "A" "A" "test"
-    , [success "\"A\" is equal to \"A\"" "test"]
-    )
+    , QC.testProperty "assertIsNotSubstring (failure)" $ \str1 str2 ->
+    checkWebDriver config cond
+      (== summarize
+        [failure
+          (fromString $ show str1 ++ " is not a substring of " ++ show (str2++str1++str2))
+          (fromString str1)
+        ]
+      ) $
+      do
+        assertIsNotSubstring (str1 :: String) (str2++str1++str2) (fromString str1)
 
-  , ( "assertEqual (String, failure)"
-    , assertEqual "B" "A" "test"
-    , [failure "\"B\" is equal to \"A\"" "test"]
-    )
+    , QC.testProperty "assertIsNamedSubstring (success)" $ \name str1 str2 ->
+    checkWebDriver config cond
+      (== summarize
+        [success
+          (fromString $ show str1 ++ " is a substring of " ++ name)
+          (fromString str1)
+        ]
+      ) $
+      do
+        assertIsNamedSubstring (str1 :: String) (str2++str1++str2, name) (fromString str1)
 
-  , ( "assertNotEqual (Int, success)"
-    , assertNotEqual (2::Int) (1::Int) "test"
-    , [success "2 is not equal to 1" "test"]
-    )
+    , QC.testProperty "assertIsNamedSubstring (failure)" $ \name c str1 str2 ->
+    let str3 = filter (/= c) str2 in
+    checkWebDriver config cond
+      (== summarize
+        [failure
+          (fromString $ show (c:str1) ++ " is a substring of " ++ name)
+          (fromString str1)
+        ]
+      ) $
+      do
+        assertIsNamedSubstring (c:str1 :: String) (str3,name) (fromString str1)
 
-  , ( "assertNotEqual (Int, failure)"
-    , assertNotEqual (1::Int) (1::Int) "test"
-    , [failure "1 is not equal to 1" "test"]
-    )
+    , QC.testProperty "assertIsNotNamedSubstring (success)" $ \name c str1 str2 ->
+    let str3 = filter (/= c) str2 in
+    checkWebDriver config cond
+      (== summarize
+        [success
+          (fromString $ show (c:str1) ++ " is not a substring of " ++ name)
+          (fromString str1)
+        ]
+      ) $
+      do
+        assertIsNotNamedSubstring (c:str1 :: String) (str3,name) (fromString str1)
 
-  , ( "assertNotEqual (String, success)"
-    , assertNotEqual "B" "A" "test"
-    , [success "\"B\" is not equal to \"A\"" "test"]
-    )
-
-  , ( "assertNotEqual (String, failure)"
-    , assertNotEqual "A" "A" "test"
-    , [failure "\"A\" is not equal to \"A\"" "test"]
-    )
-
-  , ( "assertIsSubstring (success)"
-    , assertIsSubstring "oba" "foobar" "test"
-    , [success "\"oba\" is a substring of \"foobar\"" "test"]
-    )
-
-  , ( "assertIsSubstring (failure)"
-    , assertIsSubstring "quux" "foobar" "test"
-    , [failure "\"quux\" is a substring of \"foobar\"" "test"]
-    )
-
-  , ( "assertIsNotSubstring (success)"
-    , assertIsNotSubstring "quux" "foobar" "test"
-    , [success "\"quux\" is not a substring of \"foobar\"" "test"]
-    )
-
-  , ( "assertIsNotSubstring (failure)"
-    , assertIsNotSubstring "oba" "foobar" "test"
-    , [failure "\"oba\" is not a substring of \"foobar\"" "test"]
-    )
-
-  , ( "assertIsNamedSubstring (success)"
-    , assertIsNamedSubstring "oba" ("foobar","string") "test"
-    , [success "\"oba\" is a substring of string" "test"]
-    )
-
-  , ( "assertIsNamedSubstring (failure)"
-    , assertIsNamedSubstring "quux" ("foobar","string") "test"
-    , [failure "\"quux\" is a substring of string" "test"]
-    )
-
-  , ( "assertIsNotNamedSubstring (success)"
-    , assertIsNotNamedSubstring "quux" ("foobar","string") "test"
-    , [success "\"quux\" is not a substring of string" "test"]
-    )
-
-  , ( "assertIsNotNamedSubstring (failure)"
-    , assertIsNotNamedSubstring "oba" ("foobar","string") "test"
-    , [failure "\"oba\" is not a substring of string" "test"]
-    )
-  ]
-
-
-
-_assertionSummaryCases :: [(String, WebDriver (), AssertionSummary)]
-_assertionSummaryCases =
-  [ ( "assertSuccess"
-    , assertSuccess "yay!"
-    , summarize [success "Success!" "yay!"]
-    )
-
-  , ( "assertFailure"
-    , assertFailure "oh no"
-    , summarize [failure "Failure :(" "oh no"]
-    )
+    , QC.testProperty "assertIsNotNamedSubstring (failure)" $ \name str1 str2 ->
+    checkWebDriver config cond
+      (== summarize
+        [failure
+          (fromString $ show str1 ++ " is not a substring of " ++ name)
+          (fromString str1)
+        ]
+      ) $
+      do
+        assertIsNotNamedSubstring (str1 :: String) (str2++str1++str2, name) (fromString str1)
   ]
