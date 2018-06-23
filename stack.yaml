@@ -3,7 +3,5 @@ resolver: lts-11.5
 packages:
 - .
 
-- location:
-    git: https://github.com/nbloomf/script-monad.git
-    commit: a024b5cae45fd6ef69a584ac99c95ab6ae75c851
-  extra-dep: true
+extra-deps:
+- script-monad-0.0.1
