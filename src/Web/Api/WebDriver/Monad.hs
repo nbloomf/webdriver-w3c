@@ -7,7 +7,7 @@ Maintainer  : Nathan Bloomfield (nbloomf@gmail.com)
 Stability   : experimental
 Portability : POSIX
 
-A monad and monad transformer for 
+A monad and monad transformer for building WebDriver sessions.
 -}
 
 {-# LANGUAGE GADTs, Rank2Types, OverloadedStrings #-}
