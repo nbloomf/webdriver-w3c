@@ -72,6 +72,7 @@ successfulExit buildTestCase dir =
     , buildTestCase "getPageSourceStealth" (_test_getPageSourceStealth_success path)
     , buildTestCase "getAllCookies" (_test_getAllCookies_success path)
     ,   ifDriverIs Chromedriver TE.ignoreTest
+      $ T.localOption (PrivateMode False)
       $ buildTestCase "getNamedCookie" (_test_getNamedCookie_success path)
     ,   ifDriverIs Chromedriver TE.ignoreTest
       $ buildTestCase "deleteCookie" (_test_deleteCookie_success path)

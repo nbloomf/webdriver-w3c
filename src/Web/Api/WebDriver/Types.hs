@@ -82,6 +82,8 @@ import Data.Scientific
   ( Scientific, scientific )
 import Data.String
   ( IsString(..) )
+import Data.HashMap.Strict
+  ( HashMap, toList, fromList )
 import Data.Aeson.Types
   ( ToJSON(..), FromJSON(..), Value(..), KeyValue
   , Pair, (.:?), (.:), (.=), object, typeMismatch )
@@ -453,30 +455,35 @@ instance Arbitrary PlatformName where
 data ChromeOptions = ChromeOptions
   { _chromeBinary :: Maybe FilePath -- ^ @binary@
   , _chromeArgs :: Maybe [String] -- ^ @args@
+  , _chromePrefs :: Maybe (HashMap Text Value) -- ^ @prefs@
   } deriving (Eq, Show)
 
 instance FromJSON ChromeOptions where
   parseJSON (Object v) = ChromeOptions
     <$> v .:? "binary"
     <*> v .:? "args"
+    <*> v .:? "prefs"
   parseJSON invalid = typeMismatch "ChromeOptions" invalid
 
 instance ToJSON ChromeOptions where
   toJSON ChromeOptions{..} = object_
     [ "binary" .=? (toJSON <$> _chromeBinary)
     , "args" .=? (toJSON <$> _chromeArgs)
+    , "prefs" .=? (toJSON <$> _chromePrefs)
     ]
 
 instance Arbitrary ChromeOptions where
   arbitrary = ChromeOptions
     <$> arbitrary
     <*> arbitrary
+    <*> arbHashMap
 
 -- | All members set to `Nothing`.
 defaultChromeOptions :: ChromeOptions
 defaultChromeOptions = ChromeOptions
   { _chromeBinary = Nothing
   , _chromeArgs = Nothing
+  , _chromePrefs = Nothing
   }
 
 
@@ -486,6 +493,7 @@ data FirefoxOptions = FirefoxOptions
   { _firefoxBinary :: Maybe FilePath -- ^ @binary@
   , _firefoxArgs :: Maybe [String] -- ^ @args@
   , _firefoxLog :: Maybe FirefoxLog
+  , _firefoxPrefs :: Maybe (HashMap Text Value) -- ^ @prefs@
   } deriving (Eq, Show)
 
 instance FromJSON FirefoxOptions where
@@ -493,6 +501,7 @@ instance FromJSON FirefoxOptions where
     <$> v .:? "binary"
     <*> v .:? "args"
     <*> v .:? "log"
+    <*> v .:? "prefs"
   parseJSON invalid = typeMismatch "FirefoxOptions" invalid
 
 instance ToJSON FirefoxOptions where
@@ -500,6 +509,7 @@ instance ToJSON FirefoxOptions where
     [ "binary" .=? (toJSON <$> _firefoxBinary)
     , "args" .=? (toJSON <$> _firefoxArgs)
     , "log" .=? (toJSON <$> _firefoxLog)
+    , "prefs" .=? (toJSON <$> _firefoxPrefs)
     ]
 
 instance Arbitrary FirefoxOptions where
@@ -507,6 +517,36 @@ instance Arbitrary FirefoxOptions where
     <$> arbitrary
     <*> arbitrary
     <*> arbitrary
+    <*> arbHashMap
+
+arbHashMap :: Gen (Maybe (HashMap Text Value))
+arbHashMap = do
+  p <- arbitrary
+  if p
+    then return Nothing
+    else do
+      m <- fromList <$> listOf (mPair arbKey arbPrefVal)
+      return $ Just m
+
+arbKey :: Gen Text
+arbKey = pack <$> ('k':) <$> arbitrary
+
+arbText :: Gen Text
+arbText = pack <$> arbitrary
+
+arbPrefVal :: Gen Value
+arbPrefVal = do
+  k <- arbitrary :: Gen Int
+  case k`mod`3 of
+    0 -> Bool <$> arbitrary
+    1 -> String <$> arbText
+    _ -> Number <$> arbScientific
+
+mPair :: (Monad m) => m a -> m b -> m (a,b)
+mPair ga gb = do
+  a <- ga
+  b <- gb
+  return (a,b)
 
 -- | All members set to `Nothing`.
 defaultFirefoxOptions :: FirefoxOptions
@@ -514,6 +554,7 @@ defaultFirefoxOptions = FirefoxOptions
   { _firefoxBinary = Nothing
   , _firefoxArgs = Nothing
   , _firefoxLog = Nothing
+  , _firefoxPrefs = Nothing
   }
 
 

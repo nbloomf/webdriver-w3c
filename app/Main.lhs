@@ -262,6 +262,7 @@ in the interpreter. Here's what `example3` looks like:
 >   SE.setEnv "TASTY_NUM_THREADS" "1"
 >   defaultWebDriverMain
 >     $ localOption (SilentLog)
+>     $ localOption (PrivateMode True)
 >     $ test_suite
 
 Here's what happened:
