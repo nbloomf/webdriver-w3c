@@ -51,6 +51,7 @@ module Test.Tasty.WebDriver (
   , Headless(..)
   , LogColors(..)
   , GeckodriverLog(..)
+  , PrivateMode(..)
 
   , module Test.Tasty.WebDriver.Config
   ) where
@@ -63,6 +64,8 @@ import Data.Typeable
   ( Typeable, Proxy(Proxy) )
 import Data.List
   ( unlines, lookup )
+import qualified Data.HashMap.Strict as HM
+  ( fromList )
 import System.IO
   ( Handle, stdout, stderr, stdin, openFile, IOMode(..), hClose )
 import Control.Concurrent
@@ -80,7 +83,7 @@ import qualified Data.Digest.Pure.SHA as SHA
 import Data.IORef
   ( IORef, newIORef, atomicModifyIORef' )
 import Data.Maybe
-  ( fromMaybe )
+  ( fromMaybe, catMaybes )
 import Data.Time.Clock.System
   ( getSystemTime )
 import Network.HTTP.Client
@@ -159,6 +162,9 @@ _OPT_DELAY = "wd-delay"
 _OPT_REMOTE_ENDS_CONFIG :: String
 _OPT_REMOTE_ENDS_CONFIG = "wd-remote-ends-config"
 
+_OPT_PRIVATE_MODE :: String
+_OPT_PRIVATE_MODE = "wd-private-mode"
+
 
 
 data WebDriverTest m eff = WebDriverTest
@@ -190,6 +196,7 @@ instance (Monad eff, Monad (m eff), Typeable eff, Typeable m) => TT.IsTest (WebD
     , TO.Option (Proxy :: Proxy NumRetries)
     , TO.Option (Proxy :: Proxy LogColors)
     , TO.Option (Proxy :: Proxy GeckodriverLog)
+    , TO.Option (Proxy :: Proxy PrivateMode)
     ]
 
   run opts WebDriverTest{..} _ = do
@@ -210,6 +217,7 @@ instance (Monad eff, Monad (m eff), Typeable eff, Typeable m) => TT.IsTest (WebD
       LogPrinterLock (Just logLock) = TO.lookupOption opts
       LogColors logColors = TO.lookupOption opts
       GeckodriverLog geckoLogLevel = TO.lookupOption opts
+      PrivateMode privateMode = TO.lookupOption opts
 
     let
       title = comment wdTestName
@@ -224,20 +232,26 @@ instance (Monad eff, Monad (m eff), Typeable eff, Typeable m) => TT.IsTest (WebD
         Geckodriver -> emptyCapabilities
           { _browserName = Just Firefox
           , _firefoxOptions = Just defaultFirefoxOptions
-              { _firefoxBinary = browserPath
-              , _firefoxArgs = if headless then Just ["-headless"] else Nothing
-              , _firefoxLog = Just FirefoxLog
-                  { _firefoxLogLevel = Just geckoLogLevel
-                  }
+            { _firefoxBinary = browserPath
+            , _firefoxArgs = Just $ catMaybes
+              [ if headless then Just "-headless" else Nothing
+              , if privateMode then Just "-private" else Nothing
+              ]
+            , _firefoxLog = Just FirefoxLog
+              { _firefoxLogLevel = Just geckoLogLevel
               }
+            }
           }
 
         Chromedriver -> emptyCapabilities
           { _browserName = Just Chrome
           , _chromeOptions = Just $ defaultChromeOptions
-              { _chromeBinary = browserPath
-              , _chromeArgs = if headless then Just ["--headless"] else Nothing
-              }
+            { _chromeBinary = browserPath
+            , _chromeArgs = Just $ catMaybes
+              [ if headless then Just "--headless" else Nothing
+              , if privateMode then Just "--incognito" else Nothing
+              ]
+            }
           }
 
     dataPath <- case datas of
@@ -466,6 +480,19 @@ instance TO.IsOption Headless where
   parseValue = fmap Headless . TO.safeReadBool
   optionName = return _OPT_HEADLESS
   optionHelp = return "run in headless mode: (false), true"
+
+
+
+-- | Run in private mode.
+newtype PrivateMode
+  = PrivateMode { thePrivateMode :: Bool }
+  deriving Typeable
+
+instance TO.IsOption PrivateMode where
+  defaultValue = PrivateMode True
+  parseValue = fmap PrivateMode . TO.safeReadBool
+  optionName = return _OPT_PRIVATE_MODE
+  optionHelp = return "run in private mode: (false), true"
 
 
 

@@ -1,5 +1,9 @@
 TODO
 ====
+* Remove extra newline after log items
+* Missing module description in Monad
+* Firefox preferences
+* Chrome preferences
 
 
 NEXT
