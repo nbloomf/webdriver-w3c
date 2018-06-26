@@ -64,6 +64,8 @@ module Web.Api.WebDriver.Monad (
   , httpSilentDelete
   , hPutStrLn
   , hPutStrLnBlocking
+  , promptForString
+  , promptForSecret
   , readFilePath
   , writeFilePath
   , fileExists
