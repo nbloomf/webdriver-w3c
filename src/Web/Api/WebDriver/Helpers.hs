@@ -9,8 +9,14 @@ Portability : POSIX
 -}
 
 module Web.Api.WebDriver.Helpers (
+  -- * Data
+    writeDataFile
+  , readDataFile
+  , writeJsonFile
+  , readJsonFile
+
   -- * Secrets
-    stashCookies
+  , stashCookies
   , loadCookies
 
   -- * Actions
@@ -19,7 +25,9 @@ module Web.Api.WebDriver.Helpers (
   ) where
 
 import qualified Data.Aeson as Aeson
-  ( encode )
+  ( encode, ToJSON(..), Value )
+import Data.ByteString.Lazy
+  ( ByteString )
 import qualified Data.ByteString.Lazy.Char8 as BS
   ( pack )
 import qualified Data.Digest.Pure.SHA as SHA
@@ -87,6 +95,49 @@ readCookieFile file = do
       >>= mapM constructFromJson
       >>= (return . Just)
     else return Nothing
+
+
+
+-- | Write a `ByteString` to the data directory
+writeDataFile
+  :: (Monad eff)
+  => FilePath -- ^ File path, relative to @$DATA_PATH@, with leading slash
+  -> ByteString
+  -> WebDriverT eff ()
+writeDataFile file contents = do
+  path <- fromEnv (_dataPath . _env)
+  writeFilePath (path ++ file) contents
+
+-- | Read a `ByteString` from the data directory
+readDataFile
+  :: (Monad eff)
+  => FilePath -- ^ File path, relative to @$DATA_PATH@, with leading slash
+  -> WebDriverT eff ByteString
+readDataFile file = do
+  path <- fromEnv (_dataPath . _env)
+  readFilePath $ path ++ file
+
+
+
+-- | Write JSON to the data directory
+writeJsonFile
+  :: (Monad eff, Aeson.ToJSON a)
+  => FilePath -- ^ File path, relative to @$DATA_PATH@, with leading slash
+  -> a
+  -> WebDriverT eff ()
+writeJsonFile file a = do
+  path <- fromEnv (_dataPath . _env)
+  writeFilePath (path ++ file) (Aeson.encode $ Aeson.toJSON a)
+
+-- | Read a JSON `Value` from the data directory
+readJsonFile
+  :: (Monad eff)
+  => FilePath -- ^ File path, relative to @$DATA_PATH@, with leading slash
+  -> WebDriverT eff Aeson.Value
+readJsonFile file = do
+  path <- fromEnv (_dataPath . _env)
+  readFilePath (path ++ file) >>= parseJson
+
 
 
 -- | `KeyDownAction` with the given `Char`.
