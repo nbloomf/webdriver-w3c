@@ -656,11 +656,9 @@ evalWDAct act = case act of
   FileExists path -> try $ doesFileExist path
 
   HGetLine handle -> try $ do
-    hFlush handle
     hGetLine handle
 
   HGetLineNoEcho handle -> try $ do
-    hFlush handle
     echo <- hGetEcho handle
     hSetEcho handle False
     secret <- hGetLine handle
