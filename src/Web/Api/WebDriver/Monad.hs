@@ -10,7 +10,7 @@ Portability : POSIX
 A monad and monad transformer for building WebDriver sessions.
 -}
 
-{-# LANGUAGE GADTs, Rank2Types, OverloadedStrings #-}
+{-# LANGUAGE GADTs, Rank2Types, OverloadedStrings, RecordWildCards #-}
 module Web.Api.WebDriver.Monad (
     WebDriver
   , execWebDriver
@@ -65,11 +65,16 @@ module Web.Api.WebDriver.Monad (
   , httpSilentDelete
   , hPutStrLn
   , hPutStrLnBlocking
+  , getStrLn
   , promptForString
   , promptForSecret
   , readFilePath
   , writeFilePath
   , fileExists
+  , breakpointsOn
+  , breakpointsOff
+  , breakpoint
+  , breakpointWith
 
   -- * Types
   , Http.E(..)
@@ -88,6 +93,7 @@ module Web.Api.WebDriver.Monad (
   , WDAct(..)
   , Http.S(..)
   , WDState(..)
+  , BreakpointSetting(..)
 
   -- * Logs
   , getAssertions
@@ -96,7 +102,7 @@ module Web.Api.WebDriver.Monad (
 
 
 
-import Prelude hiding (readFile, writeFile)
+import Prelude hiding (readFile, writeFile, putStrLn)
 
 import Control.Concurrent.MVar
   ( MVar )
@@ -122,6 +128,8 @@ import Data.Functor.Identity
   ( Identity(..) )
 import Data.IORef
   ( IORef, newIORef, readIORef, writeIORef )
+import Data.List
+  ( intercalate )
 import qualified Data.Map.Strict as M
   ( Map, fromList )
 import Data.Text
@@ -190,6 +198,7 @@ defaultWebDriverState = Http.S
   , Http._httpSession = Nothing
   , Http._userState = WDState
     { _sessionId = Nothing
+    , _breakpoints = BreakpointsOff
     }
   }
 
@@ -467,6 +476,7 @@ data WDError
   | ImageDecodeError String
   | UnexpectedValue String
   | UnexpectedResult Outcome String
+  | BreakpointHaltError
   deriving Show
 
 -- | Read-only environment variables specific to WebDriver.
@@ -504,16 +514,37 @@ data ResponseFormat
   | ChromeFormat -- ^ Responses as emitted by chromedriver.
   deriving (Eq, Show)
 
+data BreakpointSetting
+  = BreakpointsOn
+  | BreakpointsOff
+  deriving (Eq, Show)
+
 -- | Includes a @Maybe String@ representing the current session ID, if one has been opened.
-newtype WDState = WDState
+data WDState = WDState
   { _sessionId :: Maybe String
+  , _breakpoints :: BreakpointSetting
   } deriving Show
+
+breakpointsOn :: (Monad eff) => WebDriverT eff ()
+breakpointsOn = modifyState $ \st -> st
+  { Http._userState = (Http._userState st)
+    { _breakpoints = BreakpointsOn
+    }
+  }
+
+breakpointsOff :: (Monad eff) => WebDriverT eff ()
+breakpointsOff = modifyState $ \st -> st
+  { Http._userState = (Http._userState st)
+    { _breakpoints = BreakpointsOff
+    }
+  }
 
 -- | WebDriver specific log entries.
 data WDLog
   = LogAssertion Assertion
   | LogSession SessionVerb
   | LogUnexpectedResult Outcome String
+  | LogBreakpoint String
   deriving Show
 
 -- | Pretty printer for log entries.
@@ -595,20 +626,28 @@ printWDError json e = case e of
   UnexpectedResult r msg -> case r of
     IsSuccess -> "Unexpected success: " ++ msg
     IsFailure -> "Unexpected failure: " ++ msg
+  BreakpointHaltError -> "Breakpoint Halt"
+
+putStrLn :: (Monad eff) => String -> WebDriverT eff ()
+putStrLn str = do
+  outH <- fromEnv (_stdout . Http._env)
+  hPutStrLn outH str
+
+getStrLn :: (Monad eff) => WebDriverT eff String
+getStrLn = do
+  inH <- fromEnv (_stdin . Http._env)
+  result <- promptWDAct $ HGetLine inH
+  case result of
+    Right string -> return string
+    Left e -> throwIOException e
 
 -- | Prompt for input on `stdin`.
 promptForString
   :: (Monad m)
   => String -- ^ Prompt text
   -> WebDriverT m String
-promptForString prompt = do
-  outH <- fromEnv (_stdout . Http._env)
-  inH <- fromEnv (_stdin . Http._env)
-  hPutStrLn outH prompt
-  result <- promptWDAct $ HGetLine inH
-  case result of
-    Right string -> return string
-    Left e -> throwIOException e
+promptForString prompt =
+  putStrLn prompt >> getStrLn
 
 -- | Prompt for input on `stdin`, but do not echo the typed characters back to the terminal -- handy for getting suuper secret info.
 promptForSecret
@@ -657,6 +696,92 @@ fileExists path = do
   case result of
     Right p -> return p
     Left e -> throwIOException e
+
+
+
+data BreakpointAction
+  = BreakpointContinue
+  | BreakpointHalt
+  | BreakpointDump -- ^ Show the current state and environment
+  | BreakpointSilence -- ^ Turn breakpoints off and continue
+  | BreakpointAct -- ^ Client-supplied action
+  deriving (Eq, Show)
+
+parseBreakpointAction :: String -> Maybe BreakpointAction
+parseBreakpointAction str = case str of
+  "c" -> Just BreakpointContinue
+  "h" -> Just BreakpointHalt
+  "d" -> Just BreakpointDump
+  "s" -> Just BreakpointSilence
+  "a" -> Just BreakpointAct
+  _ -> Nothing
+
+breakpointMessage :: (Monad eff) => String -> Maybe String -> WebDriverT eff ()
+breakpointMessage msg custom = do
+  putStrLn "=== BREAKPOINT ==="
+  putStrLn msg
+  putStrLn "c : continue"
+  putStrLn "h : halt"
+  putStrLn "d : dump webdriver state"
+  putStrLn "s : turn breakpoints off and continue"
+  case custom of
+    Just act -> putStrLn $ "a : " ++ act
+    Nothing -> return ()
+  putStrLn "=================="
+
+breakpointWith
+  :: (Monad eff)
+  => String
+  -> Maybe (String, WebDriverT eff ())
+  -> WebDriverT eff ()
+breakpointWith msg act = do
+  bp <- fromState (_breakpoints . Http._userState)
+  case bp of
+    BreakpointsOff -> return ()
+    BreakpointsOn -> do
+      logEntry $ LogBreakpoint msg
+      let
+        (actionDescription, action) = case act of
+          Nothing -> (Nothing, return ())
+          Just (title, action) -> (Just title, action)
+      breakpointMessage msg actionDescription
+      command <- getStrLn
+      case parseBreakpointAction command of
+        Just BreakpointContinue -> return ()
+        Just BreakpointHalt -> throwError BreakpointHaltError
+        Just BreakpointDump -> do
+          putStrLn "=== DUMP ========="
+          fromState dumpState >>= putStrLn
+          fromEnv dumpEnv >>= putStrLn
+          putStrLn "=================="
+          breakpointWith msg act
+        Just BreakpointSilence -> breakpointsOff
+        Just BreakpointAct -> action
+        Nothing -> do
+          putStrLn $ "Unrecognized breakpoint option '" ++ command ++ "'"
+          breakpointWith msg act
+
+breakpoint
+  :: (Monad eff)
+  => String
+  -> WebDriverT eff ()
+breakpoint msg = breakpointWith msg Nothing
+
+dumpState :: Http.S WDState -> String
+dumpState Http.S{..} = intercalate "\n"
+  [ "Session ID: " ++ show (_sessionId _userState)
+  , show (_breakpoints _userState)
+  ]
+
+dumpEnv :: Http.R WDError WDLog WDEnv -> String
+dumpEnv Http.R{..} = intercalate "\n"
+  [ "Remote Host: " ++ (_remoteHostname _env)
+  , "Remote Port: " ++ show (_remotePort _env)
+  , "Remote Path: " ++ (_remotePath _env)
+  , "Data Path: " ++ (_dataPath _env)
+  , "Response Format: " ++ show (_responseFormat _env)
+  , "API Version: " ++ show (_apiVersion _env)
+  ]
 
 
 

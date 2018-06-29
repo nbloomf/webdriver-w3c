@@ -285,6 +285,7 @@ instance (Monad eff, Monad (m eff), Typeable eff, Typeable m) => TT.IsTest (WebD
               , _httpSession = Nothing
               , _userState = WDState
                 { _sessionId = Nothing
+                , _breakpoints = BreakpointsOff
                 }
               }
             , _environment = defaultWebDriverEnvironment
