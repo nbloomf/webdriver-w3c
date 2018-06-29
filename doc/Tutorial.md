@@ -349,6 +349,7 @@ example3 = do
   SE.setEnv "TASTY_NUM_THREADS" "1"
   defaultWebDriverMain
     $ localOption (SilentLog)
+    $ localOption (PrivateMode True)
     $ test_suite
 ```
 

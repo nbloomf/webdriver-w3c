@@ -733,10 +733,10 @@ isElementSelected element = do
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-element-attribute>.
 getElementAttribute
   :: (Monad m, HasElementRef t)
-  => t
-  -> AttributeName
+  => AttributeName
+  -> t
   -> WebDriverT m (Either Bool String)
-getElementAttribute element name = do
+getElementAttribute name element = do
   let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
   x <- httpGet (baseUrl ++ "/element/" ++ elementRef ++ "/attribute/" ++ E.encode name)
@@ -753,10 +753,10 @@ getElementAttribute element name = do
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-element-property>.
 getElementProperty
   :: (Monad m, HasElementRef t)
-  => t
-  -> PropertyName
+  => PropertyName
+  -> t
   -> WebDriverT m Value
-getElementProperty element name = do
+getElementProperty name element = do
   let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
   httpGet (baseUrl ++ "/element/" ++ elementRef ++ "/property/" ++ E.encode name)
@@ -768,10 +768,10 @@ getElementProperty element name = do
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-element-css-value>.
 getElementCssValue
   :: (Monad m, HasElementRef t)
-  => t
-  -> CssPropertyName
+  => CssPropertyName
+  -> t
   -> WebDriverT m String
-getElementCssValue element name = do
+getElementCssValue name element = do
   let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
   httpGet (baseUrl ++ "/element/" ++ elementRef ++ "/css/" ++ name)
@@ -878,10 +878,10 @@ elementClear element = do
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#element-send-keys>.
 elementSendKeys
   :: (Monad m, HasElementRef t)
-  => t
-  -> String
+  => String
+  -> t
   -> WebDriverT m ()
-elementSendKeys element text = do
+elementSendKeys text element = do
   let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
   let !payload = encode $ object [ "text" .= text ]
