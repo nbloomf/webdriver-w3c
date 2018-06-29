@@ -2,7 +2,6 @@ TODO
 ====
 * Handle IO (& other) errors in cleanup helper
 * Breakpoints + breakpoint handler
-* elementSendKeys: switch order of arguments
 
 
 NEXT

@@ -5,10 +5,11 @@
 * New
   * Browser preferences field on `FirefoxOptions` and `ChromeOptions`
   * `readDataFile`, `writeDataFile`, `readJsonFile`, and `writeJsonFile` data helpers
+  * `breakpoint` and `breakpointWith` for helping with debugging; controlled by `breakpointsOn`, and `breakpointsOff`
 * Changed
   * Switched order of arguments for `elementSendKeys`, `getElementAttribute`, `getElementProperty`, and `getElementCssValue`. The element reference now comes last to make it easier to chain these with `>>=`.
 * Fix
-  * Bug in behavior of `cleanupOnError` was not catching all errors
+  * Bug in behavior of `cleanupOnError` was causing it to miss some errors, which left the remote end session open
 
 
 ## 0.0.1
