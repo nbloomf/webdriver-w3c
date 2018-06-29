@@ -513,6 +513,47 @@ the tasty integration; there are analogous `debugWebDriverT` and
 put mutable state, delimited continuations, or even another HTTP API
 monad in there. Use your imagination!
 
+Debugging
+---------
+
+Running browser sessions is one thing, but writing and debugging them is
+another. `webdriver-w3c` has some tools for dealing with this as well.
+Besides the log, which gives a thorough account of what happened, we can
+include breakpoints in our code. When breakpoints are activated, they
+stop the session and give us a chance to poke around the browser before
+moving on.
+
+Here's a simple example.
+
+``` {.sourceCode .literate .haskell}
+stop_and_smell_the_ajax :: (Monad eff) => WebDriver eff ()
+stop_and_smell_the_ajax = do
+  breakpointsOn
+
+  navigateTo "https://google.com"
+
+  breakpoint "Just checking"
+
+  navigateTo "https://mozilla.org"
+
+  breakpoint "are we there yet"
+```
+
+We can run this with `example5`:
+
+``` {.sourceCode .literate .haskell}
+example5 :: IO ()
+example5 = do
+  execWebDriver defaultWebDriverConfig
+    (runIsolated defaultFirefoxCapabilities stop_and_smell_the_ajax)
+  return ()
+```
+
+The basic `breakpoint` command gives the option to continue, throw an
+error, dump the current state and environment to stdout, and turn
+breakpoints off. A fancier version, `breakpointWith`, takes an
+additional argument letting us trigger a custom action.
+
 Where to Learn More
 -------------------
 
