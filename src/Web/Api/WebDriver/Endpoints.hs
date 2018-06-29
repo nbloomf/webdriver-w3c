@@ -221,8 +221,11 @@ cleanupOnError
   :: (Monad m)
   => WebDriverT m a -- ^ `WebDriver` session that may throw errors
   -> WebDriverT m a
-cleanupOnError x = catchError x $ \e ->
-  deleteSession >> throwError e
+cleanupOnError x = catchAnyError x
+  (\e -> deleteSession >> throwError e)
+  (\e -> deleteSession >> throwHttpException e)
+  (\e -> deleteSession >> throwIOException e)
+  (\e -> deleteSession >> throwJsonError e)
 
 -- | Run a WebDriver computation in an isolated browser session. Ensures that the session is closed on the remote end.
 runIsolated

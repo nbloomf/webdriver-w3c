@@ -53,6 +53,7 @@ module Web.Api.WebDriver.Monad (
   , catchJsonError
   , catchHttpException
   , catchIOException
+  , catchAnyError
   , parseJson
   , lookupKeyJson
   , constructFromJson
@@ -358,6 +359,17 @@ throwHttpException = WDT . Http.throwHttpException
 
 throwIOException :: IOException -> WebDriverT m a
 throwIOException = WDT . Http.throwIOException
+
+-- | Explicitly handle any of the error types thrown in `WebDriverT`
+catchAnyError
+  :: WebDriverT m a
+  -> (WDError -> WebDriverT m a)
+  -> (N.HttpException -> WebDriverT m a)
+  -> (IOException -> WebDriverT m a)
+  -> (Http.JsonError -> WebDriverT m a)
+  -> WebDriverT m a
+catchAnyError x hE hH hI hJ = WDT $ Http.catchAnyError (unWDT x)
+  (unWDT . hE) (unWDT . hH) (unWDT . hI) (unWDT . hJ)
 
 -- | Rethrows other error types
 catchError :: WebDriverT m a -> (WDError -> WebDriverT m a) -> WebDriverT m a
