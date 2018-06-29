@@ -520,7 +520,7 @@ _test_getElementAttribute_success page =
     session = do
       navigateTo page
       !element <- getActiveElement
-      !attr <- getElementAttribute element "href"
+      !attr <- getElementAttribute "href" element
       assertSuccess "yay"
       return ()
 
@@ -539,7 +539,7 @@ _test_getElementCssValue_success page =
     session = do
       navigateTo page
       !element <- findElement CssSelector "p#super-cool"
-      !text <- getElementCssValue element "text-decoration"
+      !text <- getElementCssValue "text-decoration" element
       case text of
         "none" -> assertSuccess "yay"
         _ -> assertFailure $ AssertionComment $ "expected 'none', got '" ++ text ++ "'"
@@ -648,7 +648,7 @@ _test_elementSendKeys_success page =
     session = do
       navigateTo page
       !element <- findElement CssSelector "input[name='sometext']"
-      () <- elementSendKeys element "foo"
+      () <- elementSendKeys "foo" element
       assertSuccess "yay"
       return ()
 

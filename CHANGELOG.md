@@ -2,7 +2,12 @@
 
 ## Unreleased changes
 
-(none)
+* New
+  * Browser preferences field on `FirefoxOptions` and `ChromeOptions`
+  * `readDataFile`, `writeDataFile`, `readJsonFile`, and `writeJsonFile` data helpers
+* Changed
+  * Switched order of arguments for `elementSendKeys`, `getElementAttribute`, `getElementProperty`, and `getElementCssValue`. The element reference now comes last to make it easier to chain these with `>>=`.
+
 
 ## 0.0.1
 

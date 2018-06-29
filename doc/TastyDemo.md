@@ -39,7 +39,7 @@ Define your tests
 
 First things first: to make a WebDriver test suite, we need some
 WebDriver tests. These are just values of type `WebDriver IO ()`. (Or
-more generally, `Effectful m => WebDriver m ()`, but that's not
+more generally, `Monad eff => WebDriver eff ()`, but that's not
 important for now.) Here are a few dweeby examples. It's not necessary
 for the tests to start with `_test` or use snake\_case; I'm doing it
 here out of habit.
@@ -67,16 +67,9 @@ The simplest way to make a test executable with tasty is to use
 
 This function wraps tasty's `defaultMain`, which handles command line
 option parsing, and adds some magic of its own. `TestTree` is tasty's
-type for an executable test suite. There are three functions for
-building these out of WebDriver sessions.
-
-1.  `testCase`, which defines a simple named test consisting of a single
-    WebDriver session
-2.  `testGroup`, which defines a named list of `TestTree`s
-3.  `testCaseWithSetup`, which is like `testCase` but takes additional
-    setup and teardown instructions to be run before and after the test;
-    `testCaseWithSetup` is less frequently useful, but it's there just
-    in case.
+type for an executable test suite. There are several functions for
+building these out of WebDriver sessions; they live in
+`Test.Tasty.WebDriver` and have names starting with `testCase`.
 
 Here's an example `main`.
 
