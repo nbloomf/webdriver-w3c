@@ -10,6 +10,7 @@ Portability : POSIX
 
 module Web.Api.WebDriver (
     module Web.Api.WebDriver.Assert
+  , module Web.Api.WebDriver.Classes
   , module Web.Api.WebDriver.Endpoints
   , module Web.Api.WebDriver.Helpers
   , module Web.Api.WebDriver.Monad
@@ -19,6 +20,7 @@ module Web.Api.WebDriver (
   ) where
 
 import Web.Api.WebDriver.Assert
+import Web.Api.WebDriver.Classes
 import Web.Api.WebDriver.Endpoints
 import Web.Api.WebDriver.Helpers
 import Web.Api.WebDriver.Monad
