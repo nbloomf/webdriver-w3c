@@ -2,19 +2,21 @@
 
 ## Unreleased changes
 
-* New
+* Added
   * Browser preferences field on `FirefoxOptions` and `ChromeOptions`
   * `readDataFile`, `writeDataFile`, `readJsonFile`, and `writeJsonFile` data helpers
   * `breakpoint` and `breakpointWith` for helping with debugging; controlled by `breakpointsOn`, and `breakpointsOff`
 * Changed
   * Switched order of arguments for `elementSendKeys`, `getElementAttribute`, `getElementProperty`, and `getElementCssValue`. The element reference now comes last to make it easier to chain these with `>>=`.
-* Fix
+  * `logDebug` and `logNotice`
+* Fixed
   * Bug in behavior of `cleanupOnError` was causing it to miss some errors, which left the remote end session open
+
 
 
 ## 0.0.1
 
-* New
+* Added
     * `WebDriver` monad for remotely controlling user agents. Also comes in monad transformer flavor with `WebDriverT` 
     * Bindings for all [WebDriver endpoints](https://w3c.github.io/webdriver/webdriver-spec.html) as of 2018-04-20
     * Integration with the [Tasty](https://hackage.haskell.org/package/tasty) test framework

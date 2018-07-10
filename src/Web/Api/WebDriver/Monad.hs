@@ -43,6 +43,8 @@ module Web.Api.WebDriver.Monad (
   , fromEnv
   , comment
   , wait
+  , logDebug
+  , logNotice
   , throwError
   , throwJsonError
   , throwHttpException
@@ -98,6 +100,8 @@ module Web.Api.WebDriver.Monad (
   -- * Logs
   , getAssertions
   , Http.logEntries
+  , Http.printHttpLogs
+  , Http.basicLogEntryPrinter
 ) where
 
 
@@ -206,6 +210,7 @@ defaultWebDriverEnvironment :: Http.R WDError WDLog WDEnv
 defaultWebDriverEnvironment = Http.R
   { Http._logHandle = stdout
   , Http._logLock = Nothing
+  , Http._logEntryPrinter = Http.basicLogEntryPrinter
   , Http._uid = ""
   , Http._logOptions = defaultWebDriverLogOptions
   , Http._httpErrorInject = promoteHttpResponseError
@@ -346,8 +351,11 @@ modifyState = WDT . Http.modify
 fromEnv :: (Http.R WDError WDLog WDEnv -> a) -> WebDriverT m a
 fromEnv = WDT . Http.reader
 
-logEntry :: WDLog -> WebDriverT m ()
-logEntry = WDT . Http.logEntry
+logDebug :: WDLog -> WebDriverT m ()
+logDebug = WDT . Http.logDebug
+
+logNotice :: WDLog -> WebDriverT m ()
+logNotice = WDT . Http.logNotice
 
 -- | Write a comment to the log.
 comment :: String -> WebDriverT m ()
@@ -446,7 +454,7 @@ promptWDAct = WDT . Http.prompt . Http.P
 
 
 instance Assert (WebDriverT m) where
-  assert = logEntry . LogAssertion
+  assert = logNotice . LogAssertion
 
 
 
@@ -739,7 +747,7 @@ breakpointWith msg act = do
   case bp of
     BreakpointsOff -> return ()
     BreakpointsOn -> do
-      logEntry $ LogBreakpoint msg
+      logNotice $ LogBreakpoint msg
       let
         (actionDescription, action) = case act of
           Nothing -> (Nothing, return ())

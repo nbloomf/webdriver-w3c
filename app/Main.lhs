@@ -14,6 +14,7 @@ Hello, and welcome to the wonderful world of browser automation with WebDriver a
 > import Test.Tasty
 > import qualified System.Environment as SE
 > import Control.Monad
+> import System.IO
 > 
 > main :: IO ()
 > main = return ()
