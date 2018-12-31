@@ -17,7 +17,7 @@ import qualified Test.Tasty.ExpectedFailure as TE
 invalidElementState
   :: (Monad eff)
   => WDError
-  -> WebDriver eff ()
+  -> WebDriverT eff()
 invalidElementState e = case e of
   ResponseError InvalidElementState _ _ _ _ -> assertSuccess "yay!"
   err -> assertFailure $
@@ -26,7 +26,7 @@ invalidElementState e = case e of
 
 invalidElementStateExit
   :: (Monad eff)
-  => (String -> WebDriver eff () -> T.TestTree)
+  => (String -> WebDriverT eff() -> T.TestTree)
   -> FilePath
   -> T.TestTree
 invalidElementStateExit buildTestCase dir =
@@ -39,10 +39,10 @@ invalidElementStateExit buildTestCase dir =
 
 
 _test_elementClear_invalid_element_state
-  :: (Monad eff) => FilePath -> WebDriver eff ()
+  :: (Monad eff) => FilePath -> WebDriverT eff()
 _test_elementClear_invalid_element_state page =
   let
-    session :: (Monad eff) => WebDriver eff ()
+    session :: (Monad eff) => WebDriverT eff()
     session = do
       navigateTo page
       !element <- findElement CssSelector "body"

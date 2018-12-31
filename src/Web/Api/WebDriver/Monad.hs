@@ -7,22 +7,29 @@ Maintainer  : Nathan Bloomfield (nbloomf@gmail.com)
 Stability   : experimental
 Portability : POSIX
 
-A monad and monad transformer for building WebDriver sessions.
+A monad transformer for building WebDriver sessions.
 -}
 
-{-# LANGUAGE GADTs, Rank2Types, OverloadedStrings, RecordWildCards #-}
-module Web.Api.WebDriver.Monad (
-    WebDriver
-  , execWebDriver
-  , debugWebDriver
-  , checkWebDriver
+{-#
+  LANGUAGE
+    GADTs,
+    Rank2Types,
+    KindSignatures,
+    RecordWildCards,
+    OverloadedStrings
+#-}
 
-  , WebDriverT()
+module Web.Api.WebDriver.Monad (
+    WebDriverT
   , execWebDriverT
   , debugWebDriverT
   , checkWebDriverT
-  , liftWebDriverT
-  , IdentityT(..)
+
+  , WebDriverTT()
+  , execWebDriverTT
+  , debugWebDriverTT
+  , checkWebDriverTT
+  , liftWebDriverTT
 
   , evalWDAct
   , Http.evalIO
@@ -50,6 +57,7 @@ module Web.Api.WebDriver.Monad (
   , throwHttpException
   , throwIOException
   , expect
+  , expectIs
   , assert
   , catchError
   , catchJsonError
@@ -116,6 +124,10 @@ import Control.Lens
   ( (^.), (^?) )
 import Control.Monad
   ( ap )
+import Control.Monad.Trans.Class
+  ( MonadTrans(..) )
+import Control.Monad.Trans.Identity
+  ( IdentityT(..) )
 import Data.Aeson
   ( Value(), Result(Success), toJSON, (.=), FromJSON, fromJSON, object )
 import Data.Aeson.Encode.Pretty
@@ -162,24 +174,36 @@ import Web.Api.WebDriver.Assert
 
 
 
--- | Wrapper type around `Http.HttpT`; a stack of error, reader, writer, state, and prompt monads.
-newtype WebDriverT m a = WDT
-  { unWDT :: Http.HttpT WDError WDEnv WDLog WDState WDAct m a }
+-- | Wrapper type around `Http.HttpTT`; a stack of error, reader, writer, state, and prompt monad transformers.
+newtype WebDriverTT
+  (t :: (* -> *) -> * -> *)
+  (eff :: * -> *)
+  (a :: *)
+  = WDT
+    { unWDT :: Http.HttpTT WDError WDEnv WDLog WDState WDAct t eff a }
 
-instance Functor (WebDriverT m) where
+instance
+  (Monad eff, Monad (t eff), MonadTrans t)
+    => Functor (WebDriverTT t eff) where
   fmap f = WDT . fmap f . unWDT
 
-instance Applicative (WebDriverT m) where
+instance
+  (Monad eff, Monad (t eff), MonadTrans t)
+    => Applicative (WebDriverTT t eff) where
   pure = return
   (<*>) = ap
 
-instance Monad (WebDriverT m) where
+instance
+  (Monad eff, Monad (t eff), MonadTrans t)
+    => Monad (WebDriverTT t eff) where
   return = WDT . return
   (WDT x) >>= f = WDT (x >>= (unWDT . f))
 
--- | Lift a value from the inner monad
-liftWebDriverT :: (Monad m) => m a -> WebDriverT m a
-liftWebDriverT = WDT . Http.liftHttpT
+-- | Lift a value from the inner transformed monad
+liftWebDriverTT
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => t eff a -> WebDriverTT t eff a
+liftWebDriverTT = WDT . Http.liftHttpTT
 
 -- | Type representing configuration settings for a WebDriver session
 data WebDriverConfig eff = WDConfig
@@ -243,224 +267,273 @@ defaultWebDriverLogOptions = Http.trivialLogOptions
 
 
 
--- | Execute a `WebDriverT` session.
-execWebDriverT
-  :: (Monad eff, Monad (m eff))
+-- | Execute a `WebDriverTT` session.
+execWebDriverTT
+  :: (Monad eff, Monad (t eff), MonadTrans t)
   => WebDriverConfig eff
-  -> (forall u. eff u -> m eff u) -- ^ Lift effects to the inner monad
-  -> WebDriverT (m eff) a
-  -> m eff (Either (Http.E WDError) a, Http.S WDState, Http.W WDError WDLog)
-execWebDriverT config lift = Http.execHttpTM
-  (_initialState config) (_environment config) (_evaluator config) lift . unWDT
+  -> WebDriverTT t eff a
+  -> t eff (Either (Http.E WDError) a, Http.S WDState, Http.W WDError WDLog)
+execWebDriverTT config = Http.execHttpTT
+  (_initialState config) (_environment config) (_evaluator config) . unWDT
 
--- | Execute a `WebDriverT` session, returning an assertion summary with the result.
-debugWebDriverT
-  :: (Monad eff, Monad (m eff))
+-- | Execute a `WebDriverTT` session, returning an assertion summary with the result.
+debugWebDriverTT
+  :: (Monad eff, Monad (t eff), MonadTrans t)
   => WebDriverConfig eff
-  -> (forall u. eff u -> m eff u) -- ^ Lift effects to the inner monad
-  -> WebDriverT (m eff) a
-  -> m eff (Either String a, AssertionSummary)
-debugWebDriverT config lift session = do
-  (result, _, w) <- execWebDriverT config lift session
+  -> WebDriverTT t eff a
+  -> t eff (Either String a, AssertionSummary)
+debugWebDriverTT config session = do
+  (result, _, w) <- execWebDriverTT config session
   let output = case result of
         Right a -> Right a
         Left e -> Left $ Http.printError (printWDError True) e
   return (output, summarize $ getAssertions $ Http.logEntries w)
 
 -- | For testing with QuickCheck.
-checkWebDriverT
-  :: (Monad eff, Monad (m eff))
+checkWebDriverTT
+  :: (Monad eff, Monad (t eff), MonadTrans t, Show q)
   => WebDriverConfig eff
-  -> (forall u. eff u -> m eff u) -- ^ Lift effects to the inner monad
-  -> (m eff (Either (Http.E WDError) t, Http.S WDState, Http.W WDError WDLog) -> IO q) -- ^ Condense to `IO`
+  -> (t eff (Either (Http.E WDError) a, Http.S WDState, Http.W WDError WDLog) -> IO q) -- ^ Condense to `IO`
   -> (q -> Bool) -- ^ Result check
-  -> WebDriverT (m eff) t
+  -> WebDriverTT t eff a
   -> Property
-checkWebDriverT config lift cond check =
-  Http.checkHttpTM
+checkWebDriverTT config cond check =
+  Http.checkHttpTT
     (_initialState config)
     (_environment config)
     (_evaluator config)
-    lift cond check . unWDT
+    cond check . unWDT
 
 
 
 
 
--- | `WebDriverT` over `IdentityT`.
-type WebDriver eff a = WebDriverT (IdentityT eff) a
-
--- | The identity monad transformer.
-newtype IdentityT m a = IdentityT { runIdentityT :: m a }
-
-instance (Monad m) => Monad (IdentityT m) where
-  return = IdentityT . return
-  x >>= f = IdentityT $ runIdentityT x >>= (runIdentityT . f)
-
-instance (Functor m) => Functor (IdentityT m) where
-  fmap f = IdentityT . fmap f . runIdentityT
-
-instance (Monad m) => Applicative (IdentityT m) where
-  pure = return
-  (<*>) = ap
+-- | `WebDriverTT` over `IdentityT`.
+type WebDriverT eff a = WebDriverTT IdentityT eff a
 
 
 
--- | Execute a `WebDriver` session.
-execWebDriver
+-- | Execute a `WebDriverT` session.
+execWebDriverT
   :: (Monad eff)
   => WebDriverConfig eff
-  -> WebDriver eff a
+  -> WebDriverT eff a
   -> eff (Either (Http.E WDError) a, Http.S WDState, Http.W WDError WDLog)
-execWebDriver config = runIdentityT . execWebDriverT config IdentityT
+execWebDriverT config = runIdentityT . execWebDriverTT config
 
--- | Execute a `WebDriver` session, returning an assertion summary with the result.
-debugWebDriver
+-- | Execute a `WebDriverT` session, returning an assertion summary with the result.
+debugWebDriverT
   :: (Monad eff)
   => WebDriverConfig eff
-  -> WebDriver eff a
+  -> WebDriverT eff a
   -> eff (Either String a, AssertionSummary)
-debugWebDriver config session = do
-  (result, _, w) <- execWebDriver config session
+debugWebDriverT config session = do
+  (result, _, w) <- execWebDriverT config session
   let output = case result of
         Right a -> Right a
         Left e -> Left $ Http.printError (printWDError True) e
   return (output, summarize $ getAssertions $ Http.logEntries w)
 
 -- | For testing with QuickCheck
-checkWebDriver
-  :: (Monad eff)
+checkWebDriverT
+  :: (Monad eff, Show q)
   => WebDriverConfig eff
   -> (eff (Either (Http.E WDError) t, Http.S WDState, Http.W WDError WDLog) -> IO q) -- ^ Condense to `IO`
   -> (q -> Bool) -- ^ Result check
-  -> WebDriver eff t
+  -> WebDriverT eff t
   -> Property
-checkWebDriver config cond = checkWebDriverT config IdentityT (cond . runIdentityT)
+checkWebDriverT config cond = checkWebDriverTT config (cond . runIdentityT)
 
 
 
 -- | Get a computed value from the state
-fromState :: (Http.S WDState -> a) -> WebDriverT m a
+fromState
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => (Http.S WDState -> a) -> WebDriverTT t eff a
 fromState = WDT . Http.gets
 
 -- | Mutate the state
-modifyState :: (Http.S WDState -> Http.S WDState) -> WebDriverT m ()
+modifyState
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => (Http.S WDState -> Http.S WDState) -> WebDriverTT t eff ()
 modifyState = WDT . Http.modify
 
 -- | Get a computed value from the environment
-fromEnv :: (Http.R WDError WDLog WDEnv -> a) -> WebDriverT m a
+fromEnv
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => (Http.R WDError WDLog WDEnv -> a) -> WebDriverTT t eff a
 fromEnv = WDT . Http.reader
 
-logDebug :: WDLog -> WebDriverT m ()
+logDebug
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WDLog -> WebDriverTT t eff ()
 logDebug = WDT . Http.logDebug
 
-logNotice :: WDLog -> WebDriverT m ()
+logNotice
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WDLog -> WebDriverTT t eff ()
 logNotice = WDT . Http.logNotice
 
 -- | Write a comment to the log.
-comment :: String -> WebDriverT m ()
+comment
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => String -> WebDriverTT t eff ()
 comment = WDT . Http.comment
 
--- | In milliseconds
-wait :: Int -> WebDriverT m ()
+-- | Suspend the current session. Handy when waiting for pages to load.
+wait
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => Int -- ^ Wait time in milliseconds
+  -> WebDriverTT t eff ()
 wait = WDT . Http.wait
 
-throwError :: WDError -> WebDriverT m a
+throwError
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WDError -> WebDriverTT t eff a
 throwError = WDT . Http.throwError
 
-throwJsonError :: Http.JsonError -> WebDriverT m a
+throwJsonError
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => Http.JsonError -> WebDriverTT t eff a
 throwJsonError = WDT . Http.throwJsonError
 
-throwHttpException :: N.HttpException -> WebDriverT m a
+throwHttpException
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => N.HttpException -> WebDriverTT t eff a
 throwHttpException = WDT . Http.throwHttpException
 
-throwIOException :: IOException -> WebDriverT m a
+throwIOException
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => IOException -> WebDriverTT t eff a
 throwIOException = WDT . Http.throwIOException
 
--- | Explicitly handle any of the error types thrown in `WebDriverT`
+-- | Explicitly handle any of the error types thrown in `WebDriverTT`
 catchAnyError
-  :: WebDriverT m a
-  -> (WDError -> WebDriverT m a)
-  -> (N.HttpException -> WebDriverT m a)
-  -> (IOException -> WebDriverT m a)
-  -> (Http.JsonError -> WebDriverT m a)
-  -> WebDriverT m a
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WebDriverTT t eff a
+  -> (WDError -> WebDriverTT t eff a)
+  -> (N.HttpException -> WebDriverTT t eff a)
+  -> (IOException -> WebDriverTT t eff a)
+  -> (Http.JsonError -> WebDriverTT t eff a)
+  -> WebDriverTT t eff a
 catchAnyError x hE hH hI hJ = WDT $ Http.catchAnyError (unWDT x)
   (unWDT . hE) (unWDT . hH) (unWDT . hI) (unWDT . hJ)
 
 -- | Rethrows other error types
-catchError :: WebDriverT m a -> (WDError -> WebDriverT m a) -> WebDriverT m a
+catchError
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WebDriverTT t eff a
+  -> (WDError -> WebDriverTT t eff a)
+  -> WebDriverTT t eff a
 catchError x h = WDT $ Http.catchError (unWDT x) (unWDT . h)
 
 -- | Rethrows other error types
-catchJsonError :: WebDriverT m a -> (Http.JsonError -> WebDriverT m a) -> WebDriverT m a
+catchJsonError
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WebDriverTT t eff a
+  -> (Http.JsonError -> WebDriverTT t eff a)
+  -> WebDriverTT t eff a
 catchJsonError x h = WDT $ Http.catchJsonError (unWDT x) (unWDT . h)
 
 -- | Rethrows other error types
-catchHttpException :: WebDriverT m a -> (N.HttpException -> WebDriverT m a) -> WebDriverT m a
+catchHttpException
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WebDriverTT t eff a
+  -> (N.HttpException -> WebDriverTT t eff a)
+  -> WebDriverTT t eff a
 catchHttpException x h = WDT $ Http.catchHttpException (unWDT x) (unWDT . h)
 
 -- | Rethrows other error types
-catchIOException :: WebDriverT m a -> (IOException -> WebDriverT m a) -> WebDriverT m a
+catchIOException
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WebDriverTT t eff a
+  -> (IOException -> WebDriverTT t eff a)
+  -> WebDriverTT t eff a
 catchIOException x h = WDT $ Http.catchIOException (unWDT x) (unWDT . h)
 
 -- | May throw a `JsonError`.
-parseJson :: ByteString -> WebDriverT m Value
+parseJson
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => ByteString -> WebDriverTT t eff Value
 parseJson = WDT . Http.parseJson
 
 -- | May throw a `JsonError`.
-lookupKeyJson :: Text -> Value -> WebDriverT m Value
+lookupKeyJson
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => Text -> Value -> WebDriverTT t eff Value
 lookupKeyJson key = WDT . Http.lookupKeyJson key
 
 -- | May throw a `JsonError`.
-constructFromJson :: (FromJSON a) => Value -> WebDriverT m a
+constructFromJson
+  :: (Monad eff, Monad (t eff), MonadTrans t, FromJSON a)
+  => Value -> WebDriverTT t eff a
 constructFromJson = WDT . Http.constructFromJson
 
 -- | Capures `HttpException`s.
-httpGet :: Http.Url -> WebDriverT m Http.HttpResponse
+httpGet
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => Http.Url -> WebDriverTT t eff Http.HttpResponse
 httpGet = WDT . Http.httpGet
 
 -- | Does not write request or response info to the log, except to note that a request occurred. Capures `HttpException`s.
-httpSilentGet :: Http.Url -> WebDriverT m Http.HttpResponse
+httpSilentGet
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => Http.Url -> WebDriverTT t eff Http.HttpResponse
 httpSilentGet = WDT . Http.httpSilentGet
 
 -- | Capures `HttpException`s.
-httpPost :: Http.Url -> ByteString -> WebDriverT m Http.HttpResponse
+httpPost
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => Http.Url -> ByteString -> WebDriverTT t eff Http.HttpResponse
 httpPost url = WDT . Http.httpPost url
 
 -- | Does not write request or response info to the log, except to note that a request occurred. Capures `HttpException`s.
-httpSilentPost :: Http.Url -> ByteString -> WebDriverT m Http.HttpResponse
+httpSilentPost
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => Http.Url -> ByteString -> WebDriverTT t eff Http.HttpResponse
 httpSilentPost url = WDT . Http.httpSilentPost url
 
 -- | Capures `HttpException`s.
-httpDelete :: Http.Url -> WebDriverT m Http.HttpResponse
+httpDelete
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => Http.Url -> WebDriverTT t eff Http.HttpResponse
 httpDelete = WDT . Http.httpDelete
 
 -- | Does not write request or response info to the log, except to note that a request occurred. Capures `HttpException`s.
-httpSilentDelete :: Http.Url -> WebDriverT m Http.HttpResponse
+httpSilentDelete
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => Http.Url -> WebDriverTT t eff Http.HttpResponse
 httpSilentDelete = WDT . Http.httpSilentDelete
 
 -- | Capures `IOException`s.
-hPutStrLn :: Handle -> String -> WebDriverT m ()
+hPutStrLn
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => Handle -> String -> WebDriverTT t eff ()
 hPutStrLn h = WDT . Http.hPutStrLn h
 
 -- | Capures `IOException`s.
-hPutStrLnBlocking :: MVar () -> Handle -> String -> WebDriverT m ()
+hPutStrLnBlocking
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => MVar () -> Handle -> String -> WebDriverTT t eff ()
 hPutStrLnBlocking lock h = WDT . Http.hPutStrLnBlocking lock h
 
-promptWDAct :: WDAct a -> WebDriverT m a
+promptWDAct
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WDAct a -> WebDriverTT t eff a
 promptWDAct = WDT . Http.prompt . Http.P
 
 
 
-instance Assert (WebDriverT m) where
+instance
+  (Monad eff, Monad (t eff), MonadTrans t)
+    => Assert (WebDriverTT t eff) where
   assert = logNotice . LogAssertion
 
 
 
 
 
--- | Filter the assertions from a `WebDriver` log.
+-- | Filter the assertions from a WebDriver log.
 getAssertions :: [WDLog] -> [Assertion]
 getAssertions xs = get xs
   where
@@ -533,14 +606,18 @@ data WDState = WDState
   , _breakpoints :: BreakpointSetting
   } deriving Show
 
-breakpointsOn :: (Monad eff) => WebDriverT eff ()
+breakpointsOn
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WebDriverTT t eff ()
 breakpointsOn = modifyState $ \st -> st
   { Http._userState = (Http._userState st)
     { _breakpoints = BreakpointsOn
     }
   }
 
-breakpointsOff :: (Monad eff) => WebDriverT eff ()
+breakpointsOff
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WebDriverTT t eff ()
 breakpointsOff = modifyState $ \st -> st
   { Http._userState = (Http._userState st)
     { _breakpoints = BreakpointsOff
@@ -581,14 +658,26 @@ data WDAct a where
 
 -- | For validating responses. Throws an `UnexpectedValue` error if the two arguments are not equal according to their `Eq` instance.
 expect
-  :: (Monad m, Eq a, Show a)
+  :: (Monad eff, Monad (t eff), MonadTrans t, Eq a, Show a)
   => a
   -> a
-  -> WebDriverT m a
+  -> WebDriverTT t eff a
 expect x y = if x == y
   then return y
   else throwError $ UnexpectedValue $
     "expected " ++ show x ++ " but got " ++ show y
+
+-- | For validating responses. Throws an `UnexpectedValue` error if the `a` argument does not satisfy the predicate.
+expectIs
+  :: (Monad eff, Monad (t eff), MonadTrans t, Show a)
+  => (a -> Bool)
+  -> String -- ^ Human readable error label
+  -> a
+  -> WebDriverTT t eff a
+expectIs p label x = if p x
+  then return x
+  else throwError $ UnexpectedValue $
+    "expected " ++ label ++ " but got " ++ show x
 
 -- | Promote semantic HTTP exceptions to typed errors.
 promoteHttpResponseError :: N.HttpException -> Maybe WDError
@@ -636,12 +725,16 @@ printWDError json e = case e of
     IsFailure -> "Unexpected failure: " ++ msg
   BreakpointHaltError -> "Breakpoint Halt"
 
-putStrLn :: (Monad eff) => String -> WebDriverT eff ()
+putStrLn
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => String -> WebDriverTT t eff ()
 putStrLn str = do
   outH <- fromEnv (_stdout . Http._env)
   hPutStrLn outH str
 
-getStrLn :: (Monad eff) => WebDriverT eff String
+getStrLn
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WebDriverTT t eff String
 getStrLn = do
   inH <- fromEnv (_stdin . Http._env)
   result <- promptWDAct $ HGetLine inH
@@ -651,17 +744,17 @@ getStrLn = do
 
 -- | Prompt for input on `stdin`.
 promptForString
-  :: (Monad m)
+  :: (Monad eff, Monad (t eff), MonadTrans t)
   => String -- ^ Prompt text
-  -> WebDriverT m String
+  -> WebDriverTT t eff String
 promptForString prompt =
   putStrLn prompt >> getStrLn
 
 -- | Prompt for input on `stdin`, but do not echo the typed characters back to the terminal -- handy for getting suuper secret info.
 promptForSecret
-  :: (Monad m)
+  :: (Monad eff, Monad (t eff), MonadTrans t)
   => String -- ^ Prompt text
-  -> WebDriverT m String
+  -> WebDriverTT t eff String
 promptForSecret prompt = do
   outH <- fromEnv (_stdout . Http._env)
   inH <- fromEnv (_stdin . Http._env)
@@ -673,9 +766,9 @@ promptForSecret prompt = do
 
 -- | Captures `IOException`s
 readFilePath
-  :: (Monad m)
+  :: (Monad eff, Monad (t eff), MonadTrans t)
   => FilePath
-  -> WebDriverT m ByteString
+  -> WebDriverTT t eff ByteString
 readFilePath path = do
   result <- promptWDAct $ ReadFilePath path
   case result of
@@ -684,10 +777,10 @@ readFilePath path = do
 
 -- | Captures `IOException`s
 writeFilePath
-  :: (Monad m)
+  :: (Monad eff, Monad (t eff), MonadTrans t)
   => FilePath
   -> ByteString
-  -> WebDriverT m ()
+  -> WebDriverTT t eff ()
 writeFilePath path bytes = do
   result <- promptWDAct $ WriteFilePath path bytes
   case result of
@@ -696,9 +789,9 @@ writeFilePath path bytes = do
 
 -- | Captures `IOException`s
 fileExists
-  :: (Monad m)
+  :: (Monad eff, Monad (t eff), MonadTrans t)
   => FilePath
-  -> WebDriverT m Bool
+  -> WebDriverTT t eff Bool
 fileExists path = do
   result <- promptWDAct $ FileExists path
   case result of
@@ -724,7 +817,9 @@ parseBreakpointAction str = case str of
   "a" -> Just BreakpointAct
   _ -> Nothing
 
-breakpointMessage :: (Monad eff) => String -> Maybe String -> WebDriverT eff ()
+breakpointMessage
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => String -> Maybe String -> WebDriverTT t eff ()
 breakpointMessage msg custom = do
   putStrLn "=== BREAKPOINT ==="
   putStrLn msg
@@ -738,10 +833,10 @@ breakpointMessage msg custom = do
   putStrLn "=================="
 
 breakpointWith
-  :: (Monad eff)
+  :: (Monad eff, Monad (t eff), MonadTrans t)
   => String
-  -> Maybe (String, WebDriverT eff ())
-  -> WebDriverT eff ()
+  -> Maybe (String, WebDriverTT t eff ())
+  -> WebDriverTT t eff ()
 breakpointWith msg act = do
   bp <- fromState (_breakpoints . Http._userState)
   case bp of
@@ -770,9 +865,9 @@ breakpointWith msg act = do
           breakpointWith msg act
 
 breakpoint
-  :: (Monad eff)
+  :: (Monad eff, Monad (t eff), MonadTrans t)
   => String
-  -> WebDriverT eff ()
+  -> WebDriverTT t eff ()
 breakpoint msg = breakpointWith msg Nothing
 
 dumpState :: Http.S WDState -> String

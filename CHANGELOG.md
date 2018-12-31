@@ -2,13 +2,17 @@
 
 ## Unreleased changes
 
+This version introduces significant changes to the API, prompted by changes in the `script-monad` dependency. The main change is that `WebDriver` and `WebDriverT` have been replaced by `WebDriverT` and `WebDriverTT` and are a more sensible monad transformer and monad transformer transformer, respectively. The main effect of this is that (1) `WebDriver*` types take an extra parameter for the effect monad, and (2) functions for working with `WebDriver*` now have additional `Monad` and `MonadTrans` constraints. The library will now only compile with GHC >=8.6 due to a transitive dependency on `QuantifiedConstraints`.
+
 * Added
   * Browser preferences field on `FirefoxOptions` and `ChromeOptions`
   * `readDataFile`, `writeDataFile`, `readJsonFile`, and `writeJsonFile` data helpers
   * `breakpoint` and `breakpointWith` for helping with debugging; controlled by `breakpointsOn`, and `breakpointsOff`
+  * `expectIs`
 * Changed
   * Switched order of arguments for `elementSendKeys`, `getElementAttribute`, `getElementProperty`, and `getElementCssValue`. The element reference now comes last to make it easier to chain these with `>>=`.
   * `logDebug` and `logNotice`
+  * Tested on geckodriver 0.23.0.
 * Fixed
   * Bug in behavior of `cleanupOnError` was causing it to miss some errors, which left the remote end session open
 

@@ -25,13 +25,13 @@ And this is the module that integrates the two.
 Define your tests
 -----------------
 
-First things first: to make a WebDriver test suite, we need some WebDriver tests. These are just values of type `WebDriver IO ()`. (Or more generally, `Monad eff => WebDriver eff ()`, but that's not important for now.) Here are a few dweeby examples. It's not necessary for the tests to start with `_test` or use snake_case; I'm doing it here out of habit.
+First things first: to make a WebDriver test suite, we need some WebDriver tests. These are just values of type `WebDriverT IO ()`. (Or more generally, `(Monad eff, Monad (t eff), MonadTrans t) => WebDriverTT t eff ()`, but that's not important for now.) Here are a few dweeby examples. It's not necessary for the tests to start with `_test` or use snake_case; I'm doing it here out of habit.
 
-> _test_one :: (Monad eff) => WebDriver eff ()
+> _test_one :: (Monad eff) => WebDriverT eff ()
 > _test_one = do
 >   navigateTo "https://google.com"
 > 
-> _test_two :: (Monad eff) => WebDriver eff ()
+> _test_two :: (Monad eff) => WebDriverT eff ()
 > _test_two = do
 >   navigateTo "https://yahoo.com"
 >   assertSuccess "time travel achieved"
@@ -106,7 +106,7 @@ The drivers can come in any order and don't have to be contiguous, and blank lin
 
 `webdriver-w3c` can also run your tests in parallel. To take advantage of this, you'll need to compile your executable with `-threaded -rtsopts -with-rtsopts=-N` and start it with the `--num-threads N` option. You'll also need to start more than one remote end of each type. Note that if you want to run N tests in parallel, then you'll need N instances of _each_ remote end (geckodriver and chromedriver) running in the background. This is because the tests are _processed_ sequentially, even if they run in parallel. For instance, if you have 100 firefox tests followed by 100 chrome tests, but run them with one geckodriver and one chromedriver, the tests will run sequentially.
 
-There are a bunch of other command line options for tweaking the behavior of your webdriver tests; use `wd-tasty-demo --help` to see a list. Most of these are pretty specialized. Other options are pretty common. In addition to `--wd-remote-ends` and `--wd-remote-ends-config`, there's `--wd-driver`, for specifying which driver to use, and `--wd-response-format`, which is required when using chromedriver because chromedriver is not fully spec compliant.
+There are a bunch of other command line options for tweaking the behavior of your webdriver tests; use `wd-tasty-demo --help` to see a list. Most of these are pretty specialized. Other options are pretty common. In addition to `--wd-remote-ends` and `--wd-remote-ends-config`, there's `--wd-driver`, for specifying which driver to use, and `--wd-response-format`, which is required when using chromedriver because chromedriver is not fully spec compliant as of this writing.
 
 
 Example sessions

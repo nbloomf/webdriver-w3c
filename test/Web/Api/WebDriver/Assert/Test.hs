@@ -86,43 +86,43 @@ assertionTestCases
   -> TT.TestTree
 assertionTestCases config cond = TT.testGroup "Assertions"
   [ QC.testProperty "assertSuccess" $
-    checkWebDriver config cond
+    checkWebDriverT config cond
       (== summarize [success "Success!" "yay!"]) $
       do
         assertSuccess "yay!"
 
   , QC.testProperty "assertFailure" $
-    checkWebDriver config cond
+    checkWebDriverT config cond
       (== summarize [failure "Failure :(" "oh no"]) $
       do
         assertFailure "oh no"
 
   , QC.testProperty "assertTrue (success)" $ \msg ->
-    checkWebDriver config cond
+    checkWebDriverT config cond
       (== summarize [success "True is True" msg]) $
       do
         assertTrue True msg
 
   , QC.testProperty "assertTrue (failure)" $ \msg ->
-    checkWebDriver config cond
+    checkWebDriverT config cond
       (== summarize [failure "False is True" msg]) $
       do
         assertTrue False msg
 
   , QC.testProperty "assertFalse (success)" $ \msg ->
-    checkWebDriver config cond
+    checkWebDriverT config cond
       (== summarize [success "False is False" msg]) $
       do
         assertFalse False msg
 
   , QC.testProperty "assertFalse (failure)" $ \msg ->
-    checkWebDriver config cond
+    checkWebDriverT config cond
       (== summarize [failure "True is False" msg]) $
       do
         assertFalse True msg
 
   , QC.testProperty "assertEqual (Int, success)" $ \k ->
-    checkWebDriver config cond
+    checkWebDriverT config cond
       (== summarize
         [success
           (fromString $ show k ++ " is equal to " ++ show k)
@@ -133,7 +133,7 @@ assertionTestCases config cond = TT.testGroup "Assertions"
         assertEqual (k :: Int) k (fromString $ show k)
 
   , QC.testProperty "assertEqual (Int, failure)" $ \k ->
-    checkWebDriver config cond
+    checkWebDriverT config cond
       (== summarize
         [failure
           (fromString $ show (k+1) ++ " is equal to " ++ show k)
@@ -144,7 +144,7 @@ assertionTestCases config cond = TT.testGroup "Assertions"
         assertEqual (k+1 :: Int) k (fromString $ show k)
 
   , QC.testProperty "assertEqual (String, success)" $ \str ->
-    checkWebDriver config cond
+    checkWebDriverT config cond
       (== summarize
         [success
           (fromString $ show str ++ " is equal to " ++ show str)
@@ -155,7 +155,7 @@ assertionTestCases config cond = TT.testGroup "Assertions"
         assertEqual (str :: String) str (fromString str)
 
   , QC.testProperty "assertEqual (String, failure)" $ \str ->
-    checkWebDriver config cond
+    checkWebDriverT config cond
       (== summarize
         [failure
           (fromString $ show (str++"?") ++ " is equal to " ++ show str)
@@ -166,7 +166,7 @@ assertionTestCases config cond = TT.testGroup "Assertions"
         assertEqual (str++"?" :: String) str (fromString str)
 
   , QC.testProperty "assertNotEqual (Int, success)" $ \k ->
-    checkWebDriver config cond
+    checkWebDriverT config cond
       (== summarize
         [success
           (fromString $ show (k+1) ++ " is not equal to " ++ show k)
@@ -177,7 +177,7 @@ assertionTestCases config cond = TT.testGroup "Assertions"
         assertNotEqual (k+1 :: Int) k (fromString $ show k)
 
   , QC.testProperty "assertNotEqual (Int, failure)" $ \k ->
-    checkWebDriver config cond
+    checkWebDriverT config cond
       (== summarize
         [failure
           (fromString $ show k ++ " is not equal to " ++ show k)
@@ -188,7 +188,7 @@ assertionTestCases config cond = TT.testGroup "Assertions"
         assertNotEqual (k :: Int) k (fromString $ show k)
 
   , QC.testProperty "assertNotEqual (String, success)" $ \str ->
-    checkWebDriver config cond
+    checkWebDriverT config cond
       (== summarize
         [success
           (fromString $ show (str++"?") ++ " is not equal to " ++ show str)
@@ -199,7 +199,7 @@ assertionTestCases config cond = TT.testGroup "Assertions"
         assertNotEqual (str++"?" :: String) str (fromString str)
 
   , QC.testProperty "assertNotEqual (String, failure)" $ \str ->
-    checkWebDriver config cond
+    checkWebDriverT config cond
       (== summarize
         [failure
           (fromString $ show str ++ " is not equal to " ++ show str)
@@ -210,7 +210,7 @@ assertionTestCases config cond = TT.testGroup "Assertions"
         assertNotEqual (str :: String) str (fromString str)
 
     , QC.testProperty "assertIsSubstring (success)" $ \str1 str2 ->
-    checkWebDriver config cond
+    checkWebDriverT config cond
       (== summarize
         [success
           (fromString $ show str1 ++ " is a substring of " ++ show (str2++str1++str2))
@@ -222,7 +222,7 @@ assertionTestCases config cond = TT.testGroup "Assertions"
 
     , QC.testProperty "assertIsSubstring (failure)" $ \c str1 str2 ->
     let str3 = filter (/= c) str2 in
-    checkWebDriver config cond
+    checkWebDriverT config cond
       (== summarize
         [failure
           (fromString $ show (c:str1) ++ " is a substring of " ++ show str3)
@@ -234,7 +234,7 @@ assertionTestCases config cond = TT.testGroup "Assertions"
 
     , QC.testProperty "assertIsNotSubstring (success)" $ \c str1 str2 ->
     let str3 = filter (/= c) str2 in
-    checkWebDriver config cond
+    checkWebDriverT config cond
       (== summarize
         [success
           (fromString $ show (c:str1) ++ " is not a substring of " ++ show str3)
@@ -245,7 +245,7 @@ assertionTestCases config cond = TT.testGroup "Assertions"
         assertIsNotSubstring (c:str1 :: String) (str3) (fromString str1)
 
     , QC.testProperty "assertIsNotSubstring (failure)" $ \str1 str2 ->
-    checkWebDriver config cond
+    checkWebDriverT config cond
       (== summarize
         [failure
           (fromString $ show str1 ++ " is not a substring of " ++ show (str2++str1++str2))
@@ -256,7 +256,7 @@ assertionTestCases config cond = TT.testGroup "Assertions"
         assertIsNotSubstring (str1 :: String) (str2++str1++str2) (fromString str1)
 
     , QC.testProperty "assertIsNamedSubstring (success)" $ \name str1 str2 ->
-    checkWebDriver config cond
+    checkWebDriverT config cond
       (== summarize
         [success
           (fromString $ show str1 ++ " is a substring of " ++ name)
@@ -268,7 +268,7 @@ assertionTestCases config cond = TT.testGroup "Assertions"
 
     , QC.testProperty "assertIsNamedSubstring (failure)" $ \name c str1 str2 ->
     let str3 = filter (/= c) str2 in
-    checkWebDriver config cond
+    checkWebDriverT config cond
       (== summarize
         [failure
           (fromString $ show (c:str1) ++ " is a substring of " ++ name)
@@ -280,7 +280,7 @@ assertionTestCases config cond = TT.testGroup "Assertions"
 
     , QC.testProperty "assertIsNotNamedSubstring (success)" $ \name c str1 str2 ->
     let str3 = filter (/= c) str2 in
-    checkWebDriver config cond
+    checkWebDriverT config cond
       (== summarize
         [success
           (fromString $ show (c:str1) ++ " is not a substring of " ++ name)
@@ -291,7 +291,7 @@ assertionTestCases config cond = TT.testGroup "Assertions"
         assertIsNotNamedSubstring (c:str1 :: String) (str3,name) (fromString str1)
 
     , QC.testProperty "assertIsNotNamedSubstring (failure)" $ \name str1 str2 ->
-    checkWebDriver config cond
+    checkWebDriverT config cond
       (== summarize
         [failure
           (fromString $ show str1 ++ " is not a substring of " ++ name)

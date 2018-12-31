@@ -33,7 +33,7 @@ before_install:
 - travis_retry curl -L https://get.haskellstack.org/stable/linux-x86_64.tar.gz | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
 -
 - # install geckodriver
-- travis_retry curl -L https://github.com/mozilla/geckodriver/releases/download/v0.20.1/geckodriver-v0.20.1-linux64.tar.gz | tar xz -C ~/.local/bin
+- travis_retry curl -L https://github.com/mozilla/geckodriver/releases/download/v0.23.0/geckodriver-v0.23.0-linux64.tar.gz | tar xz -C ~/.local/bin
 -
 - # install chromedriver
 - wget -O /tmp/chromedriver.zip https://chromedriver.storage.googleapis.com/2.38/chromedriver_linux64.zip
@@ -47,11 +47,11 @@ before_install:
 - # start remote ends
 - export MOZ_HEADLESS=1
 - export WD_STRESS_TEST_NUM_TESTS="50"
-- xvfb-run -a geckodriver --binary $HOME/.local/bin/firefox/firefox --port 4444 >/dev/null 2>/dev/null &
-- xvfb-run -a geckodriver --binary $HOME/.local/bin/firefox/firefox --port 4445 >/dev/null 2>/dev/null &
-- xvfb-run -a geckodriver --binary $HOME/.local/bin/firefox/firefox --port 4446 2>/dev/null >/dev/null &
-- xvfb-run -a geckodriver --binary $HOME/.local/bin/firefox/firefox --port 4447 2>/dev/null >/dev/null &
-- xvfb-run -a geckodriver --binary $HOME/.local/bin/firefox/firefox --port 4448 2>/dev/null >/dev/null &
+- xvfb-run -a geckodriver --binary $HOME/.local/bin/firefox/firefox --marionette-port 2828 --port 4444 --log error >/dev/null 2>/dev/null &
+- xvfb-run -a geckodriver --binary $HOME/.local/bin/firefox/firefox --marionette-port 2829 --port 4445 --log error >/dev/null 2>/dev/null &
+- xvfb-run -a geckodriver --binary $HOME/.local/bin/firefox/firefox --marionette-port 2830 --port 4446 --log error >/dev/null 2>/dev/null &
+- xvfb-run -a geckodriver --binary $HOME/.local/bin/firefox/firefox --marionette-port 2831 --port 4447 --log error >/dev/null 2>/dev/null &
+- xvfb-run -a geckodriver --binary $HOME/.local/bin/firefox/firefox --marionette-port 2832 --port 4448 --log error >/dev/null 2>/dev/null &
 - chromedriver --port=9515 &
 - chromedriver --port=9516 &
 - sleep 2

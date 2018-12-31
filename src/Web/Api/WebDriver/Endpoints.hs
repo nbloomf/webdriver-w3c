@@ -159,6 +159,8 @@ module Web.Api.WebDriver.Endpoints (
   , _WEB_FRAME_ID
   ) where
 
+import Control.Monad.Trans.Class
+  ( MonadTrans(..) )
 import Data.Aeson
   ( Value(..), encode, object, (.=), toJSON )
 import Data.Text
@@ -192,7 +194,9 @@ _WEB_FRAME_ID = "frame-075b-4da1-b6ba-e579c2d3230a"
 
 
 -- | Url of the remote WebDriver server.
-theRemoteUrl :: (Monad m) => WebDriverT m String
+theRemoteUrl
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WebDriverTT t eff String
 theRemoteUrl = do
   host <- fromEnv (_remoteHostname . _env)
   port <- fromEnv (_remotePort . _env)
@@ -200,7 +204,7 @@ theRemoteUrl = do
   return $ concat [ "http://", host, ":", show port, path]
 
 -- | Url of the remote WebDriver server, with session ID.
-theRemoteUrlWithSession :: (Monad m) => WebDriverT m String
+theRemoteUrlWithSession :: (Monad eff, Monad (t eff), MonadTrans t) => WebDriverTT t eff String
 theRemoteUrlWithSession = do
   st <- fromState (_sessionId . _userState)
   case st of
@@ -218,9 +222,9 @@ setSessionId x st = st { _userState = (_userState st) { _sessionId = x } }
 
 -- | If a WebDriver session ends without issuing a delete session command, then the server keeps its session state alive. `cleanupOnError` catches errors and ensures that a `deleteSession` request is sent.
 cleanupOnError
-  :: (Monad m)
-  => WebDriverT m a -- ^ `WebDriver` session that may throw errors
-  -> WebDriverT m a
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WebDriverTT t eff a -- ^ `WebDriver` session that may throw errors
+  -> WebDriverTT t eff a
 cleanupOnError x = catchAnyError x
   (\e -> deleteSession >> throwError e)
   (\e -> deleteSession >> throwHttpException e)
@@ -229,10 +233,10 @@ cleanupOnError x = catchAnyError x
 
 -- | Run a WebDriver computation in an isolated browser session. Ensures that the session is closed on the remote end.
 runIsolated
-  :: (Monad m)
+  :: (Monad eff, Monad (t eff), MonadTrans t)
   => Capabilities
-  -> WebDriverT m a
-  -> WebDriverT m ()
+  -> WebDriverTT t eff a
+  -> WebDriverTT t eff ()
 runIsolated caps theSession = cleanupOnError $ do
   session_id <- newSession caps
   modifyState $ setSessionId (Just session_id)
@@ -246,18 +250,18 @@ runIsolated caps theSession = cleanupOnError $ do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#new-session>. For an extensible version allowing arbitrary changes to the JSON value representing the `Capabilities` parameter, see `newSession'`.
 newSession
-  :: (Monad m)
+  :: (Monad eff, Monad (t eff), MonadTrans t)
   => Capabilities
-  -> WebDriverT m SessionId
+  -> WebDriverTT t eff SessionId
 newSession = newSession' id
 
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#new-session>. This generalizes `newSession'` by taking an additional function @Value -> Value@ that is applied to the `Capabilities` parameter after it is converted to JSON, but before it is passed to the HTTP call.
 newSession'
-  :: (Monad m)
+  :: (Monad eff, Monad (t eff), MonadTrans t)
   => (Value -> Value)
   -> Capabilities
-  -> WebDriverT m SessionId
+  -> WebDriverTT t eff SessionId
 newSession' f caps = do
   baseUrl <- theRemoteUrl
   format <- fromEnv (_responseFormat . _env)
@@ -280,7 +284,8 @@ newSession' f caps = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#delete-session>.
 deleteSession
-  :: (Monad m) => WebDriverT m ()
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WebDriverTT t eff ()
 deleteSession = do
   (baseUrl, format) <- theRequestContext
   httpDelete baseUrl
@@ -293,8 +298,8 @@ deleteSession = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#status>.
 sessionStatus
-  :: (Monad m)
-  => WebDriverT m (Bool, String)
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WebDriverTT t eff (Bool, String)
 sessionStatus = do
   baseUrl <- theRemoteUrl
   format <- fromEnv (_responseFormat . _env)
@@ -319,8 +324,8 @@ sessionStatus = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-timeouts>.
 getTimeouts
-  :: (Monad m)
-  => WebDriverT m TimeoutConfig
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WebDriverTT t eff TimeoutConfig
 getTimeouts = do
   baseUrl <- theRemoteUrlWithSession
   httpGet (baseUrl ++ "/timeouts")
@@ -332,9 +337,9 @@ getTimeouts = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#set-timeouts>.
 setTimeouts
-  :: (Monad m)
+  :: (Monad eff, Monad (t eff), MonadTrans t)
   => TimeoutConfig
-  -> WebDriverT m ()
+  -> WebDriverTT t eff ()
 setTimeouts timeouts = do
   baseUrl <- theRemoteUrlWithSession
   let !payload = encode timeouts
@@ -344,9 +349,9 @@ setTimeouts timeouts = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#navigate-to>. To access this enpoint without logging the request or the result, use `navigateToStealth`.
 navigateTo
-  :: (Monad m)
+  :: (Monad eff, Monad (t eff), MonadTrans t)
   => Url
-  -> WebDriverT m ()
+  -> WebDriverTT t eff ()
 navigateTo url = do
   (baseUrl, format) <- theRequestContext
   let !payload = encode $ object [ "url" .= url ]
@@ -360,9 +365,9 @@ navigateTo url = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#navigate-to>. This function does not log the request or response; if you do want the interaction logged, use `navigateTo`.
 navigateToStealth
-  :: (Monad m)
+  :: (Monad eff, Monad (t eff), MonadTrans t)
   => Url
-  -> WebDriverT m ()
+  -> WebDriverTT t eff ()
 navigateToStealth url = do
   (baseUrl, format) <- theRequestContext
   let !payload = encode $ object [ "url" .= url ]
@@ -376,8 +381,8 @@ navigateToStealth url = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-current-url>.
 getCurrentUrl
-  :: (Monad m)
-  => WebDriverT m Url
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WebDriverTT t eff Url
 getCurrentUrl = do
   baseUrl <- theRemoteUrlWithSession
   httpGet (baseUrl ++ "/url")
@@ -390,8 +395,8 @@ getCurrentUrl = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#back>.
 goBack
-  :: (Monad m)
-  => WebDriverT m ()
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WebDriverTT t eff ()
 goBack = do
   (baseUrl, format) <- theRequestContext
   let !payload = encode $ object []
@@ -405,8 +410,8 @@ goBack = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#forward>.
 goForward
-  :: (Monad m)
-  => WebDriverT m ()
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WebDriverTT t eff ()
 goForward = do
   (baseUrl, format) <- theRequestContext
   let !payload = encode $ object []
@@ -420,8 +425,8 @@ goForward = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#refresh>.
 pageRefresh
-  :: (Monad m)
-  => WebDriverT m ()
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WebDriverTT t eff ()
 pageRefresh = do
   (baseUrl, format) <- theRequestContext
   let !payload = encode $ object []
@@ -435,8 +440,8 @@ pageRefresh = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-title>.
 getTitle
-  :: (Monad m)
-  => WebDriverT m String
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WebDriverTT t eff String
 getTitle = do
   baseUrl <- theRemoteUrlWithSession
   httpGet (baseUrl ++ "/title")
@@ -449,8 +454,8 @@ getTitle = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-window-handle>.
 getWindowHandle
-  :: (Monad m)
-  => WebDriverT m ContextId
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WebDriverTT t eff ContextId
 getWindowHandle = do
   baseUrl <- theRemoteUrlWithSession
   httpGet (baseUrl ++ "/window")
@@ -463,8 +468,8 @@ getWindowHandle = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#close-window>.
 closeWindow
-  :: (Monad m)
-  => WebDriverT m [ContextId]
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WebDriverTT t eff [ContextId]
 closeWindow = do
   baseUrl <- theRemoteUrlWithSession
   httpDelete (baseUrl ++ "/window")
@@ -478,9 +483,9 @@ closeWindow = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#switch-to-window>.
 switchToWindow
-  :: (Monad m, HasContextId t)
-  => t
-  -> WebDriverT m ()
+  :: (Monad eff, Monad (t eff), MonadTrans t, HasContextId a)
+  => a
+  -> WebDriverTT t eff ()
 switchToWindow t = do
   let contextId = contextIdOf t
   baseUrl <- theRemoteUrlWithSession
@@ -491,8 +496,8 @@ switchToWindow t = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-window-handles>.
 getWindowHandles
-  :: (Monad m)
-  => WebDriverT m [ContextId]
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WebDriverTT t eff [ContextId]
 getWindowHandles = do
   baseUrl <- theRemoteUrlWithSession
   httpGet (baseUrl ++ "/window/handles")
@@ -506,9 +511,9 @@ getWindowHandles = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#switch-to-frame>.
 switchToFrame
-  :: (Monad m)
+  :: (Monad eff, Monad (t eff), MonadTrans t)
   => FrameReference
-  -> WebDriverT m ()
+  -> WebDriverTT t eff ()
 switchToFrame ref = do
   (baseUrl, format) <- theRequestContext
   let
@@ -524,16 +529,14 @@ switchToFrame ref = do
     >>= (return . _responseBody)
     >>= parseJson
     >>= lookupKeyJson "value"
-    >>= case format of
-          SpecFormat -> expect (object [])
-          ChromeFormat -> expect Null
+    >>= expectEmptyObject format
   return ()
 
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#switch-to-parent-frame>.
 switchToParentFrame
-  :: (Monad m)
-  => WebDriverT m ()
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WebDriverTT t eff ()
 switchToParentFrame = do
   (baseUrl, format) <- theRequestContext
   let !payload = encode $ object []
@@ -547,8 +550,8 @@ switchToParentFrame = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-window-rect>.
 getWindowRect
-  :: (Monad m)
-  => WebDriverT m Rect
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WebDriverTT t eff Rect
 getWindowRect = do
   baseUrl <- theRemoteUrlWithSession
   httpGet (baseUrl ++ "/window/rect")
@@ -560,9 +563,9 @@ getWindowRect = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#set-window-rect>.
 setWindowRect
-  :: (Monad m)
+  :: (Monad eff, Monad (t eff), MonadTrans t)
   => Rect
-  -> WebDriverT m Rect
+  -> WebDriverTT t eff Rect
 setWindowRect rect = do
   baseUrl <- theRemoteUrlWithSession
   let !payload = encode rect
@@ -575,8 +578,8 @@ setWindowRect rect = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#maximize-window>.
 maximizeWindow
-  :: (Monad m)
-  => WebDriverT m Rect
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WebDriverTT t eff Rect
 maximizeWindow = do
   baseUrl <- theRemoteUrlWithSession
   let !payload = encode $ object []
@@ -589,8 +592,8 @@ maximizeWindow = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#minimize-window>.
 minimizeWindow
-  :: (Monad m)
-  => WebDriverT m Rect
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WebDriverTT t eff Rect
 minimizeWindow = do
   baseUrl <- theRemoteUrlWithSession
   let !payload = encode $ object []
@@ -603,8 +606,8 @@ minimizeWindow = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#fullscreen-window>.
 fullscreenWindow
-  :: (Monad m)
-  => WebDriverT m Rect
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WebDriverTT t eff Rect
 fullscreenWindow = do
   baseUrl <- theRemoteUrlWithSession
   let !payload = encode $ object []
@@ -617,10 +620,10 @@ fullscreenWindow = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#find-element>.
 findElement
-  :: (Monad m)
+  :: (Monad eff, Monad (t eff), MonadTrans t)
   => LocationStrategy
   -> Selector
-  -> WebDriverT m ElementRef
+  -> WebDriverTT t eff ElementRef
 findElement strategy selector = do
   (baseUrl, format) <- theRequestContext
   let !payload = encode $ object [ "value" .= selector, "using" .= toJSON strategy ]
@@ -637,10 +640,10 @@ findElement strategy selector = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#find-elements>.
 findElements
-  :: (Monad m)
+  :: (Monad eff, Monad (t eff), MonadTrans t)
   => LocationStrategy
   -> Selector
-  -> WebDriverT m [ElementRef]
+  -> WebDriverTT t eff [ElementRef]
 findElements strategy selector = do
   (baseUrl, format) <- theRequestContext
   let !payload = encode $ object [ "value" .= selector, "using" .= toJSON strategy ]
@@ -658,11 +661,11 @@ findElements strategy selector = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#find-element-from-element>.
 findElementFromElement
-  :: (Monad m, HasElementRef t)
+  :: (Monad eff, Monad (t eff), MonadTrans t, HasElementRef a)
   => LocationStrategy
   -> Selector
-  -> t
-  -> WebDriverT m ElementRef
+  -> a
+  -> WebDriverTT t eff ElementRef
 findElementFromElement strategy selector root = do
   (baseUrl, format) <- theRequestContext
   let root_id = elementRefOf root
@@ -680,11 +683,11 @@ findElementFromElement strategy selector root = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#find-elements-from-element>.
 findElementsFromElement
-  :: (Monad m, HasElementRef t)
+  :: (Monad eff, Monad (t eff), MonadTrans t, HasElementRef a)
   => LocationStrategy
   -> Selector
-  -> t
-  -> WebDriverT m [ElementRef]
+  -> a
+  -> WebDriverTT t eff [ElementRef]
 findElementsFromElement strategy selector root = do
   (baseUrl, format) <- theRequestContext
   let root_id = elementRefOf root
@@ -703,8 +706,8 @@ findElementsFromElement strategy selector root = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-active-element>.
 getActiveElement
-  :: (Monad m)
-  => WebDriverT m ElementRef
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WebDriverTT t eff ElementRef
 getActiveElement = do
   (baseUrl, format) <- theRequestContext
   httpGet (baseUrl ++ "/element/active")
@@ -720,9 +723,9 @@ getActiveElement = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#is-element-selected>.
 isElementSelected
-  :: (Monad m, HasElementRef t)
-  => t
-  -> WebDriverT m Bool
+  :: (Monad eff, Monad (t eff), MonadTrans t, HasElementRef a)
+  => a
+  -> WebDriverTT t eff Bool
 isElementSelected element = do
   let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
@@ -735,10 +738,10 @@ isElementSelected element = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-element-attribute>.
 getElementAttribute
-  :: (Monad m, HasElementRef t)
+  :: (Monad eff, Monad (t eff), MonadTrans t, HasElementRef a)
   => AttributeName
-  -> t
-  -> WebDriverT m (Either Bool String)
+  -> a
+  -> WebDriverTT t eff (Either Bool String)
 getElementAttribute name element = do
   let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
@@ -755,10 +758,10 @@ getElementAttribute name element = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-element-property>.
 getElementProperty
-  :: (Monad m, HasElementRef t)
+  :: (Monad eff, Monad (t eff), MonadTrans t, HasElementRef a)
   => PropertyName
-  -> t
-  -> WebDriverT m Value
+  -> a
+  -> WebDriverTT t eff Value
 getElementProperty name element = do
   let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
@@ -770,10 +773,10 @@ getElementProperty name element = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-element-css-value>.
 getElementCssValue
-  :: (Monad m, HasElementRef t)
+  :: (Monad eff, Monad (t eff), MonadTrans t, HasElementRef a)
   => CssPropertyName
-  -> t
-  -> WebDriverT m String
+  -> a
+  -> WebDriverTT t eff String
 getElementCssValue name element = do
   let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
@@ -786,9 +789,9 @@ getElementCssValue name element = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-element-text>.
 getElementText
-  :: (Monad m, HasElementRef t)
-  => t
-  -> WebDriverT m String
+  :: (Monad eff, Monad (t eff), MonadTrans t, HasElementRef a)
+  => a
+  -> WebDriverTT t eff String
 getElementText element = do
   let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
@@ -801,9 +804,9 @@ getElementText element = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-element-tag-name>.
 getElementTagName
-  :: (Monad m, HasElementRef t)
-  => t
-  -> WebDriverT m String
+  :: (Monad eff, Monad (t eff), MonadTrans t, HasElementRef a)
+  => a
+  -> WebDriverTT t eff String
 getElementTagName element = do
   let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
@@ -816,9 +819,9 @@ getElementTagName element = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-element-rect>.
 getElementRect
-  :: (Monad m, HasElementRef t)
-  => t
-  -> WebDriverT m Rect
+  :: (Monad eff, Monad (t eff), MonadTrans t, HasElementRef a)
+  => a
+  -> WebDriverTT t eff Rect
 getElementRect element = do
   let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
@@ -831,9 +834,9 @@ getElementRect element = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#is-element-enabled>.
 isElementEnabled
-  :: (Monad m, HasElementRef t)
-  => t
-  -> WebDriverT m Bool
+  :: (Monad eff, Monad (t eff), MonadTrans t, HasElementRef a)
+  => a
+  -> WebDriverTT t eff Bool
 isElementEnabled element = do
   let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
@@ -846,9 +849,9 @@ isElementEnabled element = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#element-click>.
 elementClick
-  :: (Monad m, HasElementRef t)
-  => t
-  -> WebDriverT m ()
+  :: (Monad eff, Monad (t eff), MonadTrans t, HasElementRef a)
+  => a
+  -> WebDriverTT t eff ()
 elementClick element = do
   (baseUrl, format) <- theRequestContext
   let elementRef = show $ elementRefOf element
@@ -863,9 +866,9 @@ elementClick element = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#element-clear>.
 elementClear
-  :: (Monad m, HasElementRef t)
-  => t
-  -> WebDriverT m ()
+  :: (Monad eff, Monad (t eff), MonadTrans t, HasElementRef a)
+  => a
+  -> WebDriverTT t eff ()
 elementClear element = do
   (baseUrl, format) <- theRequestContext
   let elementRef = show $ elementRefOf element
@@ -880,26 +883,26 @@ elementClear element = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#element-send-keys>.
 elementSendKeys
-  :: (Monad m, HasElementRef t)
+  :: (Monad eff, Monad (t eff), MonadTrans t, HasElementRef a)
   => String
-  -> t
-  -> WebDriverT m ()
+  -> a
+  -> WebDriverTT t eff ()
 elementSendKeys text element = do
   let elementRef = show $ elementRefOf element
-  baseUrl <- theRemoteUrlWithSession
+  (baseUrl, format) <- theRequestContext
   let !payload = encode $ object [ "text" .= text ]
   httpPost (baseUrl ++ "/element/" ++ elementRef ++ "/value") payload
     >>= (return . _responseBody)
     >>= parseJson
     >>= lookupKeyJson "value"
-    >>= expect (object [])
+    >>= expectEmptyObject format
   return ()
 
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-page-source>.
 getPageSource
-  :: (Monad m)
-  => WebDriverT m String
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WebDriverTT t eff String
 getPageSource = do
   baseUrl <- theRemoteUrlWithSession
   httpGet (baseUrl ++ "/source")
@@ -912,8 +915,8 @@ getPageSource = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-page-source>. Does not dump the page source into the logs. :)
 getPageSourceStealth
-  :: (Monad m)
-  => WebDriverT m String
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WebDriverTT t eff String
 getPageSourceStealth = do
   baseUrl <- theRemoteUrlWithSession
   httpSilentGet (baseUrl ++ "/source")
@@ -926,10 +929,10 @@ getPageSourceStealth = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#execute-script>.
 executeScript
-  :: (Monad m)
+  :: (Monad eff, Monad (t eff), MonadTrans t)
   => Script
   -> [Value]
-  -> WebDriverT m Value
+  -> WebDriverTT t eff Value
 executeScript script args = do
   baseUrl <- theRemoteUrlWithSession
   let !payload = encode $ object [ "script" .= script, "args" .= toJSON args ]
@@ -941,10 +944,10 @@ executeScript script args = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#execute-async-script>.
 executeAsyncScript
-  :: (Monad m)
+  :: (Monad eff, Monad (t eff), MonadTrans t)
   => Script
   -> [Value]
-  -> WebDriverT m Value
+  -> WebDriverTT t eff Value
 executeAsyncScript script args = do
   baseUrl <- theRemoteUrlWithSession
   let !payload = encode $ object [ "script" .= script, "args" .= toJSON args ]
@@ -956,8 +959,8 @@ executeAsyncScript script args = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-all-cookies>.
 getAllCookies
-  :: (Monad m)
-  => WebDriverT m [Cookie]
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WebDriverTT t eff [Cookie]
 getAllCookies = do
   baseUrl <- theRemoteUrlWithSession
   httpGet (baseUrl ++ "/cookie")
@@ -970,9 +973,9 @@ getAllCookies = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-named-cookie>.
 getNamedCookie
-  :: (Monad m)
+  :: (Monad eff, Monad (t eff), MonadTrans t)
   => CookieName
-  -> WebDriverT m Cookie
+  -> WebDriverTT t eff Cookie
 getNamedCookie name = do
   baseUrl <- theRemoteUrlWithSession
   httpGet (baseUrl ++ "/cookie/" ++ E.encode name)
@@ -984,9 +987,9 @@ getNamedCookie name = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#add-cookie>.
 addCookie
-  :: (Monad m)
+  :: (Monad eff, Monad (t eff), MonadTrans t)
   => Cookie
-  -> WebDriverT m ()
+  -> WebDriverTT t eff ()
 addCookie cookie = do
   (baseUrl, format) <- theRequestContext
   let !payload = encode $ object [ "cookie" .= cookie ]
@@ -1000,9 +1003,9 @@ addCookie cookie = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#delete-cookie>.
 deleteCookie
-  :: (Monad m)
+  :: (Monad eff, Monad (t eff), MonadTrans t)
   => CookieName
-  -> WebDriverT m ()
+  -> WebDriverTT t eff ()
 deleteCookie name = do
   (baseUrl, format) <- theRequestContext
   httpDelete (baseUrl ++ "/cookie/" ++ E.encode name)
@@ -1015,8 +1018,8 @@ deleteCookie name = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#delete-all-cookies>.
 deleteAllCookies
-  :: (Monad m)
-  => WebDriverT m ()
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WebDriverTT t eff ()
 deleteAllCookies = do
   (baseUrl, format) <- theRequestContext
   httpDelete (baseUrl ++ "/cookie")
@@ -1029,41 +1032,41 @@ deleteAllCookies = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#perform-actions>. For a variant on this endpoint that does not log the request and response, see `performActionsStealth`.
 performActions
-  :: (Monad m)
+  :: (Monad eff, Monad (t eff), MonadTrans t)
   => [Action]
-  -> WebDriverT m ()
+  -> WebDriverTT t eff ()
 performActions = _performActions False
 
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#perform-actions>. This function is identical to `performActions` except that it does not log the request or response. Handy if the action includes secret info.
 performActionsStealth
-  :: (Monad m)
+  :: (Monad eff, Monad (t eff), MonadTrans t)
   => [Action]
-  -> WebDriverT m ()
+  -> WebDriverTT t eff ()
 performActionsStealth = _performActions True
 
 
 _performActions
-  :: (Monad m)
+  :: (Monad eff, Monad (t eff), MonadTrans t)
   => Bool
   -> [Action]
-  -> WebDriverT m ()
+  -> WebDriverTT t eff ()
 _performActions stealth action = do
-  baseUrl <- theRemoteUrlWithSession
+  (baseUrl, format) <- theRequestContext
   let !payload = encode $ object [ "actions" .= toJSON action ]
   let httpMethod = if stealth then httpSilentPost else httpPost
   httpMethod (baseUrl ++ "/actions") payload
     >>= (return . _responseBody)
     >>= parseJson
     >>= lookupKeyJson "value"
-    >>= expect (object [])
+    >>= expectEmptyObject format
   return ()
 
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#release-actions>.
 releaseActions
-  :: (Monad m)
-  => WebDriverT m ()
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WebDriverTT t eff ()
 releaseActions = do
   baseUrl <- theRemoteUrlWithSession
   httpDelete (baseUrl ++ "/actions")
@@ -1072,8 +1075,8 @@ releaseActions = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#dismiss-alert>.
 dismissAlert
-  :: (Monad m)
-  => WebDriverT m ()
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WebDriverTT t eff ()
 dismissAlert = do
   (baseUrl, format) <- theRequestContext
   let !payload = encode $ object []
@@ -1087,8 +1090,8 @@ dismissAlert = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#accept-alert>.
 acceptAlert
-  :: (Monad m)
-  => WebDriverT m ()
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WebDriverTT t eff ()
 acceptAlert = do
   (baseUrl, format) <- theRequestContext
   let !payload = encode $ object []
@@ -1102,8 +1105,8 @@ acceptAlert = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-alert-text>.
 getAlertText
-  :: (Monad m)
-  => WebDriverT m (Maybe String)
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WebDriverTT t eff (Maybe String)
 getAlertText = do
   baseUrl <- theRemoteUrlWithSession
   msg <- httpGet (baseUrl ++ "/alert/text")
@@ -1118,9 +1121,9 @@ getAlertText = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#send-alert-text>.
 sendAlertText
-  :: (Monad m)
+  :: (Monad eff, Monad (t eff), MonadTrans t)
   => String
-  -> WebDriverT m ()
+  -> WebDriverTT t eff ()
 sendAlertText msg = do
   (baseUrl, format) <- theRequestContext
   let !payload = encode $ object [ "text" .= msg ]
@@ -1134,8 +1137,8 @@ sendAlertText msg = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#take-screenshot>.
 takeScreenshot
-  :: (Monad m)
-  => WebDriverT m SB.ByteString
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WebDriverTT t eff SB.ByteString
 takeScreenshot = do
   baseUrl <- theRemoteUrlWithSession
   result <- httpGet (baseUrl ++ "/screenshot")
@@ -1151,9 +1154,9 @@ takeScreenshot = do
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#take-element-screenshot>.
 takeElementScreenshot
-  :: (Monad m, HasElementRef t)
-  => t
-  -> WebDriverT m SB.ByteString
+  :: (Monad eff, Monad (t eff), MonadTrans t, HasElementRef a)
+  => a
+  -> WebDriverTT t eff SB.ByteString
 takeElementScreenshot element = do
   let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
@@ -1170,18 +1173,18 @@ takeElementScreenshot element = do
 
 -- | Detect empty responses by response format. Necessary because chromedriver is not strictly spec compliant.
 expectEmptyObject
-  :: (Monad m)
+  :: (Monad eff, Monad (t eff), MonadTrans t)
   => ResponseFormat
   -> Value
-  -> WebDriverT m Value
+  -> WebDriverTT t eff Value
 expectEmptyObject format value = case format of
-  SpecFormat -> expect (object []) value
+  SpecFormat -> expectIs (\x -> elem x [Null, object []]) "empty object or null" value
   ChromeFormat -> expect Null value
 
 
 theRequestContext
-  :: (Monad m)
-  => WebDriverT m (String, ResponseFormat)
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => WebDriverTT t eff (String, ResponseFormat)
 theRequestContext = do
   baseUrl <- theRemoteUrlWithSession
   format <- fromEnv (_responseFormat . _env)
