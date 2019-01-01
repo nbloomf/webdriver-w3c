@@ -1,6 +1,8 @@
-# Changelog for webdriver-w3c
+Changelog for webdriver-w3c
+===========================
 
-## Unreleased changes
+0.0.2
+-----
 
 This version introduces significant changes to the API, prompted by changes in the `script-monad` dependency. The main change is that `WebDriver` and `WebDriverT` have been replaced by `WebDriverT` and `WebDriverTT` and are a more sensible monad transformer and monad transformer transformer, respectively. The main effect of this is that (1) `WebDriver*` types take an extra parameter for the effect monad, and (2) functions for working with `WebDriver*` now have additional `Monad` and `MonadTrans` constraints. The library will now only compile with GHC >=8.6 due to a transitive dependency on `QuantifiedConstraints`.
 
@@ -18,7 +20,8 @@ This version introduces significant changes to the API, prompted by changes in t
 
 
 
-## 0.0.1
+0.0.1
+-----
 
 * Added
     * `WebDriver` monad for remotely controlling user agents. Also comes in monad transformer flavor with `WebDriverT` 
