@@ -52,14 +52,17 @@ newtype RemoteEndPool = RemoteEndPool
   { freeRemoteEnds :: MS.Map DriverName [RemoteEnd]
   } deriving (Eq, Show)
 
+instance Semigroup RemoteEndPool where
+  x <> y = RemoteEndPool
+    { freeRemoteEnds = MS.unionWith (++) (freeRemoteEnds x) (freeRemoteEnds y)
+    }
+
 instance Monoid RemoteEndPool where
   mempty = RemoteEndPool
     { freeRemoteEnds = MS.fromList []
     }
 
-  mappend x y = RemoteEndPool
-    { freeRemoteEnds = MS.unionWith (++) (freeRemoteEnds x) (freeRemoteEnds y)
-    }
+  mappend = (<>)
 
 -- | Push a remote end to the pool stack for a given driver.
 addRemoteEndForDriver :: DriverName -> RemoteEnd -> RemoteEndPool -> RemoteEndPool

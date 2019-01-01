@@ -1,10 +1,9 @@
-TODO
+todo
 ====
 * Handle IO (& other) errors in cleanup helper
-* Breakpoints + breakpoint handler
 
 
-NEXT
+next
 ====
 * artifact directory; use adjustoption in the testcase builders, with an extra argument
   for the directory name, to describe a hierarchy for saving test artifacts (stdout, logs,
@@ -17,15 +16,17 @@ NEXT
   This has the advantage of giving a standardized structure to test artifacts for review.
   will need an option for the root artifact directory. e.g.
 
+    ```
     root_artifact_dir
     +> run_1970_01_01_00_00_00
     |  +> test_artifact_hierarchy
     |
     +> run_1970_01_01_01_00_00
        +> test_artifact_hierarchy
+    ```
 
 
-SOMEDAY
+someday
 =======
 * Chromedriver compatibility: several tests are ignored for chromedriver due to spec-noncompliance. Some of these can be fixed -- notably the findElement tests -- by figuring out how to interpret chromedriver's responses.
 * /session/{session id}/element/{element id}/displayed

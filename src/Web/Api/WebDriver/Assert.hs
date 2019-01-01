@@ -281,15 +281,18 @@ data AssertionSummary = AssertionSummary
   , successes :: [Assertion]
   } deriving (Eq, Show)
 
-instance Monoid AssertionSummary where
-  mempty = AssertionSummary 0 0 [] []
-
-  mappend x y = AssertionSummary
+instance Semigroup AssertionSummary where
+  x <> y = AssertionSummary
     { numSuccesses = numSuccesses x + numSuccesses y
     , numFailures = numFailures x + numFailures y
     , failures = failures x ++ failures y
     , successes = successes x ++ successes y
     }
+
+instance Monoid AssertionSummary where
+  mempty = AssertionSummary 0 0 [] []
+
+  mappend = (<>)
 
 -- | Summarize a single assertion.
 summary :: Assertion -> AssertionSummary

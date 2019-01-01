@@ -1,6 +1,6 @@
 {- |
 Module      : Test.Tasty.WebDriver
-Description : WebDriver integration with the Tasty test framework.
+Description : WebDriverT integration with the Tasty test framework.
 Copyright   : 2018, Automattic, Inc.
 License     : GPL-3
 Maintainer  : Nathan Bloomfield (nbloomf@gmail.com)
@@ -60,6 +60,10 @@ module Test.Tasty.WebDriver (
 
 import Control.Monad.IO.Class
   ( MonadIO, liftIO )
+import Control.Monad.Trans.Class
+  ( MonadTrans(..) )
+import Control.Monad.Trans.Identity
+  ( IdentityT(..) )
 import Data.Typeable
   ( Typeable, Proxy(Proxy) )
 import Data.List
@@ -167,17 +171,18 @@ _OPT_PRIVATE_MODE = "wd-private-mode"
 
 
 
-data WebDriverTest m eff = WebDriverTest
+data WebDriverTest t eff = WebDriverTest
   { wdTestName :: String
-  , wdTestSession :: WebDriverT (m eff) ()
+  , wdTestSession :: WebDriverTT t eff ()
   , wdEval :: forall a. P WDAct a -> eff a
-  , wdLift :: forall a. eff a -> m eff a
-  , wdToIO :: forall a. m eff a -> IO a
+  , wdToIO :: forall a. t eff a -> IO a
   }
 
 
 
-instance (Monad eff, Monad (m eff), Typeable eff, Typeable m) => TT.IsTest (WebDriverTest m eff) where
+instance
+  (Monad eff, Monad (t eff), MonadTrans t, Typeable eff, Typeable t)
+    => TT.IsTest (WebDriverTest t eff) where
   testOptions = return
     [ TO.Option (Proxy :: Proxy Driver)
     , TO.Option (Proxy :: Proxy Headless)
@@ -311,7 +316,7 @@ instance (Monad eff, Monad (m eff), Typeable eff, Typeable m) => TT.IsTest (WebD
               }
             }
 
-        (result, summary) <- wdToIO $ debugWebDriverT config wdLift $
+        (result, summary) <- wdToIO $ debugWebDriverTT config $
             title >> attemptLabel attemptNumber >> runIsolated caps wdTestSession
 
         atomically $ releaseRemoteEnd remotesRef driver remote
@@ -338,7 +343,7 @@ webDriverAssertionsToResult x =
 -- | `WebDriver` test case with the default `IO` effect evaluator.
 testCase
   :: TT.TestName
-  -> WebDriver IO () -- ^ The test
+  -> WebDriverT IO () -- ^ The test
   -> TT.TestTree
 testCase name test =
   testCaseWithSetup name (return ()) return (const test)
@@ -350,7 +355,7 @@ testCaseM
   => TT.TestName
   -> (forall a. P WDAct a -> eff a) -- ^ Evaluator
   -> (forall a. eff a -> IO a) -- ^ Conversion to `IO`
-  -> WebDriver eff ()
+  -> WebDriverT eff ()
   -> TT.TestTree
 testCaseM name eval toIO test =
   testCaseWithSetupM name eval toIO (return ()) return (const test)
@@ -358,35 +363,33 @@ testCaseM name eval toIO test =
 
 -- | `WebDriverT` test case with the default `IO` effect evaluator.
 testCaseT
-  :: (Monad (m IO), Typeable m)
+  :: (Monad (t IO), MonadTrans t, Typeable t)
   => TT.TestName
-  -> (forall a. IO a -> m IO a) -- ^ Lift effects to the inner monad
-  -> (forall a. m IO a -> IO a) -- ^ Conversion to `IO`
-  -> WebDriverT (m IO) () -- ^ The test
+  -> (forall a. t IO a -> IO a) -- ^ Conversion to `IO`
+  -> WebDriverTT t IO () -- ^ The test
   -> TT.TestTree
-testCaseT name lift toIO test =
-  testCaseWithSetupT name lift toIO (return ()) return (const test)
+testCaseT name toIO test =
+  testCaseWithSetupT name toIO (return ()) return (const test)
 
 
 -- | `WebDriverT` test case with a custom effect evaluator.
 testCaseTM
-  :: (Monad eff, Monad (m eff), Typeable eff, Typeable m)
+  :: (Monad eff, Monad (t eff), MonadTrans t, Typeable eff, Typeable t)
   => TT.TestName
   -> (forall a. P WDAct a -> eff a) -- ^ Evaluator
-  -> (forall a. eff a -> m eff a) -- ^ Lift effects to the inner monad
-  -> (forall a. m eff a -> IO a) -- ^ Conversion to `IO`.
-  -> WebDriverT (m eff) () -- ^ The test
+  -> (forall a. t eff a -> IO a) -- ^ Conversion to `IO`.
+  -> WebDriverTT t eff () -- ^ The test
   -> TT.TestTree
-testCaseTM name eval lift toIO test =
-  testCaseWithSetupTM name eval lift toIO (return ()) return (const test)
+testCaseTM name eval toIO test =
+  testCaseWithSetupTM name eval toIO (return ()) return (const test)
 
 
 -- | `WebDriver` test case with additional setup and teardown phases using the default `IO` effect evaluator. Setup runs before the test (for e.g. logging in) and teardown runs after the test (for e.g. deleting temp files).
 testCaseWithSetup
   :: TT.TestName
-  -> WebDriver IO u -- ^ Setup
-  -> (v -> WebDriver IO ()) -- ^ Teardown
-  -> (u -> WebDriver IO v) -- ^ The test
+  -> WebDriverT IO u -- ^ Setup
+  -> (v -> WebDriverT IO ()) -- ^ Teardown
+  -> (u -> WebDriverT IO v) -- ^ The test
   -> TT.TestTree
 testCaseWithSetup name =
   testCaseWithSetupM name (evalIO evalWDAct) id
@@ -398,23 +401,22 @@ testCaseWithSetupM
   => TT.TestName
   -> (forall u. P WDAct u -> eff u) -- ^ Evaluator
   -> (forall u. eff u -> IO u) -- ^ Conversion to `IO`
-  -> WebDriver eff u -- ^ Setup
-  -> (v -> WebDriver eff ()) -- ^ Teardown
-  -> (u -> WebDriver eff v) -- ^ The test
+  -> WebDriverT eff u -- ^ Setup
+  -> (v -> WebDriverT eff ()) -- ^ Teardown
+  -> (u -> WebDriverT eff v) -- ^ The test
   -> TT.TestTree
 testCaseWithSetupM name eval toIO =
-  testCaseWithSetupTM name eval IdentityT (toIO . runIdentityT)
+  testCaseWithSetupTM name eval (toIO . runIdentityT)
 
 
 -- | `WebDriverT` test case with additional setup and teardown phases using the default `IO` effect evaluator. Setup runs before the test (for e.g. logging in) and teardown runs after the test (for e.g. deleting temp files).
 testCaseWithSetupT
-  :: (Monad (m IO), Typeable m)
+  :: (Monad (t IO), MonadTrans t, Typeable t)
   => TT.TestName
-  -> (forall a. IO a -> m IO a) -- ^ Lift effects to the inner monad
-  -> (forall a. m IO a -> IO a) -- ^ Conversion to `IO`
-  -> WebDriverT (m IO) u -- ^ Setup
-  -> (v -> WebDriverT (m IO) ()) -- ^ Teardown
-  -> (u -> WebDriverT (m IO) v) -- ^ Test
+  -> (forall a. t IO a -> IO a) -- ^ Conversion to `IO`
+  -> WebDriverTT t IO u -- ^ Setup
+  -> (v -> WebDriverTT t IO ()) -- ^ Teardown
+  -> (u -> WebDriverTT t IO v) -- ^ Test
   -> TT.TestTree
 testCaseWithSetupT name =
   testCaseWithSetupTM name (evalIO evalWDAct)
@@ -422,21 +424,19 @@ testCaseWithSetupT name =
 
 -- | `WebDriverT` test case with additional setup and teardown phases and a custom effect evaluator. Setup runs before the test (for logging in, say) and teardown runs after the test (for deleting temp files, say). 
 testCaseWithSetupTM
-  :: (Monad eff, Monad (m eff), Typeable eff, Typeable m)
+  :: (Monad eff, Monad (t eff), MonadTrans t, Typeable eff, Typeable t)
   => TT.TestName
   -> (forall a. P WDAct a -> eff a) -- ^ Evaluator
-  -> (forall a. eff a -> m eff a) -- ^ Lift effects to the inner monad
-  -> (forall a. m eff a -> IO a) -- ^ Conversion to `IO`.
-  -> WebDriverT (m eff) u -- ^ Setup
-  -> (v -> WebDriverT (m eff) ()) -- ^ Teardown
-  -> (u -> WebDriverT (m eff) v) -- ^ Test
+  -> (forall a. t eff a -> IO a) -- ^ Conversion to `IO`.
+  -> WebDriverTT t eff u -- ^ Setup
+  -> (v -> WebDriverTT t eff ()) -- ^ Teardown
+  -> (u -> WebDriverTT t eff v) -- ^ Test
   -> TT.TestTree
-testCaseWithSetupTM name eval lift toIO setup teardown test =
+testCaseWithSetupTM name eval toIO setup teardown test =
   TT.singleTest name WebDriverTest
     { wdTestName = name
     , wdTestSession = setup >>= test >>= teardown
     , wdEval = eval
-    , wdLift = lift
     , wdToIO = toIO
     }
 
@@ -571,7 +571,7 @@ instance TO.IsOption WebDriverApiVersion where
     "cr-2018-03-04" -> Just $ WebDriverApiVersion CR_2018_03_04
     _ -> Nothing
   optionName = return _OPT_API_VERSION
-  optionHelp = return "WebDriver API version: (cr-2018-03-04)"
+  optionHelp = return "WebDriverT API version: (cr-2018-03-04)"
 
 
 
@@ -773,7 +773,7 @@ unlessHeadless f tree = T.askOption checkHeadless
 
 
 
--- | Run a tree of webdriver tests. Thin wrapper around tasty's @defaultMain@ that attempts to determine the deployment tier and interprets remote end config command line options.
+-- | Run a tree of WebDriverT tests. Thin wrapper around tasty's @defaultMain@ that attempts to determine the deployment tier and interprets remote end config command line options.
 defaultWebDriverMain :: TT.TestTree -> IO ()
 defaultWebDriverMain tree = do
   logLock <- newMVar ()

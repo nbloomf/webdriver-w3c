@@ -3,8 +3,8 @@
 stack build
 stack install
 
-geckodriver --port 4444 2>/dev/null >/dev/null &
-geckodriver --port 4445 2>/dev/null >/dev/null &
+geckodriver --marionette-port 4454 --port 4444 --log error >/dev/null 2>/dev/null &
+geckodriver --marionette-port 4455 --port 4445 --log error >/dev/null 2>/dev/null &
 chromedriver --port=9515 &
 chromedriver --port=9516 &
 

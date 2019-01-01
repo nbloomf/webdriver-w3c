@@ -1,8 +1,8 @@
-resolver: lts-11.5
+resolver: lts-13.0
 
 packages:
 - .
 
 extra-deps:
 - git: https://github.com/nbloomf/script-monad.git
-  commit: 966ac6a1b0b53ca21b3ba7d464f3100cb2e25a5b
+  commit: ea928925bf53ea5080a300ff7e587987f6931a94

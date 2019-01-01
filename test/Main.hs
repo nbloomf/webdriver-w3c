@@ -31,7 +31,7 @@ main = do
   args <- getArgs
   withArgs (["--wd-remote-ends","geckodriver https://localhost:4444 https://localhost:4445 chromedriver https://localhost:9515 https://localhost:9516"] ++ args) $
     defaultWebDriverMain $
-      (localOption $ NumRetries 3) $
+      (localOption $ NumRetries 1) $
         testGroup "All Tests"
           [ Test.Tasty.WebDriver.Config.Test.tests
           , Web.Api.WebDriver.Assert.Test.tests lock

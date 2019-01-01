@@ -24,6 +24,8 @@ module Web.Api.WebDriver.Helpers (
   , typeString
   ) where
 
+import Control.Monad.Trans.Class
+  ( MonadTrans(..) )
 import qualified Data.Aeson as Aeson
   ( encode, ToJSON(..), Value )
 import Data.ByteString.Lazy
@@ -44,9 +46,9 @@ import Web.Api.WebDriver.Types.Keyboard
 
 -- | Save all cookies for the current domain to a file.
 stashCookies
-  :: (Monad m)
+  :: (Monad eff, Monad (t eff), MonadTrans t)
   => String -- ^ Passed through SHA1, and the digest is used as the filename.
-  -> WebDriverT m ()
+  -> WebDriverTT t eff ()
 stashCookies string =
   let file = SHA.showDigest $ SHA.sha1 $ BS.pack string in
   getAllCookies >>= writeCookieFile file
@@ -54,9 +56,9 @@ stashCookies string =
 
 -- | Load cookies from a file saved with `stashCookies`. Returns `False` if the cookie file is missing or cannot be read.
 loadCookies
-  :: (Monad m)
+  :: (Monad eff, Monad (t eff), MonadTrans t)
   => String -- ^ Passed through SHA1, and the digest is used as the filename.
-  -> WebDriverT m Bool
+  -> WebDriverTT t eff Bool
 loadCookies string = do
   let file = SHA.showDigest $ SHA.sha1 $ BS.pack string
   contents <- readCookieFile file
@@ -69,10 +71,10 @@ loadCookies string = do
 
 -- | Write cookies to a file under the secrets path. 
 writeCookieFile
-  :: (Monad m)
+  :: (Monad eff, Monad (t eff), MonadTrans t)
   => FilePath -- ^ File path; relative to @$DATA_PATH\/secrets\/cookies\/@
   -> [Cookie]
-  -> WebDriverT m ()
+  -> WebDriverTT t eff ()
 writeCookieFile file cookies = do
   path <- fromEnv (_dataPath . _env)
   let fullpath = path ++ "/secrets/cookies/" ++ file
@@ -81,9 +83,9 @@ writeCookieFile file cookies = do
 
 -- | Read cookies from a file stored with `writeCookieFile`. Returns `Nothing` if the file does not exist.
 readCookieFile
-  :: (Monad m)
+  :: (Monad eff, Monad (t eff), MonadTrans t)
   => FilePath -- ^ File path; relative to @$DATA_PATH\/secrets\/cookies\/@
-  -> WebDriverT m (Maybe [Cookie])
+  -> WebDriverTT t eff (Maybe [Cookie])
 readCookieFile file = do
   path <- fromEnv (_dataPath . _env)
   let fullpath = path ++ "/secrets/cookies/" ++ file
@@ -100,19 +102,19 @@ readCookieFile file = do
 
 -- | Write a `ByteString` to the data directory
 writeDataFile
-  :: (Monad eff)
+  :: (Monad eff, Monad (t eff), MonadTrans t)
   => FilePath -- ^ File path, relative to @$DATA_PATH@, with leading slash
   -> ByteString
-  -> WebDriverT eff ()
+  -> WebDriverTT t eff ()
 writeDataFile file contents = do
   path <- fromEnv (_dataPath . _env)
   writeFilePath (path ++ file) contents
 
 -- | Read a `ByteString` from the data directory
 readDataFile
-  :: (Monad eff)
+  :: (Monad eff, Monad (t eff), MonadTrans t)
   => FilePath -- ^ File path, relative to @$DATA_PATH@, with leading slash
-  -> WebDriverT eff ByteString
+  -> WebDriverTT t eff ByteString
 readDataFile file = do
   path <- fromEnv (_dataPath . _env)
   readFilePath $ path ++ file
@@ -121,19 +123,19 @@ readDataFile file = do
 
 -- | Write JSON to the data directory
 writeJsonFile
-  :: (Monad eff, Aeson.ToJSON a)
+  :: (Monad eff, Monad (t eff), MonadTrans t, Aeson.ToJSON a)
   => FilePath -- ^ File path, relative to @$DATA_PATH@, with leading slash
   -> a
-  -> WebDriverT eff ()
+  -> WebDriverTT t eff ()
 writeJsonFile file a = do
   path <- fromEnv (_dataPath . _env)
   writeFilePath (path ++ file) (Aeson.encode $ Aeson.toJSON a)
 
 -- | Read a JSON `Value` from the data directory
 readJsonFile
-  :: (Monad eff)
+  :: (Monad eff, Monad (t eff), MonadTrans t)
   => FilePath -- ^ File path, relative to @$DATA_PATH@, with leading slash
-  -> WebDriverT eff Aeson.Value
+  -> WebDriverTT t eff Aeson.Value
 readJsonFile file = do
   path <- fromEnv (_dataPath . _env)
   readFilePath (path ++ file) >>= parseJson
