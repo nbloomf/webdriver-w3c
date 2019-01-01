@@ -4,5 +4,4 @@ packages:
 - .
 
 extra-deps:
-- git: https://github.com/nbloomf/script-monad.git
-  commit: ea928925bf53ea5080a300ff7e587987f6931a94
+- script-monad-0.0.3
