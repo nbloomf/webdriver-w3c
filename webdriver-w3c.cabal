@@ -30,7 +30,7 @@ library
     -fwarn-incomplete-patterns
 
   build-depends:
-      base >=4.7 && <5
+      base >=4.12 && <5
 
     , aeson >=1.2.4.0
     , aeson-pretty >=0.8.5
@@ -48,7 +48,7 @@ library
     , QuickCheck >=2.10.1
     , random >=1.1
     , scientific >=0.3.5.2
-    , script-monad >=0.0.1
+    , script-monad >=0.0.3
     , SHA >=1.6.4.2
     , stm >=2.4.5.0
     , tasty >=1.0.1.1
