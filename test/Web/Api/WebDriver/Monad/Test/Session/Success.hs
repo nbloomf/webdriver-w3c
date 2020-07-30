@@ -542,7 +542,8 @@ _test_getElementCssValue_success page =
       !text <- getElementCssValue "text-decoration" element
       case text of
         "none" -> assertSuccess "yay"
-        _ -> assertFailure $ AssertionComment $ "expected 'none', got '" ++ text ++ "'"
+        "rgb(0, 0, 0)" -> assertSuccess "yay"
+        _ -> assertFailure $ AssertionComment $ "expected 'none' or 'rgb(0, 0, 0)', got '" ++ text ++ "'"
       return ()
 
   in  catchError session unexpectedError
