@@ -99,11 +99,11 @@ import Web.Api.WebDriver.Types.Keyboard
 
 
 
-unrecognizedValue :: (Monad m) => String -> Text -> m a
+unrecognizedValue :: (MonadFail m) => String -> Text -> m a
 unrecognizedValue !name !string = fail $
   "Unrecognized value for type " ++ name ++ ": " ++ unpack string
 
-malformedValue :: (Monad m) => String -> String -> m a
+malformedValue :: (MonadFail m) => String -> String -> m a
 malformedValue !name !value = fail $
   "Malformed value for type" ++ name ++ ": " ++ value
 
