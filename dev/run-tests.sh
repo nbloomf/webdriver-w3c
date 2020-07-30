@@ -8,6 +8,7 @@ chromedriver --port=9515 &
 chromedriver --port=9516 &
 
 stack test --coverage
+stack hpc report .
 
 killall geckodriver
 killall chromedriver
