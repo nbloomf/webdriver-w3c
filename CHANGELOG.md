@@ -1,6 +1,13 @@
 Changelog for webdriver-w3c
 ===========================
 
+Unreleased
+----------
+
+* Bump stack resolver to lts-16.0
+
+
+
 0.0.2
 -----
 
