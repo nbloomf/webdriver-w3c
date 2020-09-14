@@ -85,13 +85,13 @@ followed by (enter). You should see a Firefox window open, go fullscreen, and se
 > example1 :: IO ()
 > example1 = do
 >   execWebDriverT defaultWebDriverConfig
->     (runIsolated defaultFirefoxCapabilities do_a_barrel_roll)
+>     (runIsolated_ defaultFirefoxCapabilities do_a_barrel_roll)
 >   return ()
 
 Let's break down what just happened.
 
 1. `do_a_barrel_roll` is a *WebDriver session*, expressed in the `WebDriver` DSL. It's a high-level description for a sequence of browser actions: in this case, "make the window full screen", "navigate to google.com", and so on.
-2. `runIsolated` takes a WebDriver session and runs it in a fresh browser instance. The parameters of this instance are specified in `defaultFirefoxCapabilities`.
+2. `runIsolated_` takes a WebDriver session and runs it in a fresh browser instance. The parameters of this instance are specified in `defaultFirefoxCapabilities`.
 3. `execWebDriver` takes a WebDriver session and carries out the steps, using some options specified in `defaultWebDriverConfig`.
 
 You probably also noticed a bunch of noise got printed to your terminal starting with something like this:
@@ -205,14 +205,14 @@ This is `example2`:
 > example2 :: IO ()
 > example2 = do
 >   (_, result) <- debugWebDriverT defaultWebDriverConfig
->     (runIsolated defaultFirefoxCapabilities what_page_is_this)
+>     (runIsolated_ defaultFirefoxCapabilities what_page_is_this)
 >   printSummary result
 >   return ()
 
 Here's what happened:
 
 1. `what_page_is_this` is a WebDriver session, just like `do_a_barrel_roll`, this time including an assertion: that the title of some web page is "Welcome to Lycos!".
-2. `runIsolated` runs `what_page_is_this` in a fresh browser instance.
+2. `runIsolated_` runs `what_page_is_this` in a fresh browser instance.
 3. `debugWebDriver` works much like `execWebDriver`, except that it collects the results of any assertion statements and summarizes them (this is `result`).
 4. `printSummary` takes the assertion results and prints them out all pretty like.
 
@@ -373,7 +373,7 @@ Running our custom WebDriver monad is then straightforward.
 > example4 t = do
 >   execReaderT (env t) $
 >     execWebDriverTT defaultWebDriverConfig
->       (runIsolated defaultFirefoxCapabilities custom_environment)
+>       (runIsolated_ defaultFirefoxCapabilities custom_environment)
 >   return ()
 
 Try it out with
@@ -411,7 +411,7 @@ We can run this with `example5`:
 > example5 :: IO ()
 > example5 = do
 >   execWebDriverT defaultWebDriverConfig
->     (runIsolated defaultFirefoxCapabilities stop_and_smell_the_ajax)
+>     (runIsolated_ defaultFirefoxCapabilities stop_and_smell_the_ajax)
 >   return ()
 
 The basic `breakpoint` command gives the option to continue, throw an error, dump the current state and environment to stdout, and turn breakpoints off. A fancier version, `breakpointWith`, takes an additional argument letting us trigger a custom action.

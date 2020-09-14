@@ -317,7 +317,7 @@ instance
             }
 
         (result, summary) <- wdToIO $ debugWebDriverTT config $
-            title >> attemptLabel attemptNumber >> runIsolated caps wdTestSession
+            title >> attemptLabel attemptNumber >> runIsolated_ caps wdTestSession
 
         atomically $ releaseRemoteEnd remotesRef driver remote
 
