@@ -520,7 +520,7 @@ switchToFrame ref = do
     !frame = case ref of
       TopLevelFrame -> Null
       FrameNumber k -> Number $ fromIntegral k
-      FrameContainingElement element_id -> String $ pack $ show element_id
+      FrameContainingElement element_id -> object [ _WEB_ELEMENT_ID .= show element_id ]
 
     !payload = encode $ object
       [ "id" .= toJSON frame ]

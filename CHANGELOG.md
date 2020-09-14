@@ -4,7 +4,10 @@ Changelog for webdriver-w3c
 Unreleased
 ----------
 
-* Bump stack resolver to lts-16.0
+* Changed
+  * Bump stack resolver to lts-16.0
+* Fixed
+  * Bug in behavior of `switchToFrame` when using `FrameContainingElement`
 
 
 
