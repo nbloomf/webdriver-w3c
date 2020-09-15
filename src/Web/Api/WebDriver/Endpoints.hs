@@ -18,6 +18,7 @@ The most recent version of the spec is available at <https://w3c.github.io/webdr
 {-# LANGUAGE OverloadedStrings, BangPatterns #-}
 module Web.Api.WebDriver.Endpoints (
     runIsolated
+  , runIsolated_
 
   -- * Sessions
   -- ** New Session
@@ -236,13 +237,22 @@ runIsolated
   :: (Monad eff, Monad (t eff), MonadTrans t)
   => Capabilities
   -> WebDriverTT t eff a
-  -> WebDriverTT t eff ()
+  -> WebDriverTT t eff a
 runIsolated caps theSession = cleanupOnError $ do
   session_id <- newSession caps
   modifyState $ setSessionId (Just session_id)
-  theSession
+  a <- theSession
   deleteSession
   modifyState $ setSessionId Nothing
+  return a
+
+runIsolated_
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => Capabilities
+  -> WebDriverTT t eff a
+  -> WebDriverTT t eff ()
+runIsolated_ caps theSession =
+  runIsolated caps theSession >> return ()
 
 
 

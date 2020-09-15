@@ -109,7 +109,7 @@ fullscreen, and search Google for "do a barrel roll".
 example1 :: IO ()
 example1 = do
   execWebDriver defaultWebDriverConfig
-    (runIsolated defaultFirefoxCapabilities do_a_barrel_roll)
+    (runIsolated_ defaultFirefoxCapabilities do_a_barrel_roll)
   return ()
 ```
 
@@ -119,7 +119,7 @@ Let's break down what just happened.
     `WebDriver` DSL. It's a high-level description for a sequence of
     browser actions: in this case, "make the window full screen",
     "navigate to google.com", and so on.
-2.  `runIsolated` takes a WebDriver session and runs it in a fresh
+2.  `runIsolated_` takes a WebDriver session and runs it in a fresh
     browser instance. The parameters of this instance are specified in
     `defaultFirefoxCapabilities`.
 3.  `execWebDriver` takes a WebDriver session and carries out the steps,
@@ -274,7 +274,7 @@ This is `example2`:
 example2 :: IO ()
 example2 = do
   (_, result) <- debugWebDriver defaultWebDriverConfig
-    (runIsolated defaultFirefoxCapabilities what_page_is_this)
+    (runIsolated_ defaultFirefoxCapabilities what_page_is_this)
   printSummary result
   return ()
 ```
@@ -284,7 +284,7 @@ Here's what happened:
 1.  `what_page_is_this` is a WebDriver session, just like
     `do_a_barrel_roll`, this time including an assertion: that the title
     of some web page is "Welcome to Lycos!".
-2.  `runIsolated` runs `what_page_is_this` in a fresh browser instance.
+2.  `runIsolated_` runs `what_page_is_this` in a fresh browser instance.
 3.  `debugWebDriver` works much like `execWebDriver`, except that it
     collects the results of any assertion statements and summarizes them
     (this is `result`).
@@ -496,7 +496,7 @@ example4 :: Tier -> IO ()
 example4 t = do
   execReaderT (env t) $
     execWebDriverT defaultWebDriverConfig liftReaderT
-      (runIsolated defaultFirefoxCapabilities custom_environment)
+      (runIsolated_ defaultFirefoxCapabilities custom_environment)
   return ()
 ```
 
@@ -545,7 +545,7 @@ We can run this with `example5`:
 example5 :: IO ()
 example5 = do
   execWebDriver defaultWebDriverConfig
-    (runIsolated defaultFirefoxCapabilities stop_and_smell_the_ajax)
+    (runIsolated_ defaultFirefoxCapabilities stop_and_smell_the_ajax)
   return ()
 ```
 
