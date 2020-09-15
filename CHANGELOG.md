@@ -4,6 +4,8 @@ Changelog for webdriver-w3c
 Unreleased
 ----------
 
+* Added
+  * `MonadIO` instance for `WebDriverTT t eff`
 * Changed
   * Bump stack resolver to lts-16.0
 * Fixed

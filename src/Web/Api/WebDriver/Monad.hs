@@ -124,6 +124,8 @@ import Control.Lens
   ( (^.), (^?) )
 import Control.Monad
   ( ap )
+import Control.Monad.IO.Class
+  ( MonadIO(..) )
 import Control.Monad.Trans.Class
   ( MonadTrans(..) )
 import Control.Monad.Trans.Identity
@@ -198,6 +200,11 @@ instance
     => Monad (WebDriverTT t eff) where
   return = WDT . return
   (WDT x) >>= f = WDT (x >>= (unWDT . f))
+
+instance
+  (MonadIO eff, MonadIO (t eff), MonadTrans t)
+    => MonadIO (WebDriverTT t eff) where
+  liftIO = WDT . Http.liftHttpTT . liftIO
 
 -- | Lift a value from the inner transformed monad
 liftWebDriverTT
