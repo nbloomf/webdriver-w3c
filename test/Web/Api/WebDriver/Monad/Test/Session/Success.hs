@@ -63,6 +63,8 @@ successfulExit buildTestCase dir =
     , buildTestCase "getElementTagName" (_test_getElementTagName_success path)
     , buildTestCase "getElementRect" (_test_getElementRect_success path)
     , buildTestCase "isElementEnabled" (_test_isElementEnabled_success path)
+    ,   ifDriverIs Geckodriver TE.ignoreTest -- see https://bugzilla.mozilla.org/show_bug.cgi?id=1585622
+      $ buildTestCase "getComputedRole" (_test_getComputedRole_success path)
     , buildTestCase "elementClick" (_test_elementClick_success path)
     , buildTestCase "elementClear" (_test_elementClear_success path)
     , buildTestCase "elementSendKeys" (_test_elementSendKeys_success path)
@@ -620,6 +622,21 @@ _test_isElementEnabled_success page =
       return ()
 
   in  catchError session unexpectedError
+
+
+
+_test_getComputedRole_success
+  :: (Monad eff) => FilePath -> WebDriverT eff ()
+_test_getComputedRole_success page =
+  let
+    session = do
+      navigateTo page
+      !element <- getActiveElement
+      !role <- getComputedRole element
+      assertSuccess "yay"
+      return ()
+
+  in catchError session unexpectedError
 
 
 

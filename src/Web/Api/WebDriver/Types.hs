@@ -22,6 +22,7 @@ module Web.Api.WebDriver.Types (
   , Selector
   , AttributeName
   , PropertyName
+  , AriaRole
   , Script
   , CookieName
   , CssPropertyName
@@ -187,6 +188,9 @@ type AttributeName = String
 
 -- | Used with `getElementProperty`.
 type PropertyName = String
+
+-- | Used with `getComputedRole`
+type AriaRole = String
 
 -- | Javascript
 type Script = String
