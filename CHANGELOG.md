@@ -9,6 +9,7 @@ Unreleased
 * Changed
   * Bump stack resolver to lts-16.0
   * The old behavior of `runIsolated` has been renamed to `runIsolated_`, and `runIsolated` now returns the result of its argument. The naming is meant to mimic the `sequence_`/`sequence` pattern.
+  * `chromeOptions` renamed to `goog:chromeOptions` in `ToJSON` `FromJSON` instances for `Capability` for compatibility with chromedriver versions >=75; see https://chromedriver.storage.googleapis.com/75.0.3770.8/notes.txt. Fixes issue #21.
 * Fixed
   * Bug in behavior of `switchToFrame` when using `FrameContainingElement`
 
