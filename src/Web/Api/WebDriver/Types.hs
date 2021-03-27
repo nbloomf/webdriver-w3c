@@ -153,6 +153,9 @@ instance FromJSON ContextId where
 instance ToJSON ContextId where
   toJSON (ContextId x) = String $ pack x
 
+instance Arbitrary ContextId where
+  arbitrary = ContextId <$> arbitrary
+
 -- | Type of a /top level browsing context/; see <https://html.spec.whatwg.org/#top-level-browsing-context>.
 data ContextType = WindowContext | TabContext
   deriving (Eq, Enum, Bounded)
