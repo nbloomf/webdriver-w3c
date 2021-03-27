@@ -69,3 +69,17 @@ demoGetComputedRole = do
   comment $ "Computed role is '" <> role <> "'"
   wait 5000000
   return ()
+
+
+
+demoGetComputedLabel :: WebDriverT IO ()
+demoGetComputedLabel = do
+  -- open google.com
+  navigateTo "https://www.google.com"
+
+  -- get the ARIA label of whatever element is active on page load
+  role <- getActiveElement >>= getComputedLabel
+
+  comment $ "Computed label is '" <> role <> "'"
+  wait 5000000
+  return ()
