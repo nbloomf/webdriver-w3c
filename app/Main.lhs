@@ -160,9 +160,10 @@ This library is also tested against Chrome via chromedriver. To do that, using `
 by
 
     defaultWebDriverConfig
-      { _env = defaultWDEnv
-        { _remotePort = 9515
-        , _responseFormat = ChromeFormat
+      { _environment = defaultWebDriverEnvironment
+        { _env = defaultWDEnv
+          { _remotePort = 9515
+          }
         }
       }
 
