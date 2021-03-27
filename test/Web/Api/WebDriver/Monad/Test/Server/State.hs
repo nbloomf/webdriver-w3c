@@ -100,7 +100,9 @@ _load_page path st = do
     then return _success_page
     else if file == "invalidElementState.html"
       then return _invalidElementState_page
-      else requestPage path (_internets st)
+      else if file == "about:blank"
+        then return pageAboutBlank
+        else requestPage path (_internets st)
   return $ st
     { _current_page = p
     , _history = (_current_page st) : _history st

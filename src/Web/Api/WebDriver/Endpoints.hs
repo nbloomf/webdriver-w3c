@@ -57,6 +57,8 @@ module Web.Api.WebDriver.Endpoints (
   , switchToWindow
   -- ** Get Window Handles
   , getWindowHandles
+  -- ** New Window
+  , newWindow
   -- ** Switch To Frame
   , switchToFrame
   -- ** Switch To Parent Frame
@@ -517,6 +519,24 @@ getWindowHandles = do
     >>= constructFromJson
     >>= (sequence . map constructFromJson)
     >>= (return . map (ContextId . unpack))
+
+
+-- | See <https://w3c.github.io/webdriver/webdriver-spec.html#new-window>
+newWindow
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => ContextType -> WebDriverTT t eff (ContextId, ContextType)
+newWindow ctxTypeReq = do
+  baseUrl <- theRemoteUrlWithSession
+  let !payload = encode $ object [ "type" .= ctxTypeReq ]
+  response <- httpPost (baseUrl ++ "/window/new") payload
+    >>= (return . _responseBody)
+    >>= parseJson
+    >>= lookupKeyJson "value"
+  ctxId <- lookupKeyJson "handle" response
+    >>= constructFromJson
+  ctxType <- lookupKeyJson "type" response
+    >>= constructFromJson
+  return (ctxId, ctxType)
 
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#switch-to-frame>.

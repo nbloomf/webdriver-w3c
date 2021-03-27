@@ -96,6 +96,12 @@ test_fromJson_toJson_id = testGroup "fromJSON . toJSON == id"
 
   , QC.testProperty "(ResponseErrorCode) fromJSON . toJSON == id" $
       (prop_fromJson_toJson_id :: ResponseErrorCode -> Bool)
+
+  , QC.testProperty "(ContextId) fromJSON . toJSON == id" $
+      (prop_fromJson_toJson_id :: ContextId -> Bool)
+
+  , QC.testProperty "(ContextType) fromJSON . toJSON == id" $
+      (prop_fromJson_toJson_id :: ContextType -> Bool)
   ]
 
 

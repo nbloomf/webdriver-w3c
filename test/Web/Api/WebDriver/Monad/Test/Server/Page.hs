@@ -12,6 +12,7 @@ module Web.Api.WebDriver.Monad.Test.Server.Page (
   , cssMatchDocument
   , parseCss
   , tagIsClearable
+  , pageAboutBlank
   ) where
 
 import Text.ParserCombinators.Parsec
@@ -78,6 +79,12 @@ node :: HtmlTag -> [(Attr, Maybe String)] -> [Document] -> Document
 node tag attrs children =
   let elementId = "" in
   Document{..}
+
+pageAboutBlank :: Page
+pageAboutBlank = Page
+  { contents = Text ""
+  , url = "about:blank"
+  }
 
 
 assignIds :: String -> Document -> Document
