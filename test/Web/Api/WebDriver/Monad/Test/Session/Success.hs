@@ -40,6 +40,7 @@ successfulExit buildTestCase dir =
     , buildTestCase "getWindowHandle" (_test_getWindowHandle_success)
     , buildTestCase "switchToWindow" (_test_switchToWindow_success)
     , buildTestCase "getWindowHandles" (_test_getWindowHandles_success path)
+    , buildTestCase "newWindow" (_test_newWindow_success path)
     , buildTestCase "switchToFrame" (_test_switchToFrame_success path)
     , buildTestCase "switchToParentFrame" (_test_switchToParentFrame_success path)
     , buildTestCase "getWindowRect" (_test_getWindowRect_success)
@@ -278,6 +279,23 @@ _test_getWindowHandles_success page =
         (!x):xs -> do
           assertSuccess "yay"
           return ()
+
+  in  catchError session unexpectedError
+
+
+
+_test_newWindow_success
+  :: (Monad eff) => FilePath -> WebDriverT eff ()
+_test_newWindow_success page =
+  let
+    session = do
+      navigateTo page
+      (handle, _) <- newWindow TabContext
+      switchToWindow handle
+      url <- getCurrentUrl
+      assertEqual url "about:blank" "default url"
+      assertSuccess "yay"
+      return ()
 
   in  catchError session unexpectedError
 
