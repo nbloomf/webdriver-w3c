@@ -103,6 +103,8 @@ module Web.Api.WebDriver.Endpoints (
   , getElementRect
   -- ** Is Element Enabled
   , isElementEnabled
+  -- ** Get Computed Role
+  , getComputedRole
 
   -- * Element Interaction
   -- ** Element Click
@@ -871,6 +873,21 @@ isElementEnabled element = do
   let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
   httpGet (baseUrl ++ "/element/" ++ elementRef ++ "/enabled")
+    >>= (return . _responseBody)
+    >>= parseJson
+    >>= lookupKeyJson "value"
+    >>= constructFromJson
+
+
+-- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-computed-role>
+getComputedRole
+  :: (Monad eff, Monad (t eff), MonadTrans t, HasElementRef a)
+  => a
+  -> WebDriverTT t eff AriaRole
+getComputedRole element = do
+  let elementRef = show $ elementRefOf element
+  baseUrl <- theRemoteUrlWithSession
+  httpGet (baseUrl ++ "/element/" ++ elementRef ++ "/computedrole")
     >>= (return . _responseBody)
     >>= parseJson
     >>= lookupKeyJson "value"
