@@ -336,7 +336,7 @@ instance FromJSON Capabilities where
     <*> v .:? "setWindowRect"
     <*> v .:? "timeouts"
     <*> v .:? "unhandledPromptBehavior"
-    <*> v .:? "chromeOptions"
+    <*> v .:? "goog:chromeOptions"
     <*> v .:? "moz:firefoxOptions"
   parseJSON invalid = typeMismatch "Capabilities" invalid
 
@@ -351,7 +351,7 @@ instance ToJSON Capabilities where
     , "setWindowRect" .=? (toJSON <$> _setWindowRect)
     , "timeouts" .=? (toJSON <$> _timeouts)
     , "unhandledPromptBehavior" .=? (toJSON <$> _unhandledPromptBehavior)
-    , "chromeOptions" .=? (toJSON <$> _chromeOptions)
+    , "goog:chromeOptions" .=? (toJSON <$> _chromeOptions)
     , "moz:firefoxOptions" .=? (toJSON <$> _firefoxOptions)
     ]
 
