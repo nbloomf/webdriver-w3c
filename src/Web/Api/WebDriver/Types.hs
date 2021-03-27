@@ -18,6 +18,7 @@ module Web.Api.WebDriver.Types (
     SessionId
   , ElementRef(..)
   , ContextId(..)
+  , ContextType(..)
   , Selector
   , AttributeName
   , PropertyName
@@ -144,6 +145,36 @@ instance Show ContextId where
 
 instance IsString ContextId where
   fromString = ContextId
+
+instance FromJSON ContextId where
+  parseJSON (String x) = return $ ContextId $ unpack x
+  parseJSON invalid = typeMismatch "ContextType" invalid
+
+instance ToJSON ContextId where
+  toJSON (ContextId x) = String $ pack x
+
+-- | Type of a /top level browsing context/; see <https://html.spec.whatwg.org/#top-level-browsing-context>.
+data ContextType = WindowContext | TabContext
+  deriving (Eq, Enum, Bounded)
+
+instance Show ContextType where
+  show t = case t of
+    WindowContext -> "window"
+    TabContext -> "tab"
+
+instance FromJSON ContextType where
+  parseJSON (String x) = case x of
+    "window" -> return WindowContext
+    "tab" -> return TabContext
+    _ -> unrecognizedValue "ContextType" x
+  parseJSON invalid = typeMismatch "ContextType" invalid
+
+instance ToJSON ContextType where
+  toJSON WindowContext = String "window"
+  toJSON TabContext = String "tab"
+
+instance Arbitrary ContextType where
+  arbitrary = arbitraryBoundedEnum
 
 -- | For use with a /Locator Strategy/. See <https://w3c.github.io/webdriver/webdriver-spec.html#locator-strategies>.
 type Selector = String
