@@ -27,8 +27,7 @@ unknownErrorExit
   -> FilePath
   -> T.TestTree
 unknownErrorExit buildTestCase path = T.testGroup "Unknown Error"
-  [ ifDriverIs Chromedriver TE.ignoreTest $
-      buildTestCase "navigateTo" (_test_navigateTo_unknown_error)
+  [ buildTestCase "navigateTo" (_test_navigateTo_unknown_error)
   ]
 
 
