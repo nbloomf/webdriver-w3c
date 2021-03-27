@@ -107,6 +107,10 @@ defaultWebDriverServer = MockWorld
       [_,"session",session_id,"element",element_id,"computedrole"] ->
         get_session_id_element_id_computedrole session_id element_id
 
+      {- Get Computed Label -}
+      [_,"session",session_id,"element",element_id,"computedlabel"] ->
+        get_session_id_element_id_computedlabel session_id element_id
+
       {- Get Page Source -}
       [_,"session",session_id,"source"] ->
         get_session_id_source session_id
@@ -754,6 +758,17 @@ get_session_id_element_id_computedrole
   -> String
   -> MockNetwork WebDriverServerState HttpResponse
 get_session_id_element_id_computedrole session_id element_id = do
+  verifyIsActiveSession session_id
+  return $ _success_with_value $ String "textbox"
+
+
+{- Get Computed Label -}
+
+get_session_id_element_id_computedlabel
+  :: String
+  -> String
+  -> MockNetwork WebDriverServerState HttpResponse
+get_session_id_element_id_computedlabel session_id element_id = do
   verifyIsActiveSession session_id
   return $ _success_with_value $ String "textbox"
 

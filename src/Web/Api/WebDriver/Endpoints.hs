@@ -105,6 +105,8 @@ module Web.Api.WebDriver.Endpoints (
   , isElementEnabled
   -- ** Get Computed Role
   , getComputedRole
+  -- ** Get Computed Label
+  , getComputedLabel
 
   -- * Element Interaction
   -- ** Element Click
@@ -888,6 +890,21 @@ getComputedRole element = do
   let elementRef = show $ elementRefOf element
   baseUrl <- theRemoteUrlWithSession
   httpGet (baseUrl ++ "/element/" ++ elementRef ++ "/computedrole")
+    >>= (return . _responseBody)
+    >>= parseJson
+    >>= lookupKeyJson "value"
+    >>= constructFromJson
+
+
+-- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-computed-label>
+getComputedLabel
+  :: (Monad eff, Monad (t eff), MonadTrans t, HasElementRef a)
+  => a
+  -> WebDriverTT t eff AriaLabel
+getComputedLabel element = do
+  let elementRef = show $ elementRefOf element
+  baseUrl <- theRemoteUrlWithSession
+  httpGet (baseUrl ++ "/element/" ++ elementRef ++ "/computedlabel")
     >>= (return . _responseBody)
     >>= parseJson
     >>= lookupKeyJson "value"
