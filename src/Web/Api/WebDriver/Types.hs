@@ -23,6 +23,7 @@ module Web.Api.WebDriver.Types (
   , AttributeName
   , PropertyName
   , AriaRole
+  , AriaLabel
   , Script
   , CookieName
   , CssPropertyName
@@ -191,6 +192,9 @@ type PropertyName = String
 
 -- | Used with `getComputedRole`
 type AriaRole = String
+
+-- | Used with `getComputedLabel`
+type AriaLabel = String
 
 -- | Javascript
 type Script = String
