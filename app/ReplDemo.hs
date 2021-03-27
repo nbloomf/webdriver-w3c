@@ -55,3 +55,17 @@ demoNewWindow = do
 
   wait 5000000
   return ()
+
+
+
+demoGetComputedRole :: WebDriverT IO ()
+demoGetComputedRole = do
+  -- open google.com
+  navigateTo "https://www.google.com"
+
+  -- get the ARIA role of whatever element is active on page load
+  role <- getActiveElement >>= getComputedRole
+
+  comment $ "Computed role is '" <> role <> "'"
+  wait 5000000
+  return ()
