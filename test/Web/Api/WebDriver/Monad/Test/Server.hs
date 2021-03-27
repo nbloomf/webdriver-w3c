@@ -159,6 +159,10 @@ defaultWebDriverServer = MockWorld
       [_,"session",session_id,"window"] ->
         post_session_id_window session_id payload
 
+      {- New Window -}
+      [_,"session",session_id,"window","new"] ->
+        post_session_id_window_new session_id payload
+
       {- Switch To Frame -}
       [_,"session",session_id,"frame"] ->
         post_session_id_frame session_id payload
@@ -451,6 +455,25 @@ post_session_id_window
 post_session_id_window session_id payload = do
   verifyIsActiveSession session_id
   return _success_with_empty_object
+
+
+{- New Window -}
+
+post_session_id_window_new
+  :: String
+  -> LB.ByteString
+  -> MockNetwork WebDriverServerState HttpResponse
+post_session_id_window_new session_id payload = do
+  verifyIsActiveSession session_id
+  st <- getMockServer
+  case _load_page "about:blank" st of -- not actually switching contexts here
+    Nothing -> errorMockNetwork _err_unknown_error
+    Just _st -> do
+      modifyMockServer (const _st)
+      return $ _success_with_value $ object
+        [ ( "handle", String "handle-id" )
+        , ( "type", String "tab" )
+        ]
 
 
 {- Get Window Handles -}
