@@ -33,7 +33,7 @@ tests path = testGroup "Web.Api.WebDriver.Monad"
     $ testGroup "Geckodriver" $ endpointTests testCase path
 
   ,   localOption (Driver Chromedriver)
-    $ localOption (ApiResponseFormat ChromeFormat)
+    $ localOption (ApiResponseFormat SpecFormat)
     $ localOption (Headless True)
     $ ifTierIs TEST (localOption (BrowserPath $ Just "/usr/bin/google-chrome"))
     $ localOption (SilentLog)

@@ -36,7 +36,7 @@ before_install:
 - travis_retry curl -L https://github.com/mozilla/geckodriver/releases/download/v0.23.0/geckodriver-v0.23.0-linux64.tar.gz | tar xz -C ~/.local/bin
 -
 - # install chromedriver
-- wget -O /tmp/chromedriver.zip https://chromedriver.storage.googleapis.com/2.38/chromedriver_linux64.zip
+- wget -O /tmp/chromedriver.zip https://chromedriver.storage.googleapis.com/89.0.4389.23/chromedriver_linux64.zip
 - unzip /tmp/chromedriver.zip chromedriver -d ~/.local/bin
 -
 - # install firefox
