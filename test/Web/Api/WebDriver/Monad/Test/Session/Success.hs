@@ -57,44 +57,33 @@ successfulExit buildTestCase dir =
     , buildTestCase "getActiveElement" (_test_getActiveElement_success)
     , buildTestCase "isElementSelected" (_test_isElementSelected_success path)
     , buildTestCase "getElementAttribute" (_test_getElementAttribute_success path)
-    ,   ifDriverIs Chromedriver TE.ignoreTest
-      $ buildTestCase "getElementCssValue" (_test_getElementCssValue_success path)
+    , buildTestCase "getElementCssValue" (_test_getElementCssValue_success path)
     , buildTestCase "getElementText" (_test_getElementText_success path)
     , buildTestCase "getElementTagName" (_test_getElementTagName_success path)
-    ,   ifDriverIs Chromedriver TE.ignoreTest
-      $ buildTestCase "getElementRect" (_test_getElementRect_success path)
+    , buildTestCase "getElementRect" (_test_getElementRect_success path)
     , buildTestCase "isElementEnabled" (_test_isElementEnabled_success path)
     , buildTestCase "elementClick" (_test_elementClick_success path)
     , buildTestCase "elementClear" (_test_elementClear_success path)
-    ,   ifDriverIs Chromedriver TE.ignoreTest
-      $ buildTestCase "elementSendKeys" (_test_elementSendKeys_success path)
+    , buildTestCase "elementSendKeys" (_test_elementSendKeys_success path)
     , buildTestCase "getPageSource" (_test_getPageSource_success path)
     , buildTestCase "getPageSourceStealth" (_test_getPageSourceStealth_success path)
     , buildTestCase "getAllCookies" (_test_getAllCookies_success path)
     ,   ifDriverIs Chromedriver TE.ignoreTest
       $ T.localOption (PrivateMode False)
       $ buildTestCase "getNamedCookie" (_test_getNamedCookie_success path)
-    ,   ifDriverIs Chromedriver TE.ignoreTest
-      $ buildTestCase "deleteCookie" (_test_deleteCookie_success path)
+    , buildTestCase "deleteCookie" (_test_deleteCookie_success path)
     , buildTestCase "deleteAllCookies" (_test_deleteAllCookies_success)
-    ,   ifDriverIs Chromedriver TE.ignoreTest
-      $ buildTestCase "performActions (keyboard)" (_test_performActions_keyboard_success)
-    ,   ifDriverIs Chromedriver TE.ignoreTest
-      $ buildTestCase "performActionsStealth (keyboard)" (_test_performActionsStealth_keyboard_success)
-    ,   ifDriverIs Chromedriver TE.ignoreTest
-      $ buildTestCase "releaseActions" (_test_releaseActions_success)
-    ,   ifDriverIs Chromedriver TE.ignoreTest
-      $ buildTestCase "dismissAlert" (_test_dismissAlert_success path)
-    ,   ifDriverIs Chromedriver TE.ignoreTest
-      $ buildTestCase "acceptAlert" (_test_acceptAlert_success path)
+    , buildTestCase "performActions (keyboard)" (_test_performActions_keyboard_success)
+    , buildTestCase "performActionsStealth (keyboard)" (_test_performActionsStealth_keyboard_success)
+    , buildTestCase "releaseActions" (_test_releaseActions_success)
+    , buildTestCase "dismissAlert" (_test_dismissAlert_success path)
+    , buildTestCase "acceptAlert" (_test_acceptAlert_success path)
     ,   ifDriverIs Chromedriver TE.ignoreTest
       $ ifHeadless TE.ignoreTest
       $ buildTestCase "getAlertText" (_test_getAlertText_success path)
-    ,   ifDriverIs Chromedriver TE.ignoreTest
-      $ buildTestCase "sendAlertText" (_test_sendAlertText_success path)
+    , buildTestCase "sendAlertText" (_test_sendAlertText_success path)
     , buildTestCase "takeScreenshot" (_test_takeScreenshot_success path)
-    ,   ifDriverIs Chromedriver TE.ignoreTest
-      $ buildTestCase "takeElementScreenshot" (_test_takeElementScreenshot_success path)
+    , buildTestCase "takeElementScreenshot" (_test_takeElementScreenshot_success path)
     ]
 
 
@@ -543,7 +532,11 @@ _test_getElementCssValue_success page =
       case text of
         "none" -> assertSuccess "yay"
         "rgb(0, 0, 0)" -> assertSuccess "yay"
-        _ -> assertFailure $ AssertionComment $ "expected 'none' or 'rgb(0, 0, 0)', got '" ++ text ++ "'"
+        "none solid rgb(0, 0, 0)" -> assertSuccess "yay"
+        _ -> assertFailure $ AssertionComment $ mconcat
+          [ "expected 'none' or 'rgb(0, 0, 0)' or 'none solid rgb(0, 0, 0)', got '"
+          , text, "'"
+          ]
       return ()
 
   in  catchError session unexpectedError

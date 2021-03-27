@@ -32,8 +32,7 @@ invalidElementStateExit
 invalidElementStateExit buildTestCase dir =
   let path = dir ++ "/invalidElementState.html" in
   T.testGroup "Invalid Element State"
-    [ ifDriverIs Chromedriver TE.ignoreTest $
-        buildTestCase "elementClear" (_test_elementClear_invalid_element_state path)
+    [ buildTestCase "elementClear" (_test_elementClear_invalid_element_state path)
     ]
 
 
