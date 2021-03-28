@@ -73,6 +73,9 @@ module Web.Api.WebDriver.Types (
   , Page(..)
   , Margin(..)
   , PageRange(..)
+  , Base64EncodedPdf(..)
+  , decodeBase64EncodedPdf
+  , writeBase64EncodedPdf
 
   -- * Misc
   , LocationStrategy(..)
@@ -86,6 +89,9 @@ module Web.Api.WebDriver.Types (
   , ResponseErrorCode(..)
   ) where
 
+import Control.Monad.IO.Class
+import qualified Data.ByteString as SB
+import qualified Data.ByteString.Base64 as B64
 import Data.Char
   ( toLower )
 import Data.Maybe
@@ -101,6 +107,8 @@ import Data.Aeson.Types
   , Pair, (.:?), (.:), (.=), object, typeMismatch )
 import Data.Text
   ( Text, pack, unpack )
+import Data.Text.Encoding
+  ( encodeUtf8 )
 import Test.QuickCheck
   ( Arbitrary(..), arbitraryBoundedEnum, Gen, NonNegative(..) )
 import Test.QuickCheck.Gen
@@ -1444,3 +1452,25 @@ instance Arbitrary PageRange where
           NonNegative b <- fmap (fmap (`mod` 100)) arbitrary
           return $ PageRange (min a b) (max a b)
       ]
+
+
+
+newtype Base64EncodedPdf
+  = Base64EncodedPdf SB.ByteString
+  deriving (Eq, Show)
+
+instance FromJSON Base64EncodedPdf where
+  parseJSON (String s) =
+    return $ Base64EncodedPdf $ encodeUtf8 s
+  parseJSON invalid = typeMismatch "Base64EncodedPdf" invalid
+
+decodeBase64EncodedPdf
+  :: Base64EncodedPdf -> SB.ByteString
+decodeBase64EncodedPdf (Base64EncodedPdf bytes)
+  = B64.decodeLenient bytes
+
+writeBase64EncodedPdf
+  :: ( MonadIO m )
+  => FilePath -> Base64EncodedPdf -> m ()
+writeBase64EncodedPdf path pdf =
+  liftIO $ SB.writeFile path $ decodeBase64EncodedPdf pdf
