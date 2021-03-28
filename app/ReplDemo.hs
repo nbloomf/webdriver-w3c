@@ -8,7 +8,7 @@ and development. To run an individual demo, first make sure your remote end
 (chromedriver or geckodriver) is running on the correct port, then from ghci
 say something like:
 
-    withChromedriver demoNewWindow
+    withChromedriver normalChrome demoNewWindow
 
 The executable runs all the demos, although this is less useful.
 -}
