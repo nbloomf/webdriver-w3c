@@ -160,6 +160,10 @@ module Web.Api.WebDriver.Endpoints (
   -- ** Take Element Screenshot
   , takeElementScreenshot
 
+  -- * Print
+  -- ** Print Page
+  , printPage
+
   -- Spec Constants
   , _WEB_ELEMENT_ID
   , _WEB_WINDOW_ID
@@ -1233,6 +1237,20 @@ takeElementScreenshot element = do
   case result of
     Right img -> return img
     Left str -> throwError $ ImageDecodeError str
+
+
+-- | See <https://w3c.github.io/webdriver/webdriver-spec.html#print-page>
+printPage
+  :: (Monad eff, Monad (t eff), MonadTrans t)
+  => PrintOptions -> WebDriverTT t eff Base64EncodedPdf
+printPage opts = do
+  baseUrl <- theRemoteUrlWithSession
+  let !payload = encode $ object [ "parameters" .= opts ]
+  httpPost (baseUrl ++ "/print") payload
+    >>= (return . _responseBody)
+    >>= parseJson
+    >>= lookupKeyJson "value"
+    >>= constructFromJson
 
 
 -- | Detect empty responses by response format. Necessary because chromedriver is not strictly spec compliant.
