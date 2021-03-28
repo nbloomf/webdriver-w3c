@@ -16,6 +16,7 @@ The executable runs all the demos, although this is less useful.
 main :: IO ()
 main = do
   withChromedriver normalChrome demoNewWindow
+  withChromedriver normalChrome demoGetElementShadowRoot
   withChromedriver normalChrome demoGetComputedRole
   withChromedriver normalChrome demoGetComputedLabel
 
@@ -25,11 +26,20 @@ main = do
 
 
 
+withGeckodriver :: WebDriverT IO () -> IO ()
+withGeckodriver acts = do
+  execWebDriverT firefoxConfig $
+    runIsolated_ defaultFirefoxCapabilities acts
+  return ()
+
 withChromedriver :: Capabilities -> WebDriverT IO () -> IO ()
 withChromedriver caps acts = do
   execWebDriverT chromeConfig $
     runIsolated_ caps acts
   return ()
+
+firefoxConfig :: WebDriverConfig IO
+firefoxConfig = defaultWebDriverConfig
 
 chromeConfig :: WebDriverConfig IO
 chromeConfig = defaultWebDriverConfig
@@ -67,6 +77,21 @@ demoNewWindow = do
   -- open bing.com in this tab
   navigateTo "https://www.bing.com"
 
+  wait 5000000
+  return ()
+
+
+
+-- It looks like neither chromedriver nor geckodriver support this yet.
+demoGetElementShadowRoot :: WebDriverT IO ()
+demoGetElementShadowRoot = do
+  -- open google.com
+  navigateTo "https://www.google.com"
+
+  -- get the shadow root of whatever element is active on page load
+  root <- getActiveElement >>= getElementShadowRoot
+
+  comment $ "Shadow root ID is '" <> show root <> "'"
   wait 5000000
   return ()
 
