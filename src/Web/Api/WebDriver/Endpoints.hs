@@ -1239,7 +1239,7 @@ takeElementScreenshot element = do
     Left str -> throwError $ ImageDecodeError str
 
 
--- | See <https://w3c.github.io/webdriver/webdriver-spec.html#print-page>
+-- | See <https://w3c.github.io/webdriver/webdriver-spec.html#print-page>. You may also be interested in `decodeBase64EncodedPdf` and `writeBase64EncodedPdf`.
 printPage
   :: (Monad eff, Monad (t eff), MonadTrans t)
   => PrintOptions -> WebDriverTT t eff Base64EncodedPdf
