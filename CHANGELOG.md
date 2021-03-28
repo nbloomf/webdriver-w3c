@@ -6,6 +6,7 @@ Unreleased
 
 * Added
   * `MonadIO` instance for `WebDriverTT t eff`
+  * New endpoints: `newWindow`, `getComputedRole`, `getComputedLabel`, `printPage`
 * Changed
   * Bump stack resolver to lts-16.0
   * The old behavior of `runIsolated` has been renamed to `runIsolated_`, and `runIsolated` now returns the result of its argument. The naming is meant to mimic the `sequence_`/`sequence` pattern.
