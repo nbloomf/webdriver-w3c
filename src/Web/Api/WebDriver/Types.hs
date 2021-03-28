@@ -65,6 +65,15 @@ module Web.Api.WebDriver.Types (
   , ActionItem(..)
   , emptyActionItem
 
+  -- * Print
+  , PrintOptions(..)
+  , defaultPrintOptions
+  , Orientation(..)
+  , Scale(..)
+  , Page(..)
+  , Margin(..)
+  , PageRange(..)
+
   -- * Misc
   , LocationStrategy(..)
   , Rect(..)
@@ -93,9 +102,11 @@ import Data.Aeson.Types
 import Data.Text
   ( Text, pack, unpack )
 import Test.QuickCheck
-  ( Arbitrary(..), arbitraryBoundedEnum, Gen )
+  ( Arbitrary(..), arbitraryBoundedEnum, Gen, NonNegative(..) )
 import Test.QuickCheck.Gen
-  ( listOf, oneof )
+  ( listOf, oneof, elements )
+import Text.Read
+  ( readMaybe )
 
 import Web.Api.WebDriver.Uri
 import Web.Api.WebDriver.Types.Keyboard
@@ -1217,3 +1228,219 @@ cookie name value = emptyCookie
   { _cookieName = Just name
   , _cookieValue = Just value
   }
+
+
+
+-- | See <https://w3c.github.io/webdriver/#print-page>
+data PrintOptions = PrintOptions
+  { _orientation :: Maybe Orientation -- ^ @orientation@
+  , _scale :: Maybe Scale -- ^ @scale@
+  , _background :: Maybe Bool -- ^ @background@
+  , _page :: Maybe Page -- ^ @page@
+  , _margin :: Maybe Margin -- ^ @margin@
+  , _shrinkToFit :: Maybe Bool -- ^ @shrinkToFit@
+  , _pageRanges :: Maybe [PageRange] -- ^ @pageRanges@
+  } deriving (Eq, Show)
+
+defaultPrintOptions :: PrintOptions
+defaultPrintOptions = PrintOptions
+  { _orientation = Nothing
+  , _scale = Nothing
+  , _background = Nothing
+  , _page = Nothing
+  , _margin = Nothing
+  , _shrinkToFit = Nothing
+  , _pageRanges = Nothing
+  }
+
+instance ToJSON PrintOptions where
+  toJSON PrintOptions{..} = object_
+    [ "orientation" .=? (toJSON <$> _orientation)
+    , "scale" .=? (toJSON <$> _scale)
+    , "background" .=? (toJSON <$> _background)
+    , "page" .=? (toJSON <$> _page)
+    , "margin" .=? (toJSON <$> _margin)
+    , "shrinkToFit" .=? (toJSON <$> _shrinkToFit)
+    , "pageRanges" .=? (toJSON <$> _pageRanges)
+    ]
+
+instance FromJSON PrintOptions where
+  parseJSON (Object v) = PrintOptions
+    <$> v .:? "orientation"
+    <*> v .:? "scale"
+    <*> v .:? "background"
+    <*> v .:? "page"
+    <*> v .:? "margin"
+    <*> v .:? "shrinkToFit"
+    <*> v .:? "pageRanges"
+  parseJSON invalid = typeMismatch "PrintOptions" invalid
+
+instance Arbitrary PrintOptions where
+  arbitrary = PrintOptions
+    <$> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+
+
+
+data Orientation
+  = Landscape
+  | Portrait
+  deriving (Eq, Show, Enum, Bounded)
+
+instance FromJSON Orientation where
+  parseJSON (String x) = case x of
+    "landscape" -> return Landscape
+    "portrait" -> return Portrait
+    _ -> unrecognizedValue "Orientation" x
+  parseJSON invalid = typeMismatch "Orientation" invalid
+
+instance ToJSON Orientation where
+  toJSON x = case x of
+    Landscape -> String "landscape"
+    Portrait -> String "portrait"
+
+instance Arbitrary Orientation where
+  arbitrary = arbitraryBoundedEnum
+
+
+
+newtype Scale
+  = Scale Scientific
+  deriving (Eq, Show)
+
+instance ToJSON Scale where
+  toJSON (Scale x) = toJSON x
+
+instance FromJSON Scale where
+  parseJSON = fmap Scale . parseJSON
+
+instance Arbitrary Scale where -- TODO: fix this
+  arbitrary = Scale
+    <$> elements
+      [ 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0
+      , 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0
+      ]
+
+
+
+data Page = Page
+  { _pageWidth :: Maybe Scientific -- ^ @pageWidth@
+  , _pageHeight :: Maybe Scientific -- ^ @pageHeight@
+  } deriving (Eq, Show)
+
+defaultPage :: Page
+defaultPage = Page
+  { _pageWidth = Nothing
+  , _pageHeight = Nothing
+  }
+
+instance ToJSON Page where
+  toJSON Page{..} = object_
+    [ "pageWidth" .=? (toJSON <$> _pageWidth)
+    , "pageHeight" .=? (toJSON <$> _pageHeight)
+    ]
+
+instance FromJSON Page where
+  parseJSON (Object v) = Page
+    <$> v .:? "pageWidth"
+    <*> v .:? "pageHeight"
+  parseJSON invalid = typeMismatch "Page" invalid
+
+instance Arbitrary Page where
+  arbitrary =
+    let
+      margins = map negate
+        [ 0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9
+        , 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9
+        ]
+    in Page
+      <$> oneof [ return Nothing, Just <$> elements (map (27.94 +) margins) ]
+      <*> oneof [ return Nothing, Just <$> elements (map (21.59 +) margins) ]
+
+
+
+data Margin = Margin
+  { _marginTop :: Maybe Scientific -- ^ @marginTop@
+  , _marginBottom :: Maybe Scientific -- ^ @marginBottom@
+  , _marginLeft :: Maybe Scientific -- ^ @marginLeft@
+  , _marginRight :: Maybe Scientific -- ^ @marginRight@
+  } deriving (Eq, Show)
+
+defaultMargin :: Margin
+defaultMargin = Margin
+  { _marginTop = Nothing
+  , _marginBottom = Nothing
+  , _marginLeft = Nothing
+  , _marginRight = Nothing
+  }
+
+instance ToJSON Margin where
+  toJSON Margin{..} = object_
+    [ "marginTop" .=? (toJSON <$> _marginTop)
+    , "marginBottom" .=? (toJSON <$> _marginBottom)
+    , "marginLeft" .=? (toJSON <$> _marginLeft)
+    , "marginRight" .=? (toJSON <$> _marginRight)
+    ]
+
+instance FromJSON Margin where
+  parseJSON (Object v) = Margin
+    <$> v .:? "marginTop"
+    <*> v .:? "marginBottom"
+    <*> v .:? "marginLeft"
+    <*> v .:? "marginRight"
+  parseJSON invalid = typeMismatch "Margin" invalid
+
+instance Arbitrary Margin where
+  arbitrary =
+    let
+      margins =
+        [ 0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9
+        , 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9
+        ]
+    in Margin
+      <$> oneof [ return Nothing, Just <$> elements margins ]
+      <*> oneof [ return Nothing, Just <$> elements margins ]
+      <*> oneof [ return Nothing, Just <$> elements margins ]
+      <*> oneof [ return Nothing, Just <$> elements margins ]
+
+
+
+data PageRange
+  = OnePage Int
+  | PageRange Int Int
+  deriving (Eq, Show)
+
+instance ToJSON PageRange where
+  toJSON x = case x of
+    OnePage k -> String $ pack $ show k
+    PageRange a b -> String $ mconcat
+      [ pack $ show a, "-", pack $ show b ]
+
+instance FromJSON PageRange where
+  parseJSON (String s) =
+    let str = unpack s in
+    case break (== '-') str of
+      (as, []) -> case readMaybe as of
+        Just k -> return $ OnePage k
+        Nothing -> malformedValue "page range" str
+      (as, _:bs) -> if (null as) || (null bs)
+        then malformedValue "page range" str
+        else case (readMaybe as, readMaybe bs) of
+          (Just a, Just b) -> return $ PageRange a b
+          _ -> malformedValue "page range" str
+  parseJSON invalid = typeMismatch "PageRange" invalid
+
+instance Arbitrary PageRange where
+  arbitrary = do
+    NonNegative a <- fmap (fmap (`mod` 100)) arbitrary
+    oneof
+      [ return $ OnePage a
+      , do
+          NonNegative b <- fmap (fmap (`mod` 100)) arbitrary
+          return $ PageRange (min a b) (max a b)
+      ]
