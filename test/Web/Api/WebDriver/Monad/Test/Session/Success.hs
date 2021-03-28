@@ -89,6 +89,7 @@ successfulExit buildTestCase dir =
     , buildTestCase "sendAlertText" (_test_sendAlertText_success path)
     , buildTestCase "takeScreenshot" (_test_takeScreenshot_success path)
     , buildTestCase "takeElementScreenshot" (_test_takeElementScreenshot_success path)
+    , buildTestCase "printPage" (_test_printPage_success path)
     ]
 
 
@@ -987,6 +988,20 @@ _test_takeElementScreenshot_success page =
       navigateTo page
       !element <- findElement CssSelector "body"
       !screenshot <- takeElementScreenshot element
+      assertSuccess "yay"
+      return ()
+
+  in catchError session unexpectedError
+
+
+
+_test_printPage_success
+  :: (Monad eff) => FilePath -> WebDriverT eff ()
+_test_printPage_success page =
+  let
+    session = do
+      navigateTo page
+      !screenshot <- printPage defaultPrintOptions
       assertSuccess "yay"
       return ()
 

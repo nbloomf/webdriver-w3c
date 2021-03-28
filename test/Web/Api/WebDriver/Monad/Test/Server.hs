@@ -251,6 +251,10 @@ defaultWebDriverServer = MockWorld
       [_,"session",session_id,"alert","text"] ->
         post_session_id_alert_text session_id
 
+      {- Print Page -}
+      [_,"session",session_id,"print"] ->
+        post_session_id_print session_id
+
       _ -> error $ "defaultWebDriverServer: post url: '" ++ url ++
         "' parsed as " ++ (show $ splitUrl $ stripScheme url)
 
@@ -914,6 +918,16 @@ get_session_id_alert_text
   :: String
   -> MockNetwork WebDriverServerState HttpResponse
 get_session_id_alert_text session_id = do
+  verifyIsActiveSession session_id
+  return $ _success_with_value $ String "WOO!!"
+
+
+{- Print Page -}
+
+post_session_id_print
+  :: String
+  -> MockNetwork WebDriverServerState HttpResponse
+post_session_id_print session_id = do
   verifyIsActiveSession session_id
   return $ _success_with_value $ String "WOO!!"
 

@@ -102,6 +102,24 @@ test_fromJson_toJson_id = testGroup "fromJSON . toJSON == id"
 
   , QC.testProperty "(ContextType) fromJSON . toJSON == id" $
       (prop_fromJson_toJson_id :: ContextType -> Bool)
+
+  , QC.testProperty "(PrintOptions) fromJSON . toJSON == id" $
+      (prop_fromJson_toJson_id :: PrintOptions -> Bool)
+
+  , QC.testProperty "(Orientation) fromJSON . toJSON == id" $
+      (prop_fromJson_toJson_id :: Orientation -> Bool)
+
+  , QC.testProperty "(Scale) fromJSON . toJSON == id" $
+      (prop_fromJson_toJson_id :: Scale -> Bool)
+
+  , QC.testProperty "(Page) fromJSON . toJSON == id" $
+      (prop_fromJson_toJson_id :: Page -> Bool)
+
+  , QC.testProperty "(Margin) fromJSON . toJSON == id" $
+      (prop_fromJson_toJson_id :: Margin -> Bool)
+
+  , QC.testProperty "(PageRange) fromJSON . toJSON == id" $
+      (prop_fromJson_toJson_id :: PageRange -> Bool)
   ]
 
 

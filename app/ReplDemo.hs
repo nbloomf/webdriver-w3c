@@ -8,23 +8,27 @@ and development. To run an individual demo, first make sure your remote end
 (chromedriver or geckodriver) is running on the correct port, then from ghci
 say something like:
 
-    withChromedriver demoNewWindow
+    withChromedriver normalChrome demoNewWindow
 
 The executable runs all the demos, although this is less useful.
 -}
 
 main :: IO ()
 main = do
-  withChromedriver demoNewWindow
+  withChromedriver normalChrome demoNewWindow
+  withChromedriver normalChrome demoGetComputedRole
+  withChromedriver normalChrome demoGetComputedLabel
+
+  withChromedriver headlessChrome demoPrintPage
 
 
 
 
 
-withChromedriver :: WebDriverT IO () -> IO ()
-withChromedriver acts = do
+withChromedriver :: Capabilities -> WebDriverT IO () -> IO ()
+withChromedriver caps acts = do
   execWebDriverT chromeConfig $
-    runIsolated_ defaultChromeCapabilities acts
+    runIsolated_ caps acts
   return ()
 
 chromeConfig :: WebDriverConfig IO
@@ -34,6 +38,16 @@ chromeConfig = defaultWebDriverConfig
       { _remotePort = 9515
       , _responseFormat = SpecFormat
       }
+    }
+  }
+
+normalChrome :: Capabilities
+normalChrome = defaultChromeCapabilities
+
+headlessChrome :: Capabilities
+headlessChrome = defaultChromeCapabilities
+  { _chromeOptions = Just $ defaultChromeOptions
+    { _chromeArgs = Just ["--headless"]
     }
   }
 
@@ -81,5 +95,19 @@ demoGetComputedLabel = do
   role <- getActiveElement >>= getComputedLabel
 
   comment $ "Computed label is '" <> role <> "'"
+  wait 5000000
+  return ()
+
+
+
+demoPrintPage :: WebDriverT IO ()
+demoPrintPage = do
+  -- open google.com
+  navigateTo "https://www.google.com"
+
+  -- print
+  pdf <- printPage defaultPrintOptions
+  writeBase64EncodedPdf "testprint.pdf" pdf
+
   wait 5000000
   return ()
