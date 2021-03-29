@@ -1,8 +1,8 @@
 Changelog for webdriver-w3c
 ===========================
 
-Unreleased
-----------
+0.0.3
+-----
 
 * Added
   * `MonadIO` instance for `WebDriverTT t eff`
