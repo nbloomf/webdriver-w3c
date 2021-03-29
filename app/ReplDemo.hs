@@ -1,5 +1,8 @@
 module Main where
 
+import Control.Monad.IO.Class
+import Data.List (isInfixOf)
+
 import Web.Api.WebDriver
 
 {-
@@ -48,6 +51,13 @@ headlessChrome :: Capabilities
 headlessChrome = defaultChromeCapabilities
   { _chromeOptions = Just $ defaultChromeOptions
     { _chromeArgs = Just ["--headless"]
+    }
+  }
+
+consoleLogChrome :: Capabilities
+consoleLogChrome = defaultChromeCapabilities
+  { _chromeOptions = Just $ defaultChromeOptions
+    { _chromeArgs = Just ["--user-data-dir=datadir", "--enable-logging", "--v=1"]
     }
   }
 
@@ -108,6 +118,24 @@ demoPrintPage = do
   -- print
   pdf <- printPage defaultPrintOptions
   writeBase64EncodedPdf "testprint.pdf" pdf
+
+  wait 5000000
+  return ()
+
+
+
+-- use this to demonstrate getting the JS console log
+--   withChromedriver consoleLogChrome demoConsoleLogChrome
+demoConsoleLogChrome :: WebDriverT IO ()
+demoConsoleLogChrome = do
+  -- open google.com
+  navigateTo "https://www.google.com"
+
+  executeScript "console.error('HEYOOOO')" []
+
+  -- logLines <- fmap lines $ liftIO $ readFile "~/datadir/chrome_debug.log" -- you'll need to expand ~ here
+  -- let lines = filter ("CONSOLE" `isInfixOf`) logLines
+  -- liftIO $ print lines
 
   wait 5000000
   return ()
