@@ -1,11 +1,11 @@
 name:           webdriver-w3c
-version:        0.0.2
+version:        0.0.3
 description:    Please see the README on Github at <https://github.com/nbloomf/webdriver-w3c#readme>
 homepage:       https://github.com/nbloomf/webdriver-w3c#readme
 bug-reports:    https://github.com/nbloomf/webdriver-w3c/issues
 author:         Nathan Bloomfield
 maintainer:     nathan.bloomfield@a8c.com
-copyright:      2018 Automattic, Inc.
+copyright:      2018-2021 Automattic, Inc.
 license:        GPL-3
 license-file:   LICENSE
 build-type:     Simple
