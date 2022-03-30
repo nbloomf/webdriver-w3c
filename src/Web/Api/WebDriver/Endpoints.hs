@@ -174,6 +174,8 @@ import Control.Monad.Trans.Class
   ( MonadTrans(..) )
 import Data.Aeson
   ( Value(..), encode, object, (.=), toJSON )
+import Data.Aeson.Key
+  ( fromText )
 import Data.Text
   ( Text, unpack, pack )
 import Data.Text.Encoding
@@ -558,7 +560,7 @@ switchToFrame ref = do
     !frame = case ref of
       TopLevelFrame -> Null
       FrameNumber k -> Number $ fromIntegral k
-      FrameContainingElement element_id -> object [ _WEB_ELEMENT_ID .= show element_id ]
+      FrameContainingElement element_id -> object [ (fromText _WEB_ELEMENT_ID) .= show element_id ]
 
     !payload = encode $ object
       [ "id" .= toJSON frame ]
