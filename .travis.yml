@@ -1,72 +1,32 @@
-# Use new container infrastructure to enable caching
-sudo: false
+sudo: true
+language: haskell
 
+git:
+  depth: 5
 
-# Do not choose a language; we provide our own build tools.
-language: generic
+cabal: "2.4"
 
-
-# Caching so the next build will be fast too.
 cache:
   directories:
-  - $HOME/.stack
-  - $HOME/.stack-work
+  - "$HOME/.cabal/store"
+  
 
-
-# Ensure necessary system libraries are present
-addons:
-  apt:
-    sources:
-      - google-chrome
-    packages:
-      - google-chrome-stable
-      - libgmp-dev
-      - unzip
-      - xvfb
-
-
-before_install:
-- mkdir -p ~/.local/bin
-- export PATH=$HOME/.local/bin:$PATH
--
-- # install stack
-- travis_retry curl -L https://get.haskellstack.org/stable/linux-x86_64.tar.gz | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
--
-- # install geckodriver
-- travis_retry curl -L https://github.com/mozilla/geckodriver/releases/download/v0.29.0/geckodriver-v0.29.0-linux64.tar.gz | tar xz -C ~/.local/bin
--
-- # install chromedriver
-- wget -O /tmp/chromedriver.zip https://chromedriver.storage.googleapis.com/89.0.4389.23/chromedriver_linux64.zip
-- unzip /tmp/chromedriver.zip chromedriver -d ~/.local/bin
--
-- # install firefox
-- wget -L -O firefox.tar.bz2 'https://download.mozilla.org/?product=firefox-latest-ssl&os=linux64&lang=en-US'
-- tar xvf firefox.tar.bz2 -C ~/.local/bin
-- export PATH=$HOME/.local/bin/firefox:$PATH
-- 
-- # start remote ends
-- export MOZ_HEADLESS=1
-- export WD_STRESS_TEST_NUM_TESTS="50"
-- xvfb-run -a geckodriver --binary $HOME/.local/bin/firefox/firefox --marionette-port 2828 --port 4444 --log error >/dev/null 2>/dev/null &
-- xvfb-run -a geckodriver --binary $HOME/.local/bin/firefox/firefox --marionette-port 2829 --port 4445 --log error >/dev/null 2>/dev/null &
-- xvfb-run -a geckodriver --binary $HOME/.local/bin/firefox/firefox --marionette-port 2830 --port 4446 --log error >/dev/null 2>/dev/null &
-- xvfb-run -a geckodriver --binary $HOME/.local/bin/firefox/firefox --marionette-port 2831 --port 4447 --log error >/dev/null 2>/dev/null &
-- xvfb-run -a geckodriver --binary $HOME/.local/bin/firefox/firefox --marionette-port 2832 --port 4448 --log error >/dev/null 2>/dev/null &
-- chromedriver --port=9515 &
-- chromedriver --port=9516 &
-- sleep 2
-
+matrix:
+  include:
+  - ghc: 8.10.7
+  
+  
 
 install:
-- # stack --no-terminal --install-ghc test --only-dependencies
+  # HLint check
+  - curl -sSL https://raw.github.com/ndmitchell/neil/master/misc/travis.sh | sh -s -- hlint .
 
-
-before_script:
-- # root needs permission to run chrome-sandbox; else chromedriver will error out
-- sudo chown root /opt/google/chrome/chrome-sandbox
-- sudo chmod 4755 /opt/google/chrome/chrome-sandbox
-
+  - cabal v2-update
+  - cabal v2-configure --enable-tests --enable-benchmarks --test-show-details=direct
+  - cabal v2-build --enable-tests --enable-benchmarks
 
 script:
-- stack --no-terminal test --haddock --no-haddock-deps
-- stack --no-terminal install webdriver-w3c:wd-parallel-stress-test && stack --no-terminal exec -- wd-parallel-stress-test --wd-remote-ends 'geckodriver https://localhost:4444 https://localhost:4445 https://localhost:4446 https://localhost:4447 https://localhost:4448' --num-threads 5
+  - cabal v2-test --enable-tests
+
+notifications:
+  email: false

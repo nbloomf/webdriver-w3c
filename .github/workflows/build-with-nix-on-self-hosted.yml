@@ -1,0 +1,33 @@
+name: build-with-nix
+
+# Trigger the workflow on push or pull request, but only for the master branch
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+jobs:
+  build:
+    name: build with haskell.nix
+    runs-on: self-hosted
+
+    steps:
+    - uses: actions/checkout@v2
+      if: github.event.action == 'opened' || github.event.action == 'synchronize' || github.event.ref == 'refs/heads/master'
+
+    - name: Prepare Nix
+      run: |
+        ./ci/prepare-env/do.sh
+
+    - name: Build
+      run: |
+        [[ -f ~/.nix-profile/etc/profile.d/nix.sh ]] && . ~/.nix-profile/etc/profile.d/nix.sh
+        nix-build ./cross-build.nix
+
+        #- name: Test
+        #run: |
+        #nix-shell --run "cabal v2-test --enable-tests"
+
+        #- name: Build Docker Image
+        #run: |
+        #nix-build ./docker.nix
