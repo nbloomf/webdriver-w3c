@@ -19,7 +19,8 @@ The executable runs all the demos, although this is less useful.
 main :: IO ()
 main = do
 
-  withChromedriver headlessChrome getResourcePerformanceChrome
+  -- withChromedriver headlessChrome getResourcePerformanceChrome
+  withChromedriver consoleLogChrome getResourcePerformanceChrome
 
 
 
@@ -54,7 +55,7 @@ headlessChrome = defaultChromeCapabilities
 consoleLogChrome :: Capabilities
 consoleLogChrome = defaultChromeCapabilities
   { _chromeOptions = Just $ defaultChromeOptions
-    { _chromeArgs = Just ["--user-data-dir=datadir", "--enable-logging", "--v=1"]
+    { _chromeArgs = Just ["--user-data-dir=datadir1", "--enable-logging", "--v=1"]
     }
   }
 
@@ -143,8 +144,13 @@ getResourcePerformanceChrome = do
   -- open the SQ trading condition page
   navigateTo "https://en.swissquote.com/forex/pricing/trading-conditions"
 
-  resPerf <- executeScript "performance.getEntriesByType('resource');" []
-  print resPerf
+  -- wait for 5 secs to make sure the page load swap and spread.
+  wait 5000000
+  resPerf <- executeScript "console.error(JSON.stringify(performance.getEntriesByType('resource')));" []
+  -- liftIO $ print resPerf
+  logLines <- fmap lines $ liftIO $ readFile "/home/chenjf/projects/datadir1/chrome_debug.log" -- you'll need to expand ~ here
+  let lines = filter ("CONSOLE" `isInfixOf`) logLines
+  liftIO $ print lines
 
   wait 5000000
 

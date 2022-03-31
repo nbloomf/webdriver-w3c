@@ -39,6 +39,7 @@ rec {
   repldemo-exe = webdriver-w3c.webdriver-w3c.components.exes.wd-repl-demo;
   tastydemo-exe = webdriver-w3c.webdriver-w3c.components.exes.wd-tasty-demo;
   parallelstresstest-exe = webdriver-w3c.webdriver-w3c.components.exes.wd-parallel-stress-test;
+  getresourceperformancedata-exe = webdriver-w3c.webdriver-w3c.components.exes.get-resource-performance-data;
   #webdriver-w3c-test = webdriver-w3c.webdriver-w3c.components.tests.webdriver-w3c-test;
 
 }
