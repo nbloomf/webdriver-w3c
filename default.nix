@@ -33,7 +33,7 @@ rec {
       };
       index-state = pkgs.haskell-nix.internalHackageIndexState;
       compiler-nix-name = haskellCompiler;
-      modules = customModules;
+      modules = [ { packages.script-monad.patches = [ ./script-monad-http-client-remove-Eq.patch ] ; } ] ++ customModules;
   });
 
   repldemo-exe = webdriver-w3c.webdriver-w3c.components.exes.wd-repl-demo;

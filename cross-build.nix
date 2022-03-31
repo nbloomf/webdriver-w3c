@@ -19,7 +19,6 @@ defaultPlatformProject.pkgs.lib.mapAttrs (_: pkgs: rec {
                                                               "--ghc-option=-optl=-L${pkgs.openssl.out}/lib"
                                                             ];
                                                           }
-                                                          { packages.script-monad.patches = [ ./script-monad-http-client-remove-Eq.patch ] ; }
                                                         ] 
                                                         else 
                                                         []);
