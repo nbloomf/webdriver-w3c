@@ -96,13 +96,12 @@ _load_page
   -> Maybe WebDriverServerState
 _load_page path st = do
   let file = fileOnly path
-  p <- if file == "success.html"
-    then return _success_page
-    else if file == "invalidElementState.html"
-      then return _invalidElementState_page
-      else if file == "about:blank"
-        then return pageAboutBlank
-        else requestPage path (_internets st)
+  p <- case file of
+    "success.html"             -> return _success_page
+    "example.com"              -> return _success_page
+    "invalidElementState.html" -> return _invalidElementState_page
+    "about:blank"              -> return pageAboutBlank
+    _                          -> requestPage path (_internets st)
   return $ st
     { _current_page = p
     , _history = (_current_page st) : _history st

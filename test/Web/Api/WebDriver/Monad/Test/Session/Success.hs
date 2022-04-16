@@ -178,6 +178,8 @@ _test_goBack_success
 _test_goBack_success =
   let
     session = do
+      () <- navigateTo "https://example.com"
+        -- chromedriver gets cranky if we try to navigate back when there is no history :)
       () <- goBack
       assertSuccess "yay"
       return ()
