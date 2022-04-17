@@ -71,7 +71,9 @@ module Web.Api.WebDriver.Types (
   , Orientation(..)
   , Scale(..)
   , Page(..)
+  , defaultPage
   , Margin(..)
+  , defaultMargin
   , PageRange(..)
   , Base64EncodedPdf(..)
   , decodeBase64EncodedPdf
@@ -83,6 +85,7 @@ module Web.Api.WebDriver.Types (
   , emptyRect
   , PromptHandler(..)
   , Cookie(..)
+  , cookie
   , emptyCookie
 
   -- * Error Responses
@@ -966,6 +969,7 @@ instance Arbitrary Action where
     <*> arbitrary
 
 -- | All members set to `Nothing` except `_actionItems`, which is the empty list.
+emptyAction :: Action
 emptyAction = Action
   { _inputSourceType = Nothing
   , _inputSourceId = Nothing

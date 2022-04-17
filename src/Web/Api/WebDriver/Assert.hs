@@ -30,6 +30,7 @@ module Web.Api.WebDriver.Assert (
   , summarize
   , summarizeAll
   , printSummary
+  , numAssertions
 
   -- * Basic Assertions
   , assertSuccessIf
