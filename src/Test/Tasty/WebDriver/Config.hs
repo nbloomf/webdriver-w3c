@@ -25,11 +25,11 @@ module Test.Tasty.WebDriver.Config (
   ) where
 
 import Data.List
-  ( unlines, isPrefixOf, isSuffixOf, nub )
+  ( isPrefixOf, nub )
 import qualified Data.Map.Strict as MS
   ( fromListWith, insert, lookup, adjust, fromList, unionWith, Map )
 import Data.Typeable
-  ( Typeable, Proxy(Proxy) )
+  ( Typeable )
 import Network.URI
   ( URI(..), URIAuth(..), parseURI )
 import Text.Read

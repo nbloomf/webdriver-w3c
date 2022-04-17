@@ -1,10 +1,8 @@
 module Main where
 
 import System.Environment (setEnv, getArgs, withArgs)
-import System.Exit (exitFailure)
 import System.Directory (getCurrentDirectory)
 import Control.Concurrent.MVar (newMVar)
-import Data.IORef
 
 import Test.Tasty
 import Test.Tasty.WebDriver

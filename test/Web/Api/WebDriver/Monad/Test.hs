@@ -3,11 +3,7 @@ module Web.Api.WebDriver.Monad.Test (
     tests
 ) where
 
-import Data.Typeable
-  ( Typeable )
-import System.IO
-
-import Test.Tasty (TestTree(), testGroup, localOption, Timeout(NoTimeout))
+import Test.Tasty (TestTree(), testGroup, localOption)
 
 import Data.MockIO
 

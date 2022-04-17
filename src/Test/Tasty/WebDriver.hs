@@ -58,24 +58,18 @@ module Test.Tasty.WebDriver (
 
 
 
-import Control.Monad.IO.Class
-  ( MonadIO, liftIO )
 import Control.Monad.Trans.Class
   ( MonadTrans(..) )
 import Control.Monad.Trans.Identity
   ( IdentityT(..) )
 import Data.Typeable
   ( Typeable, Proxy(Proxy) )
-import Data.List
-  ( unlines, lookup )
-import qualified Data.HashMap.Strict as HM
-  ( fromList )
 import System.IO
   ( Handle, stdout, stderr, stdin, openFile, IOMode(..), hClose )
 import Control.Concurrent
   ( threadDelay )
 import Control.Concurrent.MVar
-  ( MVar, newMVar, withMVar )
+  ( newMVar )
 import Control.Concurrent.STM
   
 import Control.Lens
@@ -84,14 +78,10 @@ import qualified Data.ByteString.Lazy.Char8 as BS
   ( pack )
 import qualified Data.Digest.Pure.SHA as SHA
   ( showDigest, sha1 )
-import Data.IORef
-  ( IORef, newIORef, atomicModifyIORef' )
 import Data.Maybe
   ( fromMaybe, catMaybes )
-import Data.Time.Clock.System
-  ( getSystemTime )
 import Network.HTTP.Client
-  ( defaultManagerSettings, managerResponseTimeout, ResponseTimeout(..)
+  ( defaultManagerSettings, managerResponseTimeout
   , responseTimeoutNone )
 import qualified Network.Wreq as Wreq
   ( defaults, manager )
@@ -106,10 +96,7 @@ import qualified Data.Map.Strict as MS
 import qualified Test.Tasty as T
 import qualified Test.Tasty.Providers as TT
 import qualified Test.Tasty.Options as TO
-import qualified Test.Tasty.ExpectedFailure as TE
-import qualified Test.Tasty.Ingredients.ConsoleReporter as TC
 
-import Control.Monad.Script.Http (trivialLogOptions)
 import Web.Api.WebDriver
 import Test.Tasty.WebDriver.Config
 

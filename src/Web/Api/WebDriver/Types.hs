@@ -92,8 +92,6 @@ module Web.Api.WebDriver.Types (
 import Control.Monad.IO.Class
 import qualified Data.ByteString as SB
 import qualified Data.ByteString.Base64 as B64
-import Data.Char
-  ( toLower )
 import Data.Maybe
   ( catMaybes )
 import Data.Scientific
@@ -101,7 +99,7 @@ import Data.Scientific
 import Data.String
   ( IsString(..) )
 import Data.HashMap.Strict
-  ( HashMap, toList, fromList )
+  ( HashMap, fromList )
 import Data.Aeson.Types
   ( ToJSON(..), FromJSON(..), Value(..), KeyValue
   , Pair, (.:?), (.:), (.=), object, typeMismatch )
@@ -117,7 +115,6 @@ import Text.Read
   ( readMaybe )
 
 import Web.Api.WebDriver.Uri
-import Web.Api.WebDriver.Types.Keyboard
 
 
 

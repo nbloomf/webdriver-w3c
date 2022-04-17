@@ -46,7 +46,7 @@ module Web.Api.WebDriver.Assert (
   ) where
 
 import Data.List
-  ( unwords, isInfixOf )
+  ( isInfixOf )
 import Data.String
   ( IsString, fromString )
 import Test.QuickCheck
