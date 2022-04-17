@@ -87,7 +87,7 @@ module Web.Api.WebDriver.Monad (
   , breakpointWith
 
   -- * Types
-  , Http.E(..)
+  , Http.E()
   , Http.JsonError(..)
   , WDError(..)
   , Http.R(..)
@@ -142,16 +142,10 @@ import Data.ByteString.Lazy
   ( ByteString, readFile, writeFile )
 import qualified Data.ByteString.Lazy.Char8 as LC
   ( unpack, pack )
-import Data.Functor.Identity
-  ( Identity(..) )
-import Data.IORef
-  ( IORef, newIORef, readIORef, writeIORef )
 import Data.List
   ( intercalate )
-import qualified Data.Map.Strict as M
-  ( Map, fromList )
 import Data.Text
-  ( pack, unpack, Text )
+  ( unpack, Text )
 import qualified Network.HTTP.Client as N
   ( HttpException(..), HttpExceptionContent(..) )
 import Network.Wreq
@@ -159,7 +153,7 @@ import Network.Wreq
 import System.Directory
   ( doesFileExist )
 import System.IO
-  ( Handle, hGetLine, hSetEcho, hGetEcho, hFlush, stdout, stdin )
+  ( Handle, hGetLine, hSetEcho, hGetEcho, stdout, stdin )
 import System.IO.Error
   ( eofErrorType, doesNotExistErrorType, mkIOError )
 import Test.QuickCheck

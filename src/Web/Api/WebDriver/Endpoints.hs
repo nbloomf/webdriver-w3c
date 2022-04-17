@@ -175,7 +175,7 @@ import Control.Monad.Trans.Class
 import Data.Aeson
   ( Value(..), encode, object, (.=), toJSON )
 import Data.Text
-  ( Text, unpack, pack )
+  ( Text, unpack )
 import Data.Text.Encoding
   ( encodeUtf8 )
 import qualified Data.ByteString as SB

@@ -3,8 +3,6 @@ module Web.Api.WebDriver.Monad.Test.Session.Success (
     successfulExit
   ) where
 
-import System.IO
-
 import Web.Api.WebDriver
 import Test.Tasty.WebDriver
 

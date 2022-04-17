@@ -6,8 +6,6 @@ module Web.Api.WebDriver.Types.Test (
 import Data.Proxy
 import qualified Data.Aeson as A
   ( ToJSON(..), FromJSON, fromJSON, Result(..), object, Value(..) )
-import Test.QuickCheck
-  ( quickCheck, Arbitrary(..), label, Property )
 
 import Test.Tasty (TestTree(), testGroup)
 import Test.Tasty.QuickCheck as QC (testProperty)

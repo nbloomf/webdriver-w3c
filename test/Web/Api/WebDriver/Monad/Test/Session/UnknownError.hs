@@ -3,7 +3,6 @@ module Web.Api.WebDriver.Monad.Test.Session.UnknownError (
     unknownErrorExit
   ) where
 
-import Data.Typeable (Typeable)
 import System.IO
 
 import Web.Api.WebDriver
