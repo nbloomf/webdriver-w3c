@@ -13,6 +13,7 @@ Unreleased
   * `chromeOptions` renamed to `goog:chromeOptions` in `ToJSON` `FromJSON` instances for `Capability` for compatibility with chromedriver versions >=75; see https://chromedriver.storage.googleapis.com/75.0.3770.8/notes.txt. Fixes issue #21.
 * Fixed
   * Bug in behavior of `switchToFrame` when using `FrameContainingElement`
+  * Default value of wd-private-mode tasty flag changed to `False`
 
 
 
