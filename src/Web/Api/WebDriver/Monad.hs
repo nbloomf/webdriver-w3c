@@ -196,6 +196,11 @@ instance
   (WDT x) >>= f = WDT (x >>= (unWDT . f))
 
 instance
+  (Monad eff, Monad (t eff), MonadTrans t)
+    => MonadFail (WebDriverTT t eff) where
+  fail msg = throwError $ MonadFailureError msg
+
+instance
   (MonadIO eff, MonadIO (t eff), MonadTrans t)
     => MonadIO (WebDriverTT t eff) where
   liftIO = WDT . Http.liftHttpTT . liftIO
@@ -559,6 +564,7 @@ data WDError
   | UnexpectedValue String
   | UnexpectedResult Outcome String
   | BreakpointHaltError
+  | MonadFailureError String
   deriving Show
 
 -- | Read-only environment variables specific to WebDriver.
@@ -725,6 +731,7 @@ printWDError _ e = case e of
     IsSuccess -> "Unexpected success: " ++ msg
     IsFailure -> "Unexpected failure: " ++ msg
   BreakpointHaltError -> "Breakpoint Halt"
+  MonadFailureError msg -> "MonadFail: " ++ msg
 
 putStrLn
   :: (Monad eff, Monad (t eff), MonadTrans t)
