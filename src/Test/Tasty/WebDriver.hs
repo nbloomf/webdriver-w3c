@@ -206,7 +206,6 @@ instance
       BrowserPath browserPath = TO.lookupOption opts
       RemoteEndRef remotes = TO.lookupOption opts
       NumRetries numRetries = TO.lookupOption opts
-      LogPrinterLock (Just logLock) = TO.lookupOption opts
       LogColors logColors = TO.lookupOption opts
       GeckodriverLog geckoLogLevel = TO.lookupOption opts
       PrivateMode privateMode = TO.lookupOption opts
@@ -255,6 +254,8 @@ instance
       Nothing -> do
         putStrLn "Error: no remote ends specified."
         exitFailure
+
+    logLock <- newMVar ()
 
     let
       attempt :: Int -> IO TT.Result
@@ -575,18 +576,6 @@ instance TO.IsOption LogHandle where
 
 
 
-newtype LogPrinterLock = LogPrinterLock
-  { theLogPrinterLock :: Maybe (MVar ())
-  } deriving Typeable
-
-instance TO.IsOption LogPrinterLock where
-  defaultValue = LogPrinterLock Nothing
-  parseValue = error "LogPrinterLock is an internal option."
-  optionName = error "LogPrinterLock is an internal option."
-  optionHelp = error "LogPrinterLock is an internal option."
-
-
-
 -- | Log Noise Level.
 data LogNoiseLevel
   = NoisyLog
@@ -763,7 +752,6 @@ unlessHeadless f tree = T.askOption checkHeadless
 -- | Run a tree of WebDriverT tests. Thin wrapper around tasty's @defaultMain@ that attempts to determine the deployment tier and interprets remote end config command line options.
 defaultWebDriverMain :: TT.TestTree -> IO ()
 defaultWebDriverMain tree = do
-  logLock <- newMVar ()
   pool <- getRemoteEndRef
 
   -- Determine the deployment tier
@@ -791,7 +779,6 @@ defaultWebDriverMain tree = do
   T.defaultMain
     . T.localOption (Deployment deploy)
     . T.localOption (RemoteEndRef $ Just pool)
-    . T.localOption (LogPrinterLock $ Just logLock)
     . T.localOption (LogHandle logHandle)
     . T.localOption (LogColors colors)
     . T.localOption (ConsoleOutHandle coutHandle)
