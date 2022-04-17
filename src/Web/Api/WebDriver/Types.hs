@@ -755,7 +755,7 @@ instance FromJSON HostAndOptionalPort where
           { _urlHost = h
           , _urlPort = Nothing
           }
-      (str,":") -> malformedValue "Port" string
+      (_,":") -> malformedValue "Port" string
       (str,':':rest) -> case mkHost str of
         Nothing -> malformedValue "Host" string
         Just h -> case mkPort rest of
@@ -764,7 +764,7 @@ instance FromJSON HostAndOptionalPort where
             { _urlHost = h
             , _urlPort = Just p
             }
-      (str,rest) -> malformedValue "Host" string
+      (_,_) -> malformedValue "Host" string
   parseJSON invalid = typeMismatch "HostAndOptionalPort" invalid
 
 instance ToJSON HostAndOptionalPort where

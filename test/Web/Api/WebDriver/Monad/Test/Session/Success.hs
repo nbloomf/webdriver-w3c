@@ -98,7 +98,7 @@ _test_sessionStatus_success page =
   let
     session = do
       navigateTo page
-      (!r,!m) <- sessionStatus
+      _ <- sessionStatus
       assertSuccess "yay"
       return ()
 
@@ -111,7 +111,7 @@ _test_getTimeouts_success
 _test_getTimeouts_success =
   let
     session = do
-      !timeouts <- getTimeouts
+      _ <- getTimeouts
       assertSuccess "yay"
       return ()
 
@@ -124,7 +124,7 @@ _test_setTimeouts_success
 _test_setTimeouts_success =
   let
     session = do
-      () <- setTimeouts emptyTimeoutConfig
+      _ <- setTimeouts emptyTimeoutConfig
       assertSuccess "yay"
       return ()
 
@@ -137,7 +137,7 @@ _test_navigateTo_success
 _test_navigateTo_success page =
   let
     session = do
-      () <- navigateTo page
+      _ <- navigateTo page
       assertSuccess "yay"
       return ()
 
@@ -150,7 +150,7 @@ _test_navigateToStealth_success
 _test_navigateToStealth_success page =
   let
     session = do
-      () <- navigateToStealth page
+      _ <- navigateToStealth page
       assertSuccess "yay"
       return ()
 
@@ -163,7 +163,7 @@ _test_getCurrentUrl_success
 _test_getCurrentUrl_success =
   let
     session = do
-      !url <- getCurrentUrl
+      _ <- getCurrentUrl
       assertSuccess "yay"
       return ()
 
@@ -176,9 +176,9 @@ _test_goBack_success
 _test_goBack_success =
   let
     session = do
-      () <- navigateTo "https://example.com"
+      _ <- navigateTo "https://example.com"
         -- chromedriver gets cranky if we try to navigate back when there is no history :)
-      () <- goBack
+      _ <- goBack
       assertSuccess "yay"
       return ()
 
@@ -191,7 +191,7 @@ _test_goForward_success
 _test_goForward_success =
   let
     session = do
-      () <- goForward
+      _ <- goForward
       assertSuccess "yay"
       return ()
 
@@ -204,7 +204,7 @@ _test_pageRefresh_success
 _test_pageRefresh_success =
   let
     session = do
-      () <- pageRefresh
+      _ <- pageRefresh
       assertSuccess "yay"
       return ()
 
@@ -217,7 +217,7 @@ _test_getTitle_success
 _test_getTitle_success =
   let
     session = do
-      !title <- getTitle
+      _ <- getTitle
       assertSuccess "yay"
       return ()
 
@@ -230,7 +230,7 @@ _test_getWindowHandle_success
 _test_getWindowHandle_success =
   let
     session = do
-      !handle <- getWindowHandle
+      _ <- getWindowHandle
       assertSuccess "yay"
       return ()
 
@@ -251,7 +251,7 @@ _test_switchToWindow_success =
       case hs of
         [] -> assertFailure "no window handles"
         (!h):_ -> do
-          () <- switchToWindow h
+          _ <- switchToWindow h
           assertSuccess "yay"
           return ()
 
@@ -270,7 +270,7 @@ _test_getWindowHandles_success page =
         [] -> do
           assertSuccess "yay"
           return ()
-        (!x):xs -> do
+        _:_ -> do
           assertSuccess "yay"
           return ()
 
@@ -301,7 +301,7 @@ _test_switchToFrame_success page =
   let
     session = do
       navigateTo page
-      () <- switchToFrame TopLevelFrame
+      _ <- switchToFrame TopLevelFrame
       assertSuccess "yay"
       return ()
 
@@ -328,7 +328,7 @@ _test_getWindowRect_success
 _test_getWindowRect_success =
   let
     session = do
-      !rect <- getWindowRect
+      _ <- getWindowRect
       assertSuccess "yay"
       return ()
 
@@ -341,7 +341,7 @@ _test_setWindowRect_success
 _test_setWindowRect_success =
   let
     session = do
-      !rect <- setWindowRect $ Rect
+      _ <- setWindowRect $ Rect
         { _rectX = 0
         , _rectY = 0
         , _rectWidth = 640
@@ -359,7 +359,7 @@ _test_maximizeWindow_success
 _test_maximizeWindow_success =
   let
     session = do
-      !rect <- maximizeWindow
+      _ <- maximizeWindow
       assertSuccess "yay"
       return ()
 
@@ -372,7 +372,7 @@ _test_minimizeWindow_success
 _test_minimizeWindow_success =
   let
     session = do
-      !rect <- minimizeWindow
+      _ <- minimizeWindow
       assertSuccess "yay"
       return ()
 
@@ -385,7 +385,7 @@ _test_fullscreenWindow_success
 _test_fullscreenWindow_success =
   let
     session = do
-      !rect <- fullscreenWindow
+      _ <- fullscreenWindow
       assertSuccess "yay"
       return ()
 
@@ -399,11 +399,11 @@ _test_findElement_success page =
   let
     session = do
       navigateTo page
-      !element <- findElement CssSelector "body"
-      !element <- findElement LinkTextSelector "A Link"
-      !element <- findElement PartialLinkTextSelector "Link"
-      !element <- findElement TagName "body"
-      !element <- findElement XPathSelector "*"
+      _ <- findElement CssSelector "body"
+      _ <- findElement LinkTextSelector "A Link"
+      _ <- findElement PartialLinkTextSelector "Link"
+      _ <- findElement TagName "body"
+      _ <- findElement XPathSelector "*"
       assertSuccess "yay"
       return ()
 
@@ -451,11 +451,11 @@ _test_findElementFromElement_success page =
     session = do
       navigateTo page
       root <- findElement CssSelector "body"
-      !element <- findElementFromElement CssSelector "p" root
-      !element <- findElementFromElement LinkTextSelector "A Link" root
-      !element <- findElementFromElement PartialLinkTextSelector "Link" root
-      !element <- findElementFromElement TagName "p" root
-      !element <- findElementFromElement XPathSelector "*" root
+      _ <- findElementFromElement CssSelector "p" root
+      _ <- findElementFromElement LinkTextSelector "A Link" root
+      _ <- findElementFromElement PartialLinkTextSelector "Link" root
+      _ <- findElementFromElement TagName "p" root
+      _ <- findElementFromElement XPathSelector "*" root
       assertSuccess "yay"
       return ()
 
@@ -502,7 +502,7 @@ _test_getActiveElement_success
 _test_getActiveElement_success =
   let
     session = do
-      !element <- getActiveElement
+      _ <- getActiveElement
       assertSuccess "yay"
       return ()
 
@@ -517,7 +517,7 @@ _test_isElementSelected_success page =
     session = do
       navigateTo page
       !element <- getActiveElement
-      !p <- isElementSelected element
+      _ <- isElementSelected element
       assertSuccess "yay"
       return ()
 
@@ -532,7 +532,7 @@ _test_getElementAttribute_success page =
     session = do
       navigateTo page
       !element <- getActiveElement
-      !attr <- getElementAttribute "href" element
+      _ <- getElementAttribute "href" element
       assertSuccess "yay"
       return ()
 
@@ -573,7 +573,7 @@ _test_getElementText_success page =
     session = do
       navigateTo page
       !element <- getActiveElement
-      !text <- getElementText element
+      _ <- getElementText element
       assertSuccess "yay"
       return ()
 
@@ -605,7 +605,7 @@ _test_getElementRect_success page =
     session = do
       navigateTo page
       !element <- getActiveElement
-      !rect <- getElementRect element
+      _ <- getElementRect element
       assertSuccess "yay"
       return ()
 
@@ -620,7 +620,7 @@ _test_isElementEnabled_success page =
     session = do
       navigateTo page
       !element <- getActiveElement
-      !p <- isElementEnabled element
+      _ <- isElementEnabled element
       assertSuccess "yay"
       return ()
 
@@ -635,7 +635,7 @@ _test_getComputedRole_success page =
     session = do
       navigateTo page
       !element <- getActiveElement
-      !role <- getComputedRole element
+      _ <- getComputedRole element
       assertSuccess "yay"
       return ()
 
@@ -650,7 +650,7 @@ _test_getComputedLabel_success page =
     session = do
       navigateTo page
       !element <- getActiveElement
-      !role <- getComputedLabel element
+      _ <- getComputedLabel element
       assertSuccess "yay"
       return ()
 
@@ -665,7 +665,7 @@ _test_elementClick_success page =
     session = do
       navigateTo page
       !root <- findElement CssSelector "body"
-      () <- elementClick root
+      _ <- elementClick root
       assertSuccess "yay"
       return ()
 
@@ -680,7 +680,7 @@ _test_elementClear_success page =
     session = do
       navigateTo page
       !element <- findElement CssSelector "input[name='sometext']"
-      () <- elementClear element
+      _ <- elementClear element
       assertSuccess "yay"
       return ()
 
@@ -695,7 +695,7 @@ _test_elementSendKeys_success page =
     session = do
       navigateTo page
       !element <- findElement CssSelector "input[name='sometext']"
-      () <- elementSendKeys "foo" element
+      _ <- elementSendKeys "foo" element
       assertSuccess "yay"
       return ()
 
@@ -709,7 +709,7 @@ _test_getPageSource_success page =
   let
     session = do
       navigateTo page
-      !src <- getPageSource
+      _ <- getPageSource
       assertSuccess "yay"
       return ()
 
@@ -723,7 +723,7 @@ _test_getPageSourceStealth_success page =
   let
     session = do
       navigateTo page
-      !src <- getPageSourceStealth
+      _ <- getPageSourceStealth
       assertSuccess "yay"
       return ()
 
@@ -748,7 +748,7 @@ _test_getAllCookies_success page =
       !jar <- getAllCookies
       case jar of
         [] -> assertSuccess "yay"
-        (!x):_ -> assertFailure "unexpected cookie"
+        _:_ -> assertFailure "unexpected cookie"
       return ()
 
   in  catchError session unexpectedError
@@ -972,7 +972,7 @@ _test_takeScreenshot_success page =
   let
     session = do
       navigateTo page
-      !screenshot <- takeScreenshot
+      _ <- takeScreenshot
       assertSuccess "yay"
       return ()
 
@@ -987,7 +987,7 @@ _test_takeElementScreenshot_success page =
     session = do
       navigateTo page
       !element <- findElement CssSelector "body"
-      !screenshot <- takeElementScreenshot element
+      _ <- takeElementScreenshot element
       assertSuccess "yay"
       return ()
 
@@ -1001,7 +1001,7 @@ _test_printPage_success page =
   let
     session = do
       navigateTo page
-      !screenshot <- printPage defaultPrintOptions
+      _ <- printPage defaultPrintOptions
       assertSuccess "yay"
       return ()
 

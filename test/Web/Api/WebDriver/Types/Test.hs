@@ -158,9 +158,9 @@ prop_fromJson_parse_error
   => Proxy a -> A.Value -> IO ()
 prop_fromJson_parse_error x str =
   case A.fromJSON str of
-    A.Error !err -> return ()
+    A.Error !_ -> return ()
     A.Success !y -> do
-      let z = asProxyTypeOf y x
+      let _ = asProxyTypeOf y x
       assertFailure $ "Expected parse failure!"
 
 test_fromJson_parse_error :: TestTree
