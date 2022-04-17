@@ -37,7 +37,7 @@ _test_navigateTo_unknown_error =
   let
     session = do
       navigateTo "https://fake.example"
-      throwError $ UnexpectedResult IsSuccess "Expecting 'unknown error'"
+      _ <- throwError $ UnexpectedResult IsSuccess "Expecting 'unknown error'"
       return ()
 
   in catchError session unknownError

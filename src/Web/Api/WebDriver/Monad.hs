@@ -462,7 +462,7 @@ parseJson = WDT . Http.parseJson
 lookupKeyJson
   :: (Monad eff, Monad (t eff), MonadTrans t)
   => Text -> Value -> WebDriverTT t eff Value
-lookupKeyJson key = WDT . Http.lookupKeyJson key
+lookupKeyJson k = WDT . Http.lookupKeyJson k
 
 -- | May throw a `JsonError`.
 constructFromJson
@@ -702,9 +702,9 @@ promoteHttpResponseError e = case e of
 
 -- | For pretty printing.
 printWDError :: Bool -> WDError -> String
-printWDError json e = case e of
+printWDError _ e = case e of
   NoSession -> "No session in progress"
-  ResponseError code msg trace obj status ->
+  ResponseError _ msg trace obj status ->
     let
       code = status ^. statusCode
       smsg = status ^. statusMessage
@@ -718,7 +718,7 @@ printWDError json e = case e of
         ]
   UnableToConnect -> "Unable to connect to WebDriver server"
   RemoteEndTimeout -> "Remote End Timeout"
-  UnhandledHttpException e -> "Unhandled HTTP Exception: " ++ show e
+  UnhandledHttpException ex -> "Unhandled HTTP Exception: " ++ show ex
   ImageDecodeError msg -> "Image decode: " ++ msg
   UnexpectedValue msg -> "Unexpected value: " ++ msg
   UnexpectedResult r msg -> case r of
@@ -847,7 +847,7 @@ breakpointWith msg act = do
       let
         (actionDescription, action) = case act of
           Nothing -> (Nothing, return ())
-          Just (title, action) -> (Just title, action)
+          Just (title, action') -> (Just title, action')
       breakpointMessage msg actionDescription
       command <- getStrLn
       case parseBreakpointAction command of

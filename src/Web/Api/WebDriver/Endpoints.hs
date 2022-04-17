@@ -1058,9 +1058,9 @@ addCookie
   :: (Monad eff, Monad (t eff), MonadTrans t)
   => Cookie
   -> WebDriverTT t eff ()
-addCookie cookie = do
+addCookie c = do
   (baseUrl, format) <- theRequestContext
-  let !payload = encode $ object [ "cookie" .= cookie ]
+  let !payload = encode $ object [ "cookie" .= c ]
   httpSilentPost (baseUrl ++ "/cookie") payload
     >>= (return . _responseBody)
     >>= parseJson
