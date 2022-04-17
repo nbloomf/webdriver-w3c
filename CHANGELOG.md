@@ -5,7 +5,7 @@ Unreleased
 ----------
 
 * Added
-  * `MonadIO` instance for `WebDriverTT t eff`
+  * `MonadIO` and `MonadFail` instances for `WebDriverTT t eff`
   * New endpoints: `newWindow`, `getComputedRole`, `getComputedLabel`, `printPage`
 * Changed
   * Bump stack resolver to lts-16.0
