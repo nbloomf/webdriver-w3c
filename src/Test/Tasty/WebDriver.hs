@@ -490,7 +490,7 @@ newtype PrivateMode
   deriving Typeable
 
 instance TO.IsOption PrivateMode where
-  defaultValue = PrivateMode True
+  defaultValue = PrivateMode False
   parseValue = fmap PrivateMode . TO.safeReadBool
   optionName = return _OPT_PRIVATE_MODE
   optionHelp = return "run in private mode: (false), true"
