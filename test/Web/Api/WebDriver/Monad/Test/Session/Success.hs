@@ -417,26 +417,26 @@ _test_findElements_success page =
   let
     session = do
       navigateTo page
-      !elements <- findElements CssSelector "body"
-      case elements of
+      !e0 <- findElements CssSelector "body"
+      case e0 of
         [] -> return ()
-        (!x):xs -> return ()
-      !elements <- findElements LinkTextSelector "Standards"
-      case elements of
+        _:_ -> return ()
+      !e1 <- findElements LinkTextSelector "Standards"
+      case e1 of
         [] -> return ()
-        (!x):xs -> return ()
-      !elements <- findElements PartialLinkTextSelector "Standards"
-      case elements of
+        _:_ -> return ()
+      !e2 <- findElements PartialLinkTextSelector "Standards"
+      case e2 of
         [] -> return ()
-        (!x):xs -> return ()
-      !elements <- findElements TagName "body"
-      case elements of
+        _:_ -> return ()
+      !e3 <- findElements TagName "body"
+      case e3 of
         [] -> return ()
-        (!x):xs -> return ()
-      !elements <- findElements XPathSelector "*"
-      case elements of
+        _:_ -> return ()
+      !e4 <- findElements XPathSelector "*"
+      case e4 of
         [] -> return ()
-        (!x):xs -> return ()
+        _:_ -> return ()
       assertSuccess "yay"
       return ()
 
@@ -470,26 +470,26 @@ _test_findElementsFromElement_success page =
     session = do
       navigateTo page
       root <- findElement CssSelector "body"
-      !elements <- findElementsFromElement CssSelector "p" root
-      case elements of
+      !e0 <- findElementsFromElement CssSelector "p" root
+      case e0 of
         [] -> return ()
-        (!x):xs -> return ()
-      !elements <- findElementsFromElement LinkTextSelector "Standards" root
-      case elements of
+        _:_ -> return ()
+      !e1 <- findElementsFromElement LinkTextSelector "Standards" root
+      case e1 of
         [] -> return ()
-        (!x):xs -> return ()
-      !elements <- findElementsFromElement PartialLinkTextSelector "Standards" root
-      case elements of
+        _:_ -> return ()
+      !e2 <- findElementsFromElement PartialLinkTextSelector "Standards" root
+      case e2 of
         [] -> return ()
-        (!x):xs -> return ()
-      !elements <- findElementsFromElement TagName "p" root
-      case elements of
+        _:_ -> return ()
+      !e3 <- findElementsFromElement TagName "p" root
+      case e3 of
         [] -> return ()
-        (!x):xs -> return ()
-      !elements <- findElementsFromElement XPathSelector "*" root
-      case elements of
+        _:_ -> return ()
+      !e4 <- findElementsFromElement XPathSelector "*" root
+      case e4 of
         [] -> return ()
-        (!x):xs -> return ()
+        _:_ -> return ()
       assertSuccess "yay"
       return ()
 
@@ -762,9 +762,9 @@ _test_getNamedCookie_success page =
     session = do
       navigateTo page
       findElement CssSelector "button#add-cookie-button" >>= elementClick
-      !cookie <- getNamedCookie "fakeCookie"
-      assertEqual (_cookieName cookie) (Just "fakeCookie") "cookie name"
-      assertEqual (_cookieValue cookie) (Just "fakeValue") "cookie name"
+      !c <- getNamedCookie "fakeCookie"
+      assertEqual (_cookieName c) (Just "fakeCookie") "cookie name"
+      assertEqual (_cookieValue c) (Just "fakeValue") "cookie name"
       return ()
 
   in  catchError session unexpectedError
@@ -928,20 +928,20 @@ _test_getAlertText_success page =
     session = do
       navigateTo page
       findElement CssSelector "button#alert-button" >>= elementClick
-      !box <- getAlertText
-      case box of
+      !box0 <- getAlertText
+      case box0 of
         Nothing -> assertFailure "oh no alert"
         Just msg -> assertEqual msg "WOO!!" "alert text"
       acceptAlert
       findElement CssSelector "button#confirm-button" >>= elementClick
-      !box <- getAlertText
-      case box of
+      !box1 <- getAlertText
+      case box1 of
         Nothing -> assertFailure "oh no confirm"
         Just msg -> assertEqual msg "WOO!!" "confirm text"
       acceptAlert
       findElement CssSelector "button#prompt-button" >>= elementClick
-      !box <- getAlertText
-      case box of
+      !box2 <- getAlertText
+      case box2 of
         Nothing -> assertFailure "oh no prompt"
         Just msg -> assertEqual msg "WOO!!" "prompt text"
       acceptAlert

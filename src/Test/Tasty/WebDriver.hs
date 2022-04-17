@@ -387,8 +387,8 @@ testCaseWithSetup name =
 testCaseWithSetupM
   :: (Monad eff, Typeable eff)
   => TT.TestName
-  -> (forall u. P WDAct u -> eff u) -- ^ Evaluator
-  -> (forall u. eff u -> IO u) -- ^ Conversion to `IO`
+  -> (forall a. P WDAct a -> eff a) -- ^ Evaluator
+  -> (forall a. eff a -> IO a) -- ^ Conversion to `IO`
   -> WebDriverT eff u -- ^ Setup
   -> (v -> WebDriverT eff ()) -- ^ Teardown
   -> (u -> WebDriverT eff v) -- ^ The test
