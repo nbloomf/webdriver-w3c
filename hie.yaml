@@ -1,0 +1,10 @@
+cradle:
+  cabal:
+    - path: "./src"
+      component: "lib:webdriver-w3c"
+
+    - path: "./app"
+      component: "webdriver-w3c:exe:webdriver-w3c"
+
+    - path: "./test"
+      component: "webdriver-w3c:test:webdriver-w3c-test"

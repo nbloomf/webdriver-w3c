@@ -106,6 +106,8 @@ import Data.HashMap.Strict
 import Data.Aeson.Types
   ( ToJSON(..), FromJSON(..), Value(..), KeyValue
   , Pair, (.:?), (.:), (.=), object, typeMismatch )
+import Data.Aeson.Key
+  ( fromText )
 import Data.Text
   ( Text, pack, unpack )
 import Data.Text.Encoding
@@ -135,10 +137,10 @@ object_ :: [Maybe Pair] -> Value
 object_ = object . filter (\(_, v) -> v /= Null) . catMaybes
 
 (.==) :: (ToJSON v, KeyValue kv) => Text -> v -> Maybe kv
-(.==) key value = Just (key .= value)
+(.==) key value = Just $ (fromText key) .= value
 
 (.=?) :: (ToJSON v, KeyValue kv) => Text -> Maybe v -> Maybe kv
-(.=?) key = fmap (key .=)
+(.=?) key = fmap ((fromText key) .=)
 
 
 

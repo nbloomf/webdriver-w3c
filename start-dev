@@ -1,0 +1,1 @@
+nix-shell --run "[[ -f ~/.doom.d/config.el ]] && sed -i '/enable-local-variables/d' ~/.doom.d/config.el && echo '(setq-default enable-local-variables t)' >> ~/.doom.d/config.el ; [[ -x ~/.emacs.d/bin/doom ]] && ~/.emacs.d/bin/doom env ; emacs -nw"
