@@ -247,7 +247,7 @@ assertionTestCases config cond = TT.testGroup "Assertions"
       (== summarize
         [success
           (AssertionStatement $
-            "\"" <> str1 <> "\" is a substring of \"" <> str2 <> str1 <> str2 <> "\"")
+            T.pack (show str1) <> " is a substring of " <> T.pack (show $ str2 <> str1 <> str2))
           (AssertionComment str1)
         ]
       ) $
@@ -263,7 +263,7 @@ assertionTestCases config cond = TT.testGroup "Assertions"
       (== summarize
         [failure
           (AssertionStatement $
-            "\"" <> (T.cons c str1) <> "\" is a substring of \"" <> str3 <> "\"")
+            T.pack (show $ T.cons c str1) <> " is a substring of " <> T.pack (show str3))
           (AssertionComment str1)
         ]
       ) $
@@ -279,7 +279,7 @@ assertionTestCases config cond = TT.testGroup "Assertions"
       (== summarize
         [success
           (AssertionStatement $
-            "\"" <> (T.cons c str1) <> "\" is not a substring of \"" <> str3 <> "\"")
+            T.pack (show $ T.cons c str1) <> " is not a substring of " <> T.pack (show str3))
           (AssertionComment str1)
         ]
       ) $
@@ -294,7 +294,7 @@ assertionTestCases config cond = TT.testGroup "Assertions"
       (== summarize
         [failure
           (AssertionStatement $
-            "\"" <> str1 <> "\" is not a substring of \"" <> str2 <> str1 <> str2 <> "\"")
+            T.pack (show str1) <> " is not a substring of " <> T.pack (show $ str2 <> str1 <> str2))
           (AssertionComment str1)
         ]
       ) $
@@ -309,7 +309,7 @@ assertionTestCases config cond = TT.testGroup "Assertions"
       (== summarize
         [success
           (AssertionStatement $
-            "\"" <> str1 <> "\" is a substring of " <> name)
+            T.pack (show str1) <> " is a substring of " <> name)
           (AssertionComment str1)
         ]
       ) $
@@ -325,7 +325,7 @@ assertionTestCases config cond = TT.testGroup "Assertions"
       (== summarize
         [failure
           (AssertionStatement $
-            "\"" <> (T.cons c str1) <> "\" is a substring of " <> name)
+            T.pack (show $ T.cons c str1) <> " is a substring of " <> name)
           (AssertionComment str1)
         ]
       ) $
@@ -341,7 +341,7 @@ assertionTestCases config cond = TT.testGroup "Assertions"
       (== summarize
         [success
           (AssertionStatement $
-            "\"" <> (T.cons c str1) <> "\" is not a substring of " <> name)
+            T.pack (show $ T.cons c str1) <> " is not a substring of " <> name)
           (AssertionComment str1)
         ]
       ) $
@@ -355,7 +355,8 @@ assertionTestCases config cond = TT.testGroup "Assertions"
     checkWebDriverT config cond
       (== summarize
         [failure
-          (AssertionStatement $ "\"" <> str1 <> "\" is not a substring of " <> name)
+          (AssertionStatement $
+            T.pack (show str1) <> " is not a substring of " <> name)
           (AssertionComment str1)
         ]
       ) $
