@@ -139,13 +139,16 @@ import Data.Aeson.Lens
 import qualified Data.ByteString.Char8 as SC
   ( unpack )
 import Data.ByteString.Lazy
-  ( ByteString, readFile, writeFile )
+  ( ByteString, readFile, writeFile, toStrict, fromStrict )
 import qualified Data.ByteString.Lazy.Char8 as LC
   ( unpack, pack )
 import Data.List
   ( intercalate )
 import Data.Text
   ( unpack, Text )
+import qualified Data.Text as T
+import qualified Data.Text.IO as T
+import qualified Data.Text.Encoding as T
 import qualified Network.HTTP.Client as N
   ( HttpException(..), HttpExceptionContent(..) )
 import Network.Wreq
@@ -282,7 +285,7 @@ debugWebDriverTT
   :: (Monad eff, Monad (t eff), MonadTrans t)
   => WebDriverConfig eff
   -> WebDriverTT t eff a
-  -> t eff (Either String a, AssertionSummary)
+  -> t eff (Either Text a, AssertionSummary)
 debugWebDriverTT config session = do
   (result, _, w) <- execWebDriverTT config session
   let output = case result of
@@ -327,7 +330,7 @@ debugWebDriverT
   :: (Monad eff)
   => WebDriverConfig eff
   -> WebDriverT eff a
-  -> eff (Either String a, AssertionSummary)
+  -> eff (Either Text a, AssertionSummary)
 debugWebDriverT config session = do
   (result, _, w) <- execWebDriverT config session
   let output = case result of
@@ -378,7 +381,7 @@ logNotice = WDT . Http.logNotice
 -- | Write a comment to the log.
 comment
   :: (Monad eff, Monad (t eff), MonadTrans t)
-  => String -> WebDriverTT t eff ()
+  => Text -> WebDriverTT t eff ()
 comment = WDT . Http.comment
 
 -- | Suspend the current session. Handy when waiting for pages to load.
@@ -509,13 +512,13 @@ httpSilentDelete = WDT . Http.httpSilentDelete
 -- | Capures `IOException`s.
 hPutStrLn
   :: (Monad eff, Monad (t eff), MonadTrans t)
-  => Handle -> String -> WebDriverTT t eff ()
+  => Handle -> Text -> WebDriverTT t eff ()
 hPutStrLn h = WDT . Http.hPutStrLn h
 
 -- | Capures `IOException`s.
 hPutStrLnBlocking
   :: (Monad eff, Monad (t eff), MonadTrans t)
-  => MVar () -> Handle -> String -> WebDriverTT t eff ()
+  => MVar () -> Handle -> Text -> WebDriverTT t eff ()
 hPutStrLnBlocking lock h = WDT . Http.hPutStrLnBlocking lock h
 
 promptWDAct
@@ -550,27 +553,27 @@ data WDError
   = NoSession
 
   -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#handling-errors>
-  | ResponseError ResponseErrorCode String String (Maybe Value) Status
+  | ResponseError ResponseErrorCode Text Text (Maybe Value) Status
 
   | UnableToConnect
   | RemoteEndTimeout
   | UnhandledHttpException N.HttpException
-  | ImageDecodeError String
-  | UnexpectedValue String
-  | UnexpectedResult Outcome String
+  | ImageDecodeError Text
+  | UnexpectedValue Text
+  | UnexpectedResult Outcome Text
   | BreakpointHaltError
   deriving Show
 
 -- | Read-only environment variables specific to WebDriver.
 data WDEnv = WDEnv
   { -- | Hostname of the remote WebDriver server
-    _remoteHostname :: String
+    _remoteHostname :: Text
 
     -- | Port of the remote WebDriver server
   , _remotePort :: Int
 
     -- | Extra path for the remote WebDriver server
-  , _remotePath :: String
+  , _remotePath :: Text
 
     -- | Path where secret data is stored
   , _dataPath :: FilePath
@@ -603,7 +606,7 @@ data BreakpointSetting
 
 -- | Includes a @Maybe String@ representing the current session ID, if one has been opened.
 data WDState = WDState
-  { _sessionId :: Maybe String
+  { _sessionId :: Maybe Text
   , _breakpoints :: BreakpointSetting
   } deriving Show
 
@@ -629,13 +632,13 @@ breakpointsOff = modifyState $ \st -> st
 data WDLog
   = LogAssertion Assertion
   | LogSession SessionVerb
-  | LogUnexpectedResult Outcome String
-  | LogBreakpoint String
+  | LogUnexpectedResult Outcome Text
+  | LogBreakpoint Text
   deriving Show
 
 -- | Pretty printer for log entries.
-printWDLog :: Bool -> WDLog -> String
-printWDLog _ w = show w
+printWDLog :: Bool -> WDLog -> Text
+printWDLog _ w = T.pack $ show w
 
 -- | Type representing an abstract outcome. Do with it what you will.
 data Outcome = IsSuccess | IsFailure
@@ -652,8 +655,8 @@ data WDAct a where
   WriteFilePath :: FilePath -> ByteString -> WDAct (Either IOException ())
   FileExists :: FilePath -> WDAct (Either IOException Bool)
 
-  HGetLine :: Handle -> WDAct (Either IOException String)
-  HGetLineNoEcho :: Handle -> WDAct (Either IOException String)
+  HGetLine :: Handle -> WDAct (Either IOException Text)
+  HGetLineNoEcho :: Handle -> WDAct (Either IOException Text)
 
 
 
@@ -666,19 +669,19 @@ expect
 expect x y = if x == y
   then return y
   else throwError $ UnexpectedValue $
-    "expected " ++ show x ++ " but got " ++ show y
+    "expected " <> T.pack (show x) <> " but got " <> T.pack (show y)
 
 -- | For validating responses. Throws an `UnexpectedValue` error if the `a` argument does not satisfy the predicate.
 expectIs
   :: (Monad eff, Monad (t eff), MonadTrans t, Show a)
   => (a -> Bool)
-  -> String -- ^ Human readable error label
+  -> Text -- ^ Human readable error label
   -> a
   -> WebDriverTT t eff a
 expectIs p label x = if p x
   then return x
   else throwError $ UnexpectedValue $
-    "expected " ++ label ++ " but got " ++ show x
+    "expected " <> label <> " but got " <> T.pack (show x)
 
 -- | Promote semantic HTTP exceptions to typed errors.
 promoteHttpResponseError :: N.HttpException -> Maybe WDError
@@ -688,8 +691,8 @@ promoteHttpResponseError e = case e of
     code <- case fromJSON err of
       Success m -> return m
       _ -> Nothing
-    msg <- fmap unpack (r ^? key "value" . key "message" . _String)
-    str <- fmap unpack (r ^? key "value" . key "stacktrace" . _String)
+    msg <- r ^? key "value" . key "message" . _String
+    str <- r ^? key "value" . key "stacktrace" . _String
     let obj = r ^? key "value" . key "data" . _Value
     status <- s ^? responseStatus
     return $ ResponseError code msg str obj status
@@ -701,7 +704,7 @@ promoteHttpResponseError e = case e of
   _ -> Just $ UnhandledHttpException e
 
 -- | For pretty printing.
-printWDError :: Bool -> WDError -> String
+printWDError :: Bool -> WDError -> Text
 printWDError _ e = case e of
   NoSession -> "No session in progress"
   ResponseError _ msg trace obj status ->
@@ -709,8 +712,8 @@ printWDError _ e = case e of
       code = status ^. statusCode
       smsg = status ^. statusMessage
     in
-      (("Response: " ++ show code ++ " " ++ SC.unpack smsg ++ "\n") ++) $
-      LC.unpack $ encodePretty $ object
+      (("Response: " <> T.pack (show code) <> " " <> T.decodeUtf8 smsg <> "\n") <>) $
+      T.decodeUtf8 $ toStrict $ encodePretty $ object
         [ "error" .= toJSON code
         , "message" .= toJSON msg
         , "stacktrace" .= toJSON trace
@@ -718,24 +721,24 @@ printWDError _ e = case e of
         ]
   UnableToConnect -> "Unable to connect to WebDriver server"
   RemoteEndTimeout -> "Remote End Timeout"
-  UnhandledHttpException ex -> "Unhandled HTTP Exception: " ++ show ex
-  ImageDecodeError msg -> "Image decode: " ++ msg
-  UnexpectedValue msg -> "Unexpected value: " ++ msg
+  UnhandledHttpException ex -> "Unhandled HTTP Exception: " <> T.pack (show ex)
+  ImageDecodeError msg -> "Image decode: " <> msg
+  UnexpectedValue msg -> "Unexpected value: " <> msg
   UnexpectedResult r msg -> case r of
-    IsSuccess -> "Unexpected success: " ++ msg
-    IsFailure -> "Unexpected failure: " ++ msg
+    IsSuccess -> "Unexpected success: " <> msg
+    IsFailure -> "Unexpected failure: " <> msg
   BreakpointHaltError -> "Breakpoint Halt"
 
 putStrLn
   :: (Monad eff, Monad (t eff), MonadTrans t)
-  => String -> WebDriverTT t eff ()
+  => Text -> WebDriverTT t eff ()
 putStrLn str = do
   outH <- fromEnv (_stdout . Http._env)
   hPutStrLn outH str
 
 getStrLn
   :: (Monad eff, Monad (t eff), MonadTrans t)
-  => WebDriverTT t eff String
+  => WebDriverTT t eff Text
 getStrLn = do
   inH <- fromEnv (_stdin . Http._env)
   result <- promptWDAct $ HGetLine inH
@@ -746,16 +749,16 @@ getStrLn = do
 -- | Prompt for input on `stdin`.
 promptForString
   :: (Monad eff, Monad (t eff), MonadTrans t)
-  => String -- ^ Prompt text
-  -> WebDriverTT t eff String
+  => Text -- ^ Prompt text
+  -> WebDriverTT t eff Text
 promptForString prompt =
   putStrLn prompt >> getStrLn
 
 -- | Prompt for input on `stdin`, but do not echo the typed characters back to the terminal -- handy for getting suuper secret info.
 promptForSecret
   :: (Monad eff, Monad (t eff), MonadTrans t)
-  => String -- ^ Prompt text
-  -> WebDriverTT t eff String
+  => Text -- ^ Prompt text
+  -> WebDriverTT t eff Text
 promptForSecret prompt = do
   outH <- fromEnv (_stdout . Http._env)
   inH <- fromEnv (_stdin . Http._env)
@@ -809,7 +812,7 @@ data BreakpointAction
   | BreakpointAct -- ^ Client-supplied action
   deriving (Eq, Show)
 
-parseBreakpointAction :: String -> Maybe BreakpointAction
+parseBreakpointAction :: Text -> Maybe BreakpointAction
 parseBreakpointAction str = case str of
   "c" -> Just BreakpointContinue
   "h" -> Just BreakpointHalt
@@ -820,7 +823,7 @@ parseBreakpointAction str = case str of
 
 breakpointMessage
   :: (Monad eff, Monad (t eff), MonadTrans t)
-  => String -> Maybe String -> WebDriverTT t eff ()
+  => Text -> Maybe Text -> WebDriverTT t eff ()
 breakpointMessage msg custom = do
   putStrLn "=== BREAKPOINT ==="
   putStrLn msg
@@ -829,14 +832,14 @@ breakpointMessage msg custom = do
   putStrLn "d : dump webdriver state"
   putStrLn "s : turn breakpoints off and continue"
   case custom of
-    Just act -> putStrLn $ "a : " ++ act
+    Just act -> putStrLn $ "a : " <> act
     Nothing -> return ()
   putStrLn "=================="
 
 breakpointWith
   :: (Monad eff, Monad (t eff), MonadTrans t)
-  => String
-  -> Maybe (String, WebDriverTT t eff ())
+  => Text
+  -> Maybe (Text, WebDriverTT t eff ())
   -> WebDriverTT t eff ()
 breakpointWith msg act = do
   bp <- fromState (_breakpoints . Http._userState)
@@ -862,29 +865,29 @@ breakpointWith msg act = do
         Just BreakpointSilence -> breakpointsOff
         Just BreakpointAct -> action
         Nothing -> do
-          putStrLn $ "Unrecognized breakpoint option '" ++ command ++ "'"
+          putStrLn $ "Unrecognized breakpoint option '" <> command <> "'"
           breakpointWith msg act
 
 breakpoint
   :: (Monad eff, Monad (t eff), MonadTrans t)
-  => String
+  => Text
   -> WebDriverTT t eff ()
 breakpoint msg = breakpointWith msg Nothing
 
-dumpState :: Http.S WDState -> String
-dumpState Http.S{..} = intercalate "\n"
-  [ "Session ID: " ++ show (_sessionId _userState)
-  , show (_breakpoints _userState)
+dumpState :: Http.S WDState -> Text
+dumpState Http.S{..} = T.intercalate "\n"
+  [ "Session ID: " <> T.pack (show $ _sessionId _userState)
+  , T.pack $ show (_breakpoints _userState)
   ]
 
-dumpEnv :: Http.R WDError WDLog WDEnv -> String
-dumpEnv Http.R{..} = intercalate "\n"
-  [ "Remote Host: " ++ (_remoteHostname _env)
-  , "Remote Port: " ++ show (_remotePort _env)
-  , "Remote Path: " ++ (_remotePath _env)
-  , "Data Path: " ++ (_dataPath _env)
-  , "Response Format: " ++ show (_responseFormat _env)
-  , "API Version: " ++ show (_apiVersion _env)
+dumpEnv :: Http.R WDError WDLog WDEnv -> Text
+dumpEnv Http.R{..} = T.intercalate "\n"
+  [ "Remote Host: " <> (_remoteHostname _env)
+  , "Remote Port: " <> T.pack (show $ _remotePort _env)
+  , "Remote Path: " <> (_remotePath _env)
+  , "Data Path: " <> T.pack (_dataPath _env)
+  , "Response Format: " <> T.pack (show $ _responseFormat _env)
+  , "API Version: " <> T.pack (show $ _apiVersion _env)
   ]
 
 
@@ -897,12 +900,12 @@ evalWDAct act = case act of
   FileExists path -> try $ doesFileExist path
 
   HGetLine handle -> try $ do
-    hGetLine handle
+    T.hGetLine handle
 
   HGetLineNoEcho handle -> try $ do
     echo <- hGetEcho handle
     hSetEcho handle False
-    secret <- hGetLine handle
+    secret <- T.hGetLine handle
     hSetEcho handle echo
     return secret
 
@@ -918,12 +921,12 @@ evalWDActMockIO act = case act of
     case result of
       Nothing -> do
         return $ Left $ mkIOError doesNotExistErrorType "" Nothing (Just path)
-      Just lns -> return $ Right $ LC.pack $ unlines lns
+      Just lns -> return $ Right $ fromStrict $ T.encodeUtf8 $ T.unlines lns
 
   WriteFilePath path bytes -> do
     Mock.incrementTimer 1
     fmap Right $ Mock.modifyMockWorld $ \w -> w
-      { Mock._files = FS.writeLines (Left path) [LC.unpack bytes] $ Mock._files w }
+      { Mock._files = FS.writeLines (Left path) [T.decodeUtf8 $ toStrict bytes] $ Mock._files w }
 
   FileExists path -> do
     Mock.incrementTimer 1
@@ -938,9 +941,9 @@ evalWDActMockIO act = case act of
     let result = FS.readLine dne eof (Right handle) $ Mock._files world
     case result of
       Left err -> return $ Left err
-      Right (str, fs) -> do
+      Right (txt, fs) -> do
         Mock.modifyMockWorld $ \w -> w { Mock._files = fs }
-        return $ Right str
+        return $ Right txt
 
   HGetLineNoEcho handle -> do
     Mock.incrementTimer 1
@@ -950,6 +953,6 @@ evalWDActMockIO act = case act of
     let result = FS.readLine dne eof (Right handle) $ Mock._files world
     case result of
       Left err -> return $ Left err
-      Right (str, fs) -> do
+      Right (txt, fs) -> do
         Mock.modifyMockWorld $ \w -> w { Mock._files = fs }
-        return $ Right str
+        return $ Right txt

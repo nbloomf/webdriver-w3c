@@ -7,6 +7,7 @@ module Web.Api.WebDriver.Monad.Test.Server (
 
 import Data.List
 import Data.Text (Text, pack, unpack)
+import qualified Data.Text as T
 import Data.Text.Encoding (decodeUtf8)
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.ByteString.Lazy as LB
@@ -38,7 +39,7 @@ defaultWebDriverServer = MockWorld
   { _files = emptyFileSystem
   , _time = epoch
   , _serverState = MockServer defaultWebDriverServerState
-  , _httpGet = \url -> case splitUrl $ stripScheme url of
+  , _httpGet = \url -> case splitUrl $ stripScheme $ T.unpack url of
       {- Status -}
       [_,"status"] ->
         get_session_id_status
@@ -135,10 +136,10 @@ defaultWebDriverServer = MockWorld
       [_,"session",session_id,"element",element_id,"screenshot"] ->
         get_session_id_element_id_screenshot session_id element_id
 
-      _ -> error $ "defaultWebDriverServer: get url: " ++ url ++
-        "' parsed as " ++ (show $ splitUrl $ stripScheme url)
+      _ -> error $ "defaultWebDriverServer: get url: " ++ T.unpack url ++
+        "' parsed as " ++ (show $ splitUrl $ stripScheme $ T.unpack url)
 
-  , _httpPost = \url payload -> case splitUrl $ stripScheme url of
+  , _httpPost = \url payload -> case splitUrl $ stripScheme $ T.unpack url of
       {- New Session -}
       [_,"session"] ->
         post_session
@@ -255,10 +256,10 @@ defaultWebDriverServer = MockWorld
       [_,"session",session_id,"print"] ->
         post_session_id_print session_id
 
-      _ -> error $ "defaultWebDriverServer: post url: '" ++ url ++
-        "' parsed as " ++ (show $ splitUrl $ stripScheme url)
+      _ -> error $ "defaultWebDriverServer: post url: '" ++ T.unpack url ++
+        "' parsed as " ++ (show $ splitUrl $ stripScheme $ T.unpack url)
 
-  , _httpDelete = \url -> case splitUrl $ stripScheme url of
+  , _httpDelete = \url -> case splitUrl $ stripScheme $ T.unpack url of
       {- Delete Session -}
       [_,"session",session_id] ->
         delete_session_id session_id
@@ -279,8 +280,8 @@ defaultWebDriverServer = MockWorld
       [_,"session",session_id,"actions"] ->
         delete_session_id_actions session_id
 
-      _ -> error $ "defaultWebDriverServer: delete url: " ++ url ++
-        "' parsed as " ++ (show $ splitUrl $ stripScheme url)
+      _ -> error $ "defaultWebDriverServer: delete url: " ++ T.unpack url ++
+        "' parsed as " ++ (show $ splitUrl $ stripScheme $ T.unpack url)
   }
 
 stripScheme :: String -> String

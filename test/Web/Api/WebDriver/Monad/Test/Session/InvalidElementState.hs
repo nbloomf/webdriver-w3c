@@ -10,6 +10,8 @@ import System.IO
 import Web.Api.WebDriver
 import Test.Tasty.WebDriver
 
+import qualified Data.Text as Text
+
 import qualified Test.Tasty as T
 import qualified Test.Tasty.ExpectedFailure as TE
 
@@ -20,8 +22,8 @@ invalidElementState
   -> WebDriverT eff()
 invalidElementState e = case e of
   ResponseError InvalidElementState _ _ _ _ -> assertSuccess "yay!"
-  err -> assertFailure $
-    AssertionComment $ "Expecting 'invalid element state' but got: " ++ show err
+  err -> assertFailure $ AssertionComment $
+    "Expecting 'invalid element state' but got: " <> Text.pack (show err)
 
 
 invalidElementStateExit
@@ -43,7 +45,7 @@ _test_elementClear_invalid_element_state page =
   let
     session :: (Monad eff) => WebDriverT eff()
     session = do
-      navigateTo page
+      navigateTo $ Text.pack page
       !element <- findElement CssSelector "body"
       elementClear element
       throwError $ UnexpectedResult IsSuccess "Expecting 'invalid_element_state'"

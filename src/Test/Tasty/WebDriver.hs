@@ -10,7 +10,7 @@ Portability : POSIX
 Tasty integration for `WebDriverT` tests.
 -}
 
-{-# LANGUAGE DeriveDataTypeable, RecordWildCards, Rank2Types #-}
+{-# LANGUAGE DeriveDataTypeable, RecordWildCards, Rank2Types, OverloadedStrings #-}
 module Test.Tasty.WebDriver (
     defaultWebDriverMain
 
@@ -80,6 +80,10 @@ import qualified Data.Digest.Pure.SHA as SHA
   ( showDigest, sha1 )
 import Data.Maybe
   ( fromMaybe, catMaybes )
+import Data.Text (Text)
+import qualified Data.Text as Text
+import qualified Data.Text.IO as Text
+import Data.String
 import Network.HTTP.Client
   ( defaultManagerSettings, managerResponseTimeout
   , responseTimeoutNone )
@@ -93,6 +97,7 @@ import Text.Read
   ( readMaybe )
 
 import qualified Data.Map.Strict as MS
+import Data.Text (Text)
 import qualified Test.Tasty as T
 import qualified Test.Tasty.Providers as TT
 import qualified Test.Tasty.Options as TO
@@ -102,64 +107,64 @@ import Test.Tasty.WebDriver.Config
 
 
 
-_OPT_LOG_HANDLE :: String
+_OPT_LOG_HANDLE :: (IsString t) => t
 _OPT_LOG_HANDLE = "wd-log"
 
-_OPT_CONSOLE_OUT :: String
+_OPT_CONSOLE_OUT :: (IsString t) => t
 _OPT_CONSOLE_OUT = "wd-console-out"
 
-_OPT_CONSOLE_IN :: String
+_OPT_CONSOLE_IN :: (IsString t) => t
 _OPT_CONSOLE_IN = "wd-console-in"
 
-_OPT_COLOR :: String
+_OPT_COLOR :: (IsString t) => t
 _OPT_COLOR = "wd-color"
 
-_OPT_HEADLESS :: String
+_OPT_HEADLESS :: (IsString t) => t
 _OPT_HEADLESS = "wd-headless"
 
-_OPT_DRIVER :: String
+_OPT_DRIVER :: (IsString t) => t
 _OPT_DRIVER = "wd-driver"
 
-_OPT_GECKODRIVER_LOG :: String
+_OPT_GECKODRIVER_LOG :: (IsString t) => t
 _OPT_GECKODRIVER_LOG = "wd-geckodriver-log"
 
-_OPT_BROWSERPATH :: String
+_OPT_BROWSERPATH :: (IsString t) => t
 _OPT_BROWSERPATH = "wd-browserpath"
 
-_OPT_DEPLOYMENT :: String
+_OPT_DEPLOYMENT :: (IsString t) => t
 _OPT_DEPLOYMENT = "wd-deploy"
 
-_OPT_REMOTE_ENDS :: String
+_OPT_REMOTE_ENDS :: (IsString t) => t
 _OPT_REMOTE_ENDS = "wd-remote-ends"
 
-_OPT_DATA_PATH :: String
+_OPT_DATA_PATH :: (IsString t) => t
 _OPT_DATA_PATH = "wd-data-path"
 
-_OPT_RESPONSE_FORMAT :: String
+_OPT_RESPONSE_FORMAT :: (IsString t) => t
 _OPT_RESPONSE_FORMAT = "wd-response-format"
 
-_OPT_API_VERSION :: String
+_OPT_API_VERSION :: (IsString t) => t
 _OPT_API_VERSION = "wd-api-version"
 
-_OPT_VERBOSITY :: String
+_OPT_VERBOSITY :: (IsString t) => t
 _OPT_VERBOSITY = "wd-verbosity"
 
-_OPT_NUM_RETRIES :: String
+_OPT_NUM_RETRIES :: (IsString t) => t
 _OPT_NUM_RETRIES = "wd-num-retries"
 
-_OPT_DELAY :: String
+_OPT_DELAY :: (IsString t) => t
 _OPT_DELAY = "wd-delay"
 
-_OPT_REMOTE_ENDS_CONFIG :: String
+_OPT_REMOTE_ENDS_CONFIG :: (IsString t) => t
 _OPT_REMOTE_ENDS_CONFIG = "wd-remote-ends-config"
 
-_OPT_PRIVATE_MODE :: String
+_OPT_PRIVATE_MODE :: (IsString t) => t
 _OPT_PRIVATE_MODE = "wd-private-mode"
 
 
 
 data WebDriverTest t eff = WebDriverTest
-  { wdTestName :: String
+  { wdTestName :: Text
   , wdTestSession :: WebDriverTT t eff ()
   , wdEval :: forall a. P WDAct a -> eff a
   , wdToIO :: forall a. t eff a -> IO a
@@ -213,7 +218,7 @@ instance
     let
       title = comment wdTestName
 
-      attemptLabel k = comment $ "Attempt #" ++ show k
+      attemptLabel k = comment $ "Attempt #" <> Text.pack (show k)
 
       logNoise = case logNoiseLevel of
         NoisyLog -> False
@@ -264,10 +269,10 @@ instance
         remote <- acquireRemoteEnd remotesRef delay driver
 
         let
-          uid = digest wdTestName ++ "-" ++ show attemptNumber ++ " " ++ show remote
+          uid = digest wdTestName <> "-" <> Text.pack (show attemptNumber) <> " " <> Text.pack (show remote)
             where
-              digest :: (Show a) => a -> String
-              digest = take 8 . SHA.showDigest . SHA.sha1 . BS.pack . show
+              digest :: (Show a) => a -> Text
+              digest = Text.pack . take 8 . SHA.showDigest . SHA.sha1 . BS.pack . show
 
           config = WDConfig
             { _evaluator = wdEval
@@ -313,7 +318,7 @@ instance
           Right _ ->
             return $ webDriverAssertionsToResult summary
           Left err -> if attemptNumber >= numRetries
-            then return $ TT.testFailed $ "Unhandled error!\n" ++ err
+            then return $ TT.testFailed $ Text.unpack $ "Unhandled error!\n" <> err
             else attempt (attemptNumber + 1)
 
     attempt 1
@@ -323,7 +328,7 @@ instance
 webDriverAssertionsToResult :: AssertionSummary -> TT.Result
 webDriverAssertionsToResult x =
   if numFailures x > 0
-    then TT.testFailed $ unlines $ map printAssertion $ failures x
+    then TT.testFailed $ unlines $ map (Text.unpack . printAssertion) $ failures x
     else TT.testPassed $ show (numSuccesses x) ++ " assertion(s)"
 
 
@@ -422,7 +427,7 @@ testCaseWithSetupTM
   -> TT.TestTree
 testCaseWithSetupTM name eval toIO setup teardown test =
   TT.singleTest name WebDriverTest
-    { wdTestName = name
+    { wdTestName = Text.pack name
     , wdTestSession = setup >>= test >>= teardown
     , wdEval = eval
     , wdToIO = toIO
@@ -789,48 +794,48 @@ defaultWebDriverMain tree = do
     [ logHandle, coutHandle, cinHandle ]
 
 
-getWriteModeHandleOption :: String -> Handle -> IO Handle
+getWriteModeHandleOption :: Text -> Handle -> IO Handle
 getWriteModeHandleOption opt theDefault = do
-  args <- SE.getArgs
-  case parseOptionWithArgument ("--" ++ opt) args of
+  args <- fmap (fmap Text.pack) SE.getArgs
+  case parseOptionWithArgument ("--" <> opt) args of
     Nothing -> do
-      putStrLn $ "Error: option '" ++ opt ++ "' is missing a required path argument"
+      Text.putStrLn $ "Error: option '" <> opt <> "' is missing a required path argument"
       exitFailure
     Just Nothing -> return theDefault
     Just (Just path) -> case path of
       "stdout" -> return stdout
       "stderr" -> return stderr
-      _ -> openFile path WriteMode
+      _ -> openFile (Text.unpack path) WriteMode
 
 
-getReadModeHandleOption :: String -> Handle -> IO Handle
+getReadModeHandleOption :: Text -> Handle -> IO Handle
 getReadModeHandleOption opt theDefault = do
-  args <- SE.getArgs
-  case parseOptionWithArgument ("--" ++ opt) args of
+  args <- fmap (fmap Text.pack) SE.getArgs
+  case parseOptionWithArgument ("--" <> opt) args of
     Nothing -> do
-      putStrLn $ "Error: option '" ++ opt ++ "' is missing a required path argument"
+      Text.putStrLn $ "Error: option '" <> opt <> "' is missing a required path argument"
       exitFailure
     Just Nothing -> return theDefault
     Just (Just path) -> case path of
       "stdin" -> return stdin
-      _ -> openFile path ReadMode
+      _ -> openFile (Text.unpack path) ReadMode
 
 
 -- | Get the value of an option that can be controlled by either a command line flag or an environment variable, with the flag taking precedence.
 getEnvVarDefaultOption
-  :: String -- ^ Flag name
-  -> (String -> Maybe a) -- ^ Mapping flag values to option values
-  -> String -- ^ Environment variable name
-  -> (String -> Maybe a) -- ^ Mapping environment variable values to option values
+  :: Text -- ^ Flag name
+  -> (Text -> Maybe a) -- ^ Mapping flag values to option values
+  -> Text -- ^ Environment variable name
+  -> (Text -> Maybe a) -- ^ Mapping environment variable values to option values
   -> a -- ^ Default option value (if neither flag nor env var is set)
   -> IO a
 getEnvVarDefaultOption flag flagMap var varMap def = do
   args <- SE.getArgs
-  case parseOptionWithArgument ("--" ++ flag) args of
+  case parseOptionWithArgument ("--" <> flag) (fmap Text.pack args) of
 
     -- Flag is present, but with no argument given.
     Nothing -> do
-      putStrLn $ "Error: option '" ++ flag ++ "' is missing a required argument"
+      Text.putStrLn $ "Error: option '" <> flag <> "' is missing a required argument"
       exitFailure
 
     -- Flag with argument is present.
@@ -838,21 +843,21 @@ getEnvVarDefaultOption flag flagMap var varMap def = do
       case flagMap value of
         Just a -> return a
         Nothing -> do
-          putStrLn $ "Error: unrecognized value '" ++ value ++ "' for option '--" ++ flag ++ "'."
+          Text.putStrLn $ "Error: unrecognized value '" <> value <> "' for option '--" <> flag <> "'."
           exitFailure
 
     -- Flag not present; try to use the environment variable.
     Just Nothing -> do
-      value <- SE.lookupEnv var
-      case value of
+      value <- SE.lookupEnv $ Text.unpack var
+      case fmap Text.pack value of
 
         -- Environment variable is set.
         Just str ->
           case varMap str of
             Just a -> return a
             Nothing -> do
-              putStrLn $ "Error: unrecognized value '" ++ str ++
-                "' for environment variable '" ++ var ++ "'."
+              Text.putStrLn $ "Error: unrecognized value '" <> str <>
+                "' for environment variable '" <> var <> "'."
               exitFailure
 
         -- Environment variable not set; use default.
@@ -876,17 +881,17 @@ getRemoteEndRef = do
 
 getRemoteEndConfigPath :: IO (Maybe RemoteEndPool)
 getRemoteEndConfigPath = do
-  args <- SE.getArgs
+  args <- fmap (fmap Text.pack) SE.getArgs
   case parseOptionWithArgument "--wd-remote-ends-config" args of
     Nothing -> do
       putStrLn "option --wd-remote-ends-config missing required path argument"
       exitFailure
     Just Nothing -> return Nothing
     Just (Just path) -> do
-      str <- readFile path
+      str <- Text.readFile $ Text.unpack path
       case parseRemoteEndConfig str of
         Left err -> do
-          putStrLn err
+          Text.putStrLn err
           exitFailure
         Right x -> return (Just x)
 
@@ -894,7 +899,7 @@ getRemoteEndConfigPath = do
 
 getRemoteEndOptionString :: IO (Maybe RemoteEndPool)
 getRemoteEndOptionString = do
-  args <- SE.getArgs
+  args <- fmap (fmap Text.pack) SE.getArgs
   case parseOptionWithArgument "--wd-remote-ends" args of
     Nothing -> do
       putStrLn "option --wd-remote-ends missing required argument"
@@ -903,7 +908,7 @@ getRemoteEndOptionString = do
     Just (Just str) ->
       case parseRemoteEndOption str of
         Left err -> do
-          putStrLn err
+          Text.putStrLn err
           exitFailure
         Right x -> return (Just x)
 

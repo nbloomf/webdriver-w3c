@@ -8,6 +8,7 @@ Stability   : experimental
 Portability : POSIX
 -}
 
+{-# LANGUAGE OverloadedStrings #-}
 module Web.Api.WebDriver.Helpers (
   -- * Data
     writeDataFile
@@ -34,6 +35,7 @@ import qualified Data.ByteString.Lazy.Char8 as BS
   ( pack )
 import qualified Data.Digest.Pure.SHA as SHA
   ( showDigest, sha1 )
+import qualified Data.Text as T
 
 import Web.Api.WebDriver.Endpoints
 import Web.Api.WebDriver.Monad
@@ -146,7 +148,7 @@ readJsonFile file = do
 keypress :: Char -> ActionItem
 keypress x = emptyActionItem
   { _actionType = Just KeyDownAction
-  , _actionValue = Just [x]
+  , _actionValue = Just $ T.singleton x
   }
 
 

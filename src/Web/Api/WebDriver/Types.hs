@@ -108,6 +108,7 @@ import Data.Aeson.Types
   , Pair, (.:?), (.:), (.=), object, typeMismatch )
 import Data.Text
   ( Text, pack, unpack )
+import qualified Data.Text as T
 import Data.Text.Encoding
   ( encodeUtf8 )
 import Test.QuickCheck
@@ -121,13 +122,13 @@ import Web.Api.WebDriver.Uri
 
 
 
-unrecognizedValue :: (MonadFail m) => String -> Text -> m a
-unrecognizedValue !name !string = fail $
-  "Unrecognized value for type " ++ name ++ ": " ++ unpack string
+unrecognizedValue :: (MonadFail m) => Text -> Text -> m a
+unrecognizedValue !name !string = fail $ unpack $
+  "Unrecognized value for type " <> name <> ": " <> string
 
-malformedValue :: (MonadFail m) => String -> String -> m a
-malformedValue !name !value = fail $
-  "Malformed value for type" ++ name ++ ": " ++ value
+malformedValue :: (MonadFail m) => Text -> Text -> m a
+malformedValue !name !value = fail $ unpack $
+  "Malformed value for type " <> name <> ": " <> value
 
 
 
@@ -143,39 +144,39 @@ object_ = object . filter (\(_, v) -> v /= Null) . catMaybes
 
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#dfn-session-id>.
-type SessionId = String
+type SessionId = Text
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#dfn-web-element-reference>.
 newtype ElementRef = ElementRef
-  { theElementRef :: String
+  { theElementRef :: Text
   } deriving Eq
 
 instance Show ElementRef where
-  show (ElementRef str) = str
+  show (ElementRef str) = unpack str
 
 instance IsString ElementRef where
-  fromString = ElementRef
+  fromString = ElementRef . pack
 
 -- | Identifier for a /browsing context/; see <https://w3c.github.io/webdriver/webdriver-spec.html#dfn-current-browsing-context>.
 newtype ContextId = ContextId
-  { theContextId :: String
+  { theContextId :: Text
   } deriving Eq
 
 instance Show ContextId where
-  show (ContextId str) = str
+  show (ContextId str) = unpack str
 
 instance IsString ContextId where
-  fromString = ContextId
+  fromString = ContextId . pack
 
 instance FromJSON ContextId where
-  parseJSON (String x) = return $ ContextId $ unpack x
+  parseJSON (String x) = return $ ContextId x
   parseJSON invalid = typeMismatch "ContextType" invalid
 
 instance ToJSON ContextId where
-  toJSON (ContextId x) = String $ pack x
+  toJSON (ContextId x) = String x
 
 instance Arbitrary ContextId where
-  arbitrary = ContextId <$> arbitrary
+  arbitrary = (ContextId . pack) <$> arbitrary
 
 -- | Type of a /top level browsing context/; see <https://html.spec.whatwg.org/#top-level-browsing-context>.
 data ContextType = WindowContext | TabContext
@@ -201,28 +202,28 @@ instance Arbitrary ContextType where
   arbitrary = arbitraryBoundedEnum
 
 -- | For use with a /Locator Strategy/. See <https://w3c.github.io/webdriver/webdriver-spec.html#locator-strategies>.
-type Selector = String
+type Selector = Text
 
 -- | Used with `getElementAttribute`.
-type AttributeName = String
+type AttributeName = Text
 
 -- | Used with `getElementProperty`.
-type PropertyName = String
+type PropertyName = Text
 
 -- | Used with `getComputedRole`
-type AriaRole = String
+type AriaRole = Text
 
 -- | Used with `getComputedLabel`
-type AriaLabel = String
+type AriaLabel = Text
 
 -- | Javascript
-type Script = String
+type Script = Text
 
 -- | Used with `getNamedCookie`.
-type CookieName = String
+type CookieName = Text
 
 -- | Used with `getElementCssValue`.
-type CssPropertyName = String
+type CssPropertyName = Text
 
 -- | Possible frame references; see <https://w3c.github.io/webdriver/webdriver-spec.html#switch-to-frame>.
 data FrameReference
@@ -370,10 +371,10 @@ instance Arbitrary ResponseErrorCode where
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#capabilities>.
 data Capabilities = Capabilities
   { _browserName :: Maybe BrowserName -- ^ @browserName@
-  , _browserVersion :: Maybe String -- ^ @browserVersion@
+  , _browserVersion :: Maybe Text -- ^ @browserVersion@
   , _platformName :: Maybe PlatformName -- ^ @platformName@
   , _acceptInsecureCerts :: Maybe Bool -- ^ @acceptInsecureCerts@
-  , _pageLoadStrategy :: Maybe String -- ^ @pageLoadStrategy@
+  , _pageLoadStrategy :: Maybe Text -- ^ @pageLoadStrategy@
   , _proxy :: Maybe ProxyConfig -- ^ @proxy@
   , _setWindowRect :: Maybe Bool -- ^ @setWindowRect@
   , _timeouts :: Maybe TimeoutConfig -- ^ @timeouts@
@@ -419,10 +420,10 @@ instance ToJSON Capabilities where
 instance Arbitrary Capabilities where
   arbitrary = Capabilities
     <$> arbitrary
+    <*> (fmap (fmap T.pack) arbitrary)
     <*> arbitrary
     <*> arbitrary
-    <*> arbitrary
-    <*> arbitrary
+    <*> (fmap (fmap T.pack) arbitrary)
     <*> arbitrary
     <*> arbitrary
     <*> arbitrary
@@ -515,7 +516,7 @@ instance Arbitrary PlatformName where
 -- | See <https://sites.google.com/a/chromium.org/chromedriver/capabilities>.
 data ChromeOptions = ChromeOptions
   { _chromeBinary :: Maybe FilePath -- ^ @binary@
-  , _chromeArgs :: Maybe [String] -- ^ @args@
+  , _chromeArgs :: Maybe [Text] -- ^ @args@
   , _chromePrefs :: Maybe (HashMap Text Value) -- ^ @prefs@
   } deriving (Eq, Show)
 
@@ -536,7 +537,7 @@ instance ToJSON ChromeOptions where
 instance Arbitrary ChromeOptions where
   arbitrary = ChromeOptions
     <$> arbitrary
-    <*> arbitrary
+    <*> (fmap (fmap (fmap T.pack)) arbitrary)
     <*> arbHashMap
 
 -- | All members set to `Nothing`.
@@ -552,7 +553,7 @@ defaultChromeOptions = ChromeOptions
 -- | See <https://github.com/mozilla/geckodriver#firefox-capabilities>.
 data FirefoxOptions = FirefoxOptions
   { _firefoxBinary :: Maybe FilePath -- ^ @binary@
-  , _firefoxArgs :: Maybe [String] -- ^ @args@
+  , _firefoxArgs :: Maybe [Text] -- ^ @args@
   , _firefoxLog :: Maybe FirefoxLog
   , _firefoxPrefs :: Maybe (HashMap Text Value) -- ^ @prefs@
   } deriving (Eq, Show)
@@ -576,7 +577,7 @@ instance ToJSON FirefoxOptions where
 instance Arbitrary FirefoxOptions where
   arbitrary = FirefoxOptions
     <$> arbitrary
-    <*> arbitrary
+    <*> (fmap (fmap (fmap T.pack)) arbitrary)
     <*> arbitrary
     <*> arbHashMap
 
@@ -682,10 +683,10 @@ instance Arbitrary LogLevel where
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#proxy>.
 data ProxyConfig = ProxyConfig
   { _proxyType :: Maybe ProxyType -- ^ @proxyType@
-  , _proxyAutoconfigUrl :: Maybe String -- ^ @proxyAutoconfigUrl@
+  , _proxyAutoconfigUrl :: Maybe Text -- ^ @proxyAutoconfigUrl@
   , _ftpProxy :: Maybe HostAndOptionalPort -- ^ @ftpProxy@
   , _httpProxy :: Maybe HostAndOptionalPort -- ^ @httpProxy@
-  , _noProxy :: Maybe [String] -- ^ @noProxy@
+  , _noProxy :: Maybe [Text] -- ^ @noProxy@
   , _sslProxy :: Maybe HostAndOptionalPort -- ^ @sslProxy@
   , _socksProxy :: Maybe HostAndOptionalPort -- ^ @socksProxy@
   , _socksVersion :: Maybe Int -- ^ @socksVersion@
@@ -718,10 +719,10 @@ instance ToJSON ProxyConfig where
 instance Arbitrary ProxyConfig where
   arbitrary = ProxyConfig
     <$> arbitrary
+    <*> (fmap (fmap T.pack) arbitrary)
     <*> arbitrary
     <*> arbitrary
-    <*> arbitrary
-    <*> arbitrary
+    <*> (fmap (fmap (fmap T.pack)) arbitrary)
     <*> arbitrary
     <*> arbitrary
     <*> arbitrary
@@ -748,26 +749,29 @@ data HostAndOptionalPort = HostAndOptionalPort
   } deriving (Eq, Show)
 
 instance FromJSON HostAndOptionalPort where
-  parseJSON (String x) =
-    let string = unpack x in
-    case span (/= ':') string of
-      ("",_) -> malformedValue "Host" string
-      (str,[]) -> case mkHost str of
-        Nothing -> malformedValue "Host" string
-        Just h -> return HostAndOptionalPort
-          { _urlHost = h
-          , _urlPort = Nothing
-          }
-      (_,":") -> malformedValue "Port" string
-      (str,':':rest) -> case mkHost str of
-        Nothing -> malformedValue "Host" string
-        Just h -> case mkPort rest of
-          Nothing -> malformedValue "Port" rest
-          Just p -> return HostAndOptionalPort
+  parseJSON (String string) =
+    let (as,bs') = T.span (/= ':') string
+    in if T.null as
+      then malformedValue "Host" string
+      else case T.uncons bs' of
+        Nothing -> case mkHost as of
+          Nothing -> malformedValue "Host" string
+          Just h -> return HostAndOptionalPort
             { _urlHost = h
-            , _urlPort = Just p
+            , _urlPort = Nothing
             }
-      (_,_) -> malformedValue "Host" string
+        Just (c,bs) -> if c /= ':'
+          then malformedValue "Host" string
+          else if T.null bs
+            then malformedValue "Port" string
+            else case mkHost as of
+              Nothing -> malformedValue "Host" string
+              Just h -> case mkPort bs of
+                Nothing -> malformedValue "Port" bs
+                Just p -> return HostAndOptionalPort
+                  { _urlHost = h
+                  , _urlPort = Just p
+                  }
   parseJSON invalid = typeMismatch "HostAndOptionalPort" invalid
 
 instance ToJSON HostAndOptionalPort where
@@ -940,7 +944,7 @@ instance Arbitrary PointerSubtype where
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#processing-actions-requests>.
 data Action = Action
   { _inputSourceType :: Maybe InputSource -- ^ @type@
-  , _inputSourceId :: Maybe String -- ^ @id@
+  , _inputSourceId :: Maybe Text -- ^ @id@
   , _inputSourceParameters :: Maybe InputSourceParameter -- ^ @parameters@
   , _actionItems :: [ActionItem] -- ^ @actions@
   } deriving (Eq, Show)
@@ -964,7 +968,7 @@ instance ToJSON Action where
 instance Arbitrary Action where
   arbitrary = Action
     <$> arbitrary
-    <*> arbitrary
+    <*> (fmap (fmap T.pack) arbitrary)
     <*> arbitrary
     <*> arbitrary
 
@@ -1042,8 +1046,8 @@ instance Arbitrary InputSourceParameter where
 data ActionItem = ActionItem
   { _actionType :: Maybe ActionType -- ^ @type@
   , _actionDuration :: Maybe Int -- ^ @duration@
-  , _actionOrigin :: Maybe String -- ^ @origin@
-  , _actionValue :: Maybe String -- ^ @value@
+  , _actionOrigin :: Maybe Text -- ^ @origin@
+  , _actionValue :: Maybe Text -- ^ @value@
   , _actionButton :: Maybe Int -- ^ @button@
   , _actionX :: Maybe Int -- ^ @x@
   , _actionY :: Maybe Int -- ^ @y@
@@ -1075,8 +1079,8 @@ instance Arbitrary ActionItem where
   arbitrary = ActionItem
     <$> arbitrary
     <*> arbitrary
-    <*> arbitrary
-    <*> arbitrary
+    <*> (fmap (fmap T.pack) arbitrary)
+    <*> (fmap (fmap T.pack) arbitrary)
     <*> arbitrary
     <*> arbitrary
     <*> arbitrary
@@ -1175,13 +1179,13 @@ instance Arbitrary PromptHandler where
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#dfn-table-for-cookie-conversion>.
 data Cookie = Cookie
-  { _cookieName :: Maybe String -- ^ @name@
-  , _cookieValue :: Maybe String -- ^ @value@
-  , _cookiePath :: Maybe String -- ^ @path@
-  , _cookieDomain :: Maybe String -- ^ @domain@
+  { _cookieName :: Maybe Text -- ^ @name@
+  , _cookieValue :: Maybe Text -- ^ @value@
+  , _cookiePath :: Maybe Text -- ^ @path@
+  , _cookieDomain :: Maybe Text -- ^ @domain@
   , _cookieSecure :: Maybe Bool -- ^ @secure@
   , _cookieHttpOnly :: Maybe Bool -- ^ @httpOnly@
-  , _cookieExpiryTime :: Maybe String -- ^ @expiryTime@
+  , _cookieExpiryTime :: Maybe Text -- ^ @expiryTime@
   } deriving (Eq, Show)
 
 instance ToJSON Cookie where
@@ -1208,13 +1212,13 @@ instance FromJSON Cookie where
 
 instance Arbitrary Cookie where
   arbitrary = Cookie
-    <$> arbitrary
+    <$> (fmap (fmap T.pack) arbitrary)
+    <*> (fmap (fmap T.pack) arbitrary)
+    <*> (fmap (fmap T.pack) arbitrary)
+    <*> (fmap (fmap T.pack) arbitrary)
     <*> arbitrary
     <*> arbitrary
-    <*> arbitrary
-    <*> arbitrary
-    <*> arbitrary
-    <*> arbitrary
+    <*> (fmap (fmap T.pack) arbitrary)
 
 -- | All members set to `Nothing`.
 emptyCookie :: Cookie
@@ -1230,8 +1234,8 @@ emptyCookie = Cookie
 
 -- | All members other than @name@ and @value@ set to `Nothing`.
 cookie
-  :: String -- ^ @name@
-  -> String -- ^ @value@
+  :: Text -- ^ @name@
+  -> Text -- ^ @value@
   -> Cookie
 cookie name value = emptyCookie
   { _cookieName = Just name
@@ -1431,15 +1435,15 @@ instance ToJSON PageRange where
       [ pack $ show a, "-", pack $ show b ]
 
 instance FromJSON PageRange where
-  parseJSON (String s) =
-    let str = unpack s in
-    case break (== '-') str of
-      (as, []) -> case readMaybe as of
+  parseJSON (String str) =
+    let (as, bs') = T.break (== '-') str
+    in case T.uncons bs' of
+      Nothing -> case readMaybe $ unpack as of
         Just k -> return $ OnePage k
         Nothing -> malformedValue "page range" str
-      (as, _:bs) -> if (null as) || (null bs)
+      Just (_,bs) -> if (T.null as) || (T.null bs)
         then malformedValue "page range" str
-        else case (readMaybe as, readMaybe bs) of
+        else case (readMaybe $ unpack as, readMaybe $ unpack bs) of
           (Just a, Just b) -> return $ PageRange a b
           _ -> malformedValue "page range" str
   parseJSON invalid = typeMismatch "PageRange" invalid

@@ -8,7 +8,7 @@ Stability   : experimental
 Portability : POSIX
 -}
 
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards, OverloadedStrings #-}
 module Test.Tasty.WebDriver.Config (
     DriverName(..)
   , RemoteEndPool(..)
@@ -30,6 +30,9 @@ import qualified Data.Map.Strict as MS
   ( fromListWith, insert, lookup, adjust, fromList, unionWith, Map )
 import Data.Typeable
   ( Typeable )
+import Data.Text (Text)
+import qualified Data.Text as T
+import qualified Data.Text.IO as T
 import Network.URI
   ( URI(..), URIAuth(..), parseURI )
 import Text.Read
@@ -81,16 +84,16 @@ getRemoteEndForDriver driver pool =
 
 -- | Representation of a remote end connection.
 data RemoteEnd = RemoteEnd
-  { remoteEndHost :: String -- ^ Scheme, auth, and hostname
+  { remoteEndHost :: Text -- ^ Scheme, auth, and hostname
   , remoteEndPort :: Int
-  , remoteEndPath :: String -- ^ Additional path component
+  , remoteEndPath :: Text -- ^ Additional path component
   } deriving Eq
 
 instance Show RemoteEnd where
-  show remote = concat
+  show remote = T.unpack $ T.concat
     [ remoteEndHost remote
     , ":"
-    , show $ remoteEndPort remote
+    , T.pack $ show $ remoteEndPort remote
     , remoteEndPath remote
     ]
 
@@ -101,23 +104,23 @@ instance Show RemoteEnd where
 -- > - REMOTE_END_URI
 --
 -- where `DRIVER_NAME` is either `geckodriver` or `chromedriver` and each `REMOTE_END_URI` is the uri of a WebDriver remote end, including scheme. Blank lines are ignored.
-parseRemoteEndConfig :: String -> Either String RemoteEndPool
+parseRemoteEndConfig :: Text -> Either Text RemoteEndPool
 parseRemoteEndConfig str = do
-  freeEnds <- fmap (MS.fromListWith (++)) $ tokenizeRemoteEndConfig $ filter (/= "") $ lines str
+  freeEnds <- fmap (MS.fromListWith (<>)) $ tokenizeRemoteEndConfig $ filter (/= "") $ T.lines str
   return RemoteEndPool
     { freeRemoteEnds = freeEnds
     }
 
-tokenizeRemoteEndConfig :: [String] -> Either String [(DriverName, [RemoteEnd])]
+tokenizeRemoteEndConfig :: [Text] -> Either Text [(DriverName, [RemoteEnd])]
 tokenizeRemoteEndConfig ls = case ls of
   [] -> return []
   (first:rest) -> do
     driver <- case first of
       "geckodriver" -> return Geckodriver
       "chromedriver" -> return Chromedriver
-      _ -> Left $ "Unrecognized driver name '" ++ first ++ "'."
-    let (remotes, remainder) = span ("- " `isPrefixOf`) rest
-    ends <- mapM (parseRemoteEnd . drop 2) remotes
+      _ -> Left $ "Unrecognized driver name '" <> first <> "'."
+    let (remotes, remainder) = span ("- " `T.isPrefixOf`) rest
+    ends <- mapM (parseRemoteEnd . T.drop 2) remotes
     config <- tokenizeRemoteEndConfig remainder
     return $ (driver, nub ends) : config
 
@@ -126,57 +129,57 @@ tokenizeRemoteEndConfig ls = case ls of
 -- > DRIVER_NAME: REMOTE_END_URI REMOTE_END_URI ...
 --
 -- where `DRIVER_NAME` is either `geckodriver` or `chromedriver` and each `REMOTE_END_URI` is the uri of a WebDriver remote end, including scheme.
-parseRemoteEndOption :: String -> Either String RemoteEndPool
+parseRemoteEndOption :: Text -> Either Text RemoteEndPool
 parseRemoteEndOption str = do
-  freeEnds <- fmap (MS.fromListWith (++)) $ tokenizeRemoteEndOption $ words str
+  freeEnds <- fmap (MS.fromListWith (<>)) $ tokenizeRemoteEndOption $ T.words str
   return RemoteEndPool
     { freeRemoteEnds = freeEnds
     }
 
-tokenizeRemoteEndOption :: [String] -> Either String [(DriverName, [RemoteEnd])]
+tokenizeRemoteEndOption :: [Text] -> Either Text [(DriverName, [RemoteEnd])]
 tokenizeRemoteEndOption ws = case ws of
   [] -> return []
   (first:rest) -> do
     driver <- case first of
       "geckodriver" -> return Geckodriver
       "chromedriver" -> return Chromedriver
-      _ -> Left $ "Unrecognized driver name '" ++ first ++ "'."
+      _ -> Left $ "Unrecognized driver name '" <> first <> "'."
     let (remotes, remainder) = break (`elem` ["geckodriver","chromedriver"]) rest
     ends <- mapM parseRemoteEnd remotes
     option <- tokenizeRemoteEndOption remainder
     return $ (driver, nub ends) : option
 
 -- | Parse a single remote end URI. Must include the scheme (http:// or https://) even though this is redundant.
-parseRemoteEnd :: String -> Either String RemoteEnd
-parseRemoteEnd str = case parseURI str of
-  Nothing -> Left $ "Could not parse remote end URI '" ++ str ++ "'."
+parseRemoteEnd :: Text -> Either Text RemoteEnd
+parseRemoteEnd str = case parseURI $ T.unpack str of
+  Nothing -> Left $ "Could not parse remote end URI '" <> str <> "'."
   Just URI{..} -> case uriAuthority of
-    Nothing -> Left $ "Error parsing authority for URI '" ++ str ++ "'."
+    Nothing -> Left $ "Error parsing authority for URI '" <> str <> "'."
     Just URIAuth{..} -> case uriPort of
       "" -> Right RemoteEnd
-        { remoteEndHost = uriUserInfo ++ uriRegName
+        { remoteEndHost = T.pack $ uriUserInfo <> uriRegName
         , remoteEndPort = 4444
-        , remoteEndPath = uriPath
+        , remoteEndPath = T.pack uriPath
         }
-      ':':ds -> case readMaybe ds of
-        Nothing -> Left $ "Error parsing port for URI '" ++ str ++ "'."
+      ':' : ds -> case readMaybe ds of
+        Nothing -> Left $ "Error parsing port for URI '" <> str <> "'."
         Just k -> Right RemoteEnd
-          { remoteEndHost = uriUserInfo ++ uriRegName
+          { remoteEndHost = T.pack $ uriUserInfo <> uriRegName
           , remoteEndPort = k
-          , remoteEndPath = uriPath
+          , remoteEndPath = T.pack uriPath
           }
-      p -> Left $ "Unexpected port '" ++ p ++ "' in URI '" ++ str ++ "'."
+      _ -> Left $ "Unexpected port '" <> T.pack uriPort <> "' in URI '" <> str <> "'."
 
 
 -- | Helper function for parsing command line options with a required argument. Assumes long-form option names starting with a hyphen. Note the return type; @Just Nothing@ indicates that the option was not present, while @Nothing@ indicates that the option was present but its required argument was not.
 parseOptionWithArgument
-  :: String -- ^ Option to parse for, including hyphen(s).
-  -> [String] -- ^ List of command line arguments.
-  -> Maybe (Maybe String)
+  :: Text -- ^ Option to parse for, including hyphen(s).
+  -> [Text] -- ^ List of command line arguments.
+  -> Maybe (Maybe Text)
 parseOptionWithArgument option args = case args of
   (opt:arg:rest) -> if opt == option
-    then case arg of
-      '-':_ -> Nothing
-      _ -> Just (Just arg)
+    then case T.uncons arg of
+      Just (c,cs) -> if c == '-' then Nothing else Just (Just arg)
+      Nothing -> Just (Just arg)
     else parseOptionWithArgument option (arg:rest)
   _ -> Just Nothing
