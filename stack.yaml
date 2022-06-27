@@ -4,4 +4,4 @@ packages:
 - .
 
 extra-deps:
-- script-monad-0.0.3
+- script-monad-0.0.4

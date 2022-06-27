@@ -9,6 +9,10 @@ import Data.String
 import qualified Test.Tasty as TT (TestTree(), testGroup)
 import qualified Test.Tasty.QuickCheck as QC (testProperty)
 import qualified Test.Tasty.HUnit as HU
+import Test.QuickCheck (Arbitrary(..))
+
+import Data.Text (Text)
+import qualified Data.Text as T
 
 import Control.Concurrent (MVar)
 import qualified Network.Wreq as Wreq
@@ -32,6 +36,9 @@ tests lock = TT.testGroup "Web.Api.WebDriver.Assert"
     [ assertionTestCases (realConfig lock) condIO
     ]
   ]
+
+instance Arbitrary Text where
+  arbitrary = T.pack <$> arbitrary
 
 
 
@@ -125,179 +132,237 @@ assertionTestCases config cond = TT.testGroup "Assertions"
     checkWebDriverT config cond
       (== summarize
         [success
-          (fromString $ show k ++ " is equal to " ++ show k)
-          (fromString $ show k)
+          (AssertionStatement $
+            T.pack (show k) <> " is equal to " <> T.pack (show k))
+          (AssertionComment $ T.pack $ show k)
         ]
       ) $
       do
-        assertEqual (k :: Int) k (fromString $ show k)
+        assertEqual
+          (k :: Int) k
+          (AssertionComment $ T.pack $ show k)
 
   , QC.testProperty "assertEqual (Int, failure)" $ \k ->
     checkWebDriverT config cond
       (== summarize
         [failure
-          (fromString $ show (k+1) ++ " is equal to " ++ show k)
-          (fromString $ show k)
+          (AssertionStatement $
+            T.pack (show (k+1)) <> " is equal to " <> T.pack (show k))
+          (AssertionComment $ T.pack $ show k)
         ]
       ) $
       do
-        assertEqual (k+1 :: Int) k (fromString $ show k)
+        assertEqual
+          (k+1 :: Int) k
+          (AssertionComment $ T.pack $ show k)
 
-  , QC.testProperty "assertEqual (String, success)" $ \str ->
+  , QC.testProperty "assertEqual (Text, success)" $ \str ->
     checkWebDriverT config cond
       (== summarize
         [success
-          (fromString $ show str ++ " is equal to " ++ show str)
-          (fromString str)
+          (AssertionStatement $
+            T.pack (show str) <> " is equal to " <> T.pack (show str))
+          (AssertionComment str)
         ]
       ) $
       do
-        assertEqual (str :: String) str (fromString str)
+        assertEqual
+          (str :: Text) str
+          (AssertionComment str)
 
-  , QC.testProperty "assertEqual (String, failure)" $ \str ->
+  , QC.testProperty "assertEqual (Text, failure)" $ \str ->
     checkWebDriverT config cond
       (== summarize
         [failure
-          (fromString $ show (str++"?") ++ " is equal to " ++ show str)
-          (fromString str)
+          (AssertionStatement $
+            T.pack (show $ str <> "?") <> " is equal to " <> T.pack (show str))
+          (AssertionComment str)
         ]
       ) $
       do
-        assertEqual (str++"?" :: String) str (fromString str)
+        assertEqual
+          (str <> "?" :: Text) str
+          (AssertionComment str)
 
   , QC.testProperty "assertNotEqual (Int, success)" $ \k ->
     checkWebDriverT config cond
       (== summarize
         [success
-          (fromString $ show (k+1) ++ " is not equal to " ++ show k)
-          (fromString $ show k)
+          (AssertionStatement $
+            T.pack (show (k+1)) <> " is not equal to " <> T.pack (show k))
+          (AssertionComment $ T.pack $ show k)
         ]
       ) $
       do
-        assertNotEqual (k+1 :: Int) k (fromString $ show k)
+        assertNotEqual
+          (k+1 :: Int) k
+          (AssertionComment $ T.pack $ show k)
 
   , QC.testProperty "assertNotEqual (Int, failure)" $ \k ->
     checkWebDriverT config cond
       (== summarize
         [failure
-          (fromString $ show k ++ " is not equal to " ++ show k)
-          (fromString $ show k)
+          (AssertionStatement $
+            T.pack (show k) <> " is not equal to " <> T.pack (show k))
+          (AssertionComment $ T.pack $ show k)
         ]
       ) $
       do
-        assertNotEqual (k :: Int) k (fromString $ show k)
+        assertNotEqual
+          (k :: Int) k
+          (AssertionComment $ T.pack $ show k)
 
-  , QC.testProperty "assertNotEqual (String, success)" $ \str ->
+  , QC.testProperty "assertNotEqual (Text, success)" $ \str ->
     checkWebDriverT config cond
       (== summarize
         [success
-          (fromString $ show (str++"?") ++ " is not equal to " ++ show str)
-          (fromString str)
+          (AssertionStatement $
+            T.pack (show (str <> "?")) <> " is not equal to " <> T.pack (show str))
+          (AssertionComment str)
         ]
       ) $
       do
-        assertNotEqual (str++"?" :: String) str (fromString str)
+        assertNotEqual
+          (str <> "?" :: Text)
+          (str)
+          (AssertionComment str)
 
-  , QC.testProperty "assertNotEqual (String, failure)" $ \str ->
+  , QC.testProperty "assertNotEqual (Text, failure)" $ \str ->
     checkWebDriverT config cond
       (== summarize
         [failure
-          (fromString $ show str ++ " is not equal to " ++ show str)
-          (fromString str)
+          (AssertionStatement $
+            T.pack (show str) <> " is not equal to " <> T.pack (show str))
+          (AssertionComment str)
         ]
       ) $
       do
-        assertNotEqual (str :: String) str (fromString str)
+        assertNotEqual
+          (str :: Text)
+          (str)
+          (AssertionComment str)
 
     , QC.testProperty "assertIsSubstring (success)" $ \str1 str2 ->
     checkWebDriverT config cond
       (== summarize
         [success
-          (fromString $ show str1 ++ " is a substring of " ++ show (str2++str1++str2))
-          (fromString str1)
+          (AssertionStatement $
+            T.pack (show str1) <> " is a substring of " <> T.pack (show $ str2 <> str1 <> str2))
+          (AssertionComment str1)
         ]
       ) $
       do
-        assertIsSubstring (str1 :: String) (str2++str1++str2) (fromString str1)
+        assertIsSubstring
+          (str1 :: Text)
+          (str2 <> str1 <> str2)
+          (AssertionComment str1)
 
     , QC.testProperty "assertIsSubstring (failure)" $ \c str1 str2 ->
-    let str3 = filter (/= c) str2 in
+    let str3 = T.filter (/= c) str2 in
     checkWebDriverT config cond
       (== summarize
         [failure
-          (fromString $ show (c:str1) ++ " is a substring of " ++ show str3)
-          (fromString str1)
+          (AssertionStatement $
+            T.pack (show $ T.cons c str1) <> " is a substring of " <> T.pack (show str3))
+          (AssertionComment str1)
         ]
       ) $
       do
-        assertIsSubstring (c:str1 :: String) (str3) (fromString str1)
+        assertIsSubstring
+          (T.cons c str1 :: Text)
+          (str3)
+          (AssertionComment str1)
 
     , QC.testProperty "assertIsNotSubstring (success)" $ \c str1 str2 ->
-    let str3 = filter (/= c) str2 in
+    let str3 = T.filter (/= c) str2 in
     checkWebDriverT config cond
       (== summarize
         [success
-          (fromString $ show (c:str1) ++ " is not a substring of " ++ show str3)
-          (fromString str1)
+          (AssertionStatement $
+            T.pack (show $ T.cons c str1) <> " is not a substring of " <> T.pack (show str3))
+          (AssertionComment str1)
         ]
       ) $
       do
-        assertIsNotSubstring (c:str1 :: String) (str3) (fromString str1)
+        assertIsNotSubstring
+          (T.cons c str1 :: Text)
+          (str3)
+          (AssertionComment str1)
 
     , QC.testProperty "assertIsNotSubstring (failure)" $ \str1 str2 ->
     checkWebDriverT config cond
       (== summarize
         [failure
-          (fromString $ show str1 ++ " is not a substring of " ++ show (str2++str1++str2))
-          (fromString str1)
+          (AssertionStatement $
+            T.pack (show str1) <> " is not a substring of " <> T.pack (show $ str2 <> str1 <> str2))
+          (AssertionComment str1)
         ]
       ) $
       do
-        assertIsNotSubstring (str1 :: String) (str2++str1++str2) (fromString str1)
+        assertIsNotSubstring
+          (str1 :: Text)
+          (str2 <> str1 <> str2)
+          (AssertionComment str1)
 
     , QC.testProperty "assertIsNamedSubstring (success)" $ \name str1 str2 ->
     checkWebDriverT config cond
       (== summarize
         [success
-          (fromString $ show str1 ++ " is a substring of " ++ name)
-          (fromString str1)
+          (AssertionStatement $
+            T.pack (show str1) <> " is a substring of " <> name)
+          (AssertionComment str1)
         ]
       ) $
       do
-        assertIsNamedSubstring (str1 :: String) (str2++str1++str2, name) (fromString str1)
+        assertIsNamedSubstring
+          (str1 :: Text)
+          (str2 <> str1 <> str2, name)
+          (AssertionComment str1)
 
     , QC.testProperty "assertIsNamedSubstring (failure)" $ \name c str1 str2 ->
-    let str3 = filter (/= c) str2 in
+    let str3 = T.filter (/= c) str2 in
     checkWebDriverT config cond
       (== summarize
         [failure
-          (fromString $ show (c:str1) ++ " is a substring of " ++ name)
-          (fromString str1)
+          (AssertionStatement $
+            T.pack (show $ T.cons c str1) <> " is a substring of " <> name)
+          (AssertionComment str1)
         ]
       ) $
       do
-        assertIsNamedSubstring (c:str1 :: String) (str3,name) (fromString str1)
+        assertIsNamedSubstring
+          (T.cons c str1 :: Text)
+          (str3, name)
+          (AssertionComment str1)
 
     , QC.testProperty "assertIsNotNamedSubstring (success)" $ \name c str1 str2 ->
-    let str3 = filter (/= c) str2 in
+    let str3 = T.filter (/= c) str2 in
     checkWebDriverT config cond
       (== summarize
         [success
-          (fromString $ show (c:str1) ++ " is not a substring of " ++ name)
-          (fromString str1)
+          (AssertionStatement $
+            T.pack (show $ T.cons c str1) <> " is not a substring of " <> name)
+          (AssertionComment str1)
         ]
       ) $
       do
-        assertIsNotNamedSubstring (c:str1 :: String) (str3,name) (fromString str1)
+        assertIsNotNamedSubstring
+          (T.cons c str1 :: Text)
+          (str3, name)
+          (AssertionComment str1)
 
     , QC.testProperty "assertIsNotNamedSubstring (failure)" $ \name str1 str2 ->
     checkWebDriverT config cond
       (== summarize
         [failure
-          (fromString $ show str1 ++ " is not a substring of " ++ name)
-          (fromString str1)
+          (AssertionStatement $
+            T.pack (show str1) <> " is not a substring of " <> name)
+          (AssertionComment str1)
         ]
       ) $
       do
-        assertIsNotNamedSubstring (str1 :: String) (str2++str1++str2, name) (fromString str1)
+        assertIsNotNamedSubstring
+          (str1 :: Text)
+          (str2 <> str1 <> str2, name)
+          (AssertionComment str1)
   ]

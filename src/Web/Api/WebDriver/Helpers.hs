@@ -8,6 +8,7 @@ Stability   : experimental
 Portability : POSIX
 -}
 
+{-# LANGUAGE OverloadedStrings #-}
 module Web.Api.WebDriver.Helpers (
   -- * Data
     writeDataFile
@@ -29,11 +30,14 @@ import Control.Monad.Trans.Class
 import qualified Data.Aeson as Aeson
   ( encode, ToJSON(..), Value )
 import Data.ByteString.Lazy
-  ( ByteString )
+  ( ByteString, fromChunks )
 import qualified Data.ByteString.Lazy.Char8 as BS
   ( pack )
 import qualified Data.Digest.Pure.SHA as SHA
   ( showDigest, sha1 )
+import Data.Text (Text)
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as T
 
 import Web.Api.WebDriver.Endpoints
 import Web.Api.WebDriver.Monad
@@ -47,20 +51,20 @@ import Web.Api.WebDriver.Types.Keyboard
 -- | Save all cookies for the current domain to a file.
 stashCookies
   :: (Monad eff, Monad (t eff), MonadTrans t)
-  => String -- ^ Passed through SHA1, and the digest is used as the filename.
+  => Text -- ^ Passed through SHA1, and the digest is used as the filename.
   -> WebDriverTT t eff ()
 stashCookies string =
-  let file = SHA.showDigest $ SHA.sha1 $ BS.pack string in
+  let file = SHA.showDigest $ SHA.sha1 $ fromChunks [T.encodeUtf8 string] in
   getAllCookies >>= writeCookieFile file
 
 
 -- | Load cookies from a file saved with `stashCookies`. Returns `False` if the cookie file is missing or cannot be read.
 loadCookies
   :: (Monad eff, Monad (t eff), MonadTrans t)
-  => String -- ^ Passed through SHA1, and the digest is used as the filename.
+  => Text -- ^ Passed through SHA1, and the digest is used as the filename.
   -> WebDriverTT t eff Bool
 loadCookies string = do
-  let file = SHA.showDigest $ SHA.sha1 $ BS.pack string
+  let file = SHA.showDigest $ SHA.sha1 $ fromChunks [T.encodeUtf8 string]
   contents <- readCookieFile file
   case contents of
     Nothing -> return False
@@ -146,7 +150,7 @@ readJsonFile file = do
 keypress :: Char -> ActionItem
 keypress x = emptyActionItem
   { _actionType = Just KeyDownAction
-  , _actionValue = Just [x]
+  , _actionValue = Just $ T.singleton x
   }
 
 
@@ -160,9 +164,9 @@ press key = emptyAction
 
 
 -- | Simulate typing some text.
-typeString :: String -> Action
+typeString :: Text -> Action
 typeString x = emptyAction
   { _inputSourceType = Just KeyInputSource
   , _inputSourceId = Just "kbd"
-  , _actionItems = map keypress x
+  , _actionItems = map keypress $ T.unpack x
   }

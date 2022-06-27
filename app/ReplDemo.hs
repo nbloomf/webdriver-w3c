@@ -1,7 +1,9 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Main where
 
 import Control.Monad.IO.Class
 import Data.List (isInfixOf)
+import Data.Text (Text)
 
 import Web.Api.WebDriver
 

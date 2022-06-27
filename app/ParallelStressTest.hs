@@ -2,6 +2,7 @@
 This program is meant to simulate running a large number of tests in parallel. To set the number of tests to be run, export the WD_STRESS_TEST_NUM_TESTS variable in the shell.
 -}
 
+{-# LANGUAGE OverloadedStrings #-}
 module Main where
 
 import Test.Tasty

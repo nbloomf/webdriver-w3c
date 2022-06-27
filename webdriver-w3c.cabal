@@ -88,6 +88,7 @@ executable webdriver-w3c-intro
 
     , tasty >=1.0.1.1
     , transformers >=0.5.5.0
+    , text >=1.2.3.0
 
 
 
@@ -100,6 +101,7 @@ executable wd-tasty-demo
       webdriver-w3c
     , base >=4.7 && <5
 
+    , text >=1.2.3.0
     , tasty >=1.0.1.1
     , tasty-expected-failure >=0.11.1.1
 
@@ -114,6 +116,7 @@ executable wd-parallel-stress-test
       webdriver-w3c
     , base >=4.7 && <5
 
+    , text >=1.2.3.0
     , tasty >=1.0.1.1
 
 
@@ -127,6 +130,7 @@ executable wd-repl-demo
       webdriver-w3c
     , base >=4.7 && <5
 
+    , text >=1.2.3.0
     , tasty >=1.0.1.1
 
 

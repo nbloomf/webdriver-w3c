@@ -50,6 +50,9 @@ import Data.List
   ( isInfixOf )
 import Data.String
   ( IsString, fromString )
+import Data.Text (Text)
+import qualified Data.Text as T
+import qualified Data.Text.IO as T
 import Test.QuickCheck
   ( Arbitrary(..) )
 
@@ -73,33 +76,33 @@ data Assertion = Assertion
 
 -- | Human-readable statement which may be true or false.
 newtype AssertionStatement = AssertionStatement
-  { theAssertionStatement :: String
+  { theAssertionStatement :: Text
   } deriving Eq
 
 instance Show AssertionStatement where
-  show = theAssertionStatement
+  show = T.unpack . theAssertionStatement
 
 instance IsString AssertionStatement where
-  fromString = AssertionStatement
+  fromString = AssertionStatement . T.pack
 
 instance Arbitrary AssertionStatement where
-  arbitrary = AssertionStatement <$> arbitrary
+  arbitrary = AssertionStatement <$> (fmap T.pack arbitrary)
 
 
 
 -- | Human-readable explanation for why an assertion is made.
 newtype AssertionComment = AssertionComment
-  { theAssertionComment :: String
+  { theAssertionComment :: Text
   } deriving Eq
 
 instance Show AssertionComment where
-  show = theAssertionComment
+  show = T.unpack . theAssertionComment
 
 instance IsString AssertionComment where
-  fromString = AssertionComment
+  fromString = AssertionComment . T.pack
 
 instance Arbitrary AssertionComment where
-  arbitrary = AssertionComment <$> arbitrary
+  arbitrary = AssertionComment <$> (fmap T.pack arbitrary)
 
 
 
@@ -120,20 +123,20 @@ isSuccess a = AssertSuccess == assertionResult a
 
 
 -- | Basic string representation of an assertion.
-printAssertion :: Assertion -> String
+printAssertion :: Assertion -> Text
 printAssertion Assertion{..} =
   case assertionResult of
     AssertSuccess -> 
-      unwords
+      T.unwords
         [ "\x1b[1;32mValid Assertion\x1b[0;39;49m"
-        , "\nassertion: " ++ show assertionStatement
-        , "\ncomment: " ++ show assertionComment
+        , "\nassertion: " <> theAssertionStatement assertionStatement
+        , "\ncomment: " <> theAssertionComment assertionComment
         ]
     AssertFailure ->
-      unwords
+      T.unwords
         [ "\x1b[1;31mInvalid Assertion\x1b[0;39;49m"
-        , "\nassertion: " ++ show assertionStatement
-        , "\ncomment: " ++ show assertionComment
+        , "\nassertion: " <> theAssertionStatement assertionStatement
+        , "\ncomment: " <> theAssertionComment assertionComment
         ]
 
 
@@ -200,7 +203,7 @@ assertTrue
   -> AssertionComment -- ^ An additional comment (the /why/)
   -> m ()
 assertTrue p = assertSuccessIf p
-  (AssertionStatement $ show p ++ " is True")
+  (AssertionStatement $ T.pack (show p) <> " is True")
 
 -- | Succeeds if @Bool@ is `False`.
 assertFalse
@@ -209,7 +212,7 @@ assertFalse
   -> AssertionComment -- ^ An additional comment (the /why/)
   -> m ()
 assertFalse p = assertSuccessIf (not p)
-  (AssertionStatement $ show p ++ " is False")
+  (AssertionStatement $ T.pack (show p) <> " is False")
 
 -- | Succeeds if the given @t@s are equal according to their `Eq` instance.
 assertEqual
@@ -219,7 +222,8 @@ assertEqual
   -> AssertionComment -- ^ An additional comment (the /why/)
   -> m ()
 assertEqual x y = assertSuccessIf (x == y)
-  (AssertionStatement $ show x ++ " is equal to " ++ show y)
+  (AssertionStatement $
+    T.pack (show x) <> " is equal to " <> T.pack (show y))
 
 -- | Succeeds if the given @t@s are not equal according to their `Eq` instance.
 assertNotEqual
@@ -229,47 +233,47 @@ assertNotEqual
   -> AssertionComment -- ^ An additional comment (the /why/)
   -> m ()
 assertNotEqual x y = assertSuccessIf (x /= y)
-  (AssertionStatement $ show x ++ " is not equal to " ++ show y)
+  (AssertionStatement $ T.pack (show x) <> " is not equal to " <> T.pack (show y))
 
 -- | Succeeds if the first list is an infix of the second, according to their `Eq` instance.
 assertIsSubstring
-  :: (Monad m, Assert m, Eq a, Show a)
-  => [a]
-  -> [a]
+  :: (Monad m, Assert m)
+  => Text
+  -> Text
   -> AssertionComment -- ^ An additional comment (the /why/)
   -> m ()
-assertIsSubstring x y = assertSuccessIf (x `isInfixOf` y)
-  (AssertionStatement $ show x ++ " is a substring of " ++ show y)
+assertIsSubstring x y = assertSuccessIf (T.isInfixOf x y)
+  (AssertionStatement $ T.pack (show x) <> " is a substring of " <> T.pack (show y))
 
 -- | Succeeds if the first list is not an infix of the second, according to their `Eq` instance.
 assertIsNotSubstring
-  :: (Monad m, Assert m, Eq a, Show a)
-  => [a]
-  -> [a]
+  :: (Monad m, Assert m)
+  => Text
+  -> Text
   -> AssertionComment -- ^ An additional comment (the /why/)
   -> m ()
-assertIsNotSubstring x y = assertSuccessIf (not $ x `isInfixOf` y)
-  (AssertionStatement $ show x ++ " is not a substring of " ++ show y)
+assertIsNotSubstring x y = assertSuccessIf (not $ T.isInfixOf x y)
+  (AssertionStatement $ T.pack (show x) <> " is not a substring of " <> T.pack (show y))
 
 -- | Succeeds if the first list is an infix of the second, named list, according to their `Eq` instance. This is similar to `assertIsSubstring`, except that the "name" of the second list argument is used in reporting failures. Handy if the second list is very large -- say the source of a webpage.
 assertIsNamedSubstring
-  :: (Monad m, Assert m, Eq a, Show a)
-  => [a]
-  -> ([a],String)
+  :: (Monad m, Assert m)
+  => Text
+  -> (Text,Text)
   -> AssertionComment -- ^ An additional comment (the /why/)
   -> m ()
-assertIsNamedSubstring x (y,name) = assertSuccessIf (x `isInfixOf` y)
-  (AssertionStatement $ show x ++ " is a substring of " ++ name)
+assertIsNamedSubstring x (y,name) = assertSuccessIf (T.isInfixOf x y)
+  (AssertionStatement $ T.pack (show x) <> " is a substring of " <> name)
 
 -- | Succeeds if the first list is not an infix of the second, named list, according to their `Eq` instance. This is similar to `assertIsNotSubstring`, except that the "name" of the second list argument is used in reporting failures. Handy if the second list is very large -- say the source of a webpage.
 assertIsNotNamedSubstring
-  :: (Monad m, Assert m, Eq a, Show a)
-  => [a]
-  -> ([a],String)
+  :: (Monad m, Assert m)
+  => Text
+  -> (Text,Text)
   -> AssertionComment -- ^ An additional comment (the /why/)
   -> m ()
-assertIsNotNamedSubstring x (y,name) = assertSuccessIf (not $ isInfixOf x y)
-  (AssertionStatement $ show x ++ " is not a substring of " ++ name)
+assertIsNotNamedSubstring x (y,name) = assertSuccessIf (not $ T.isInfixOf x y)
+  (AssertionStatement $ T.pack (show x) <> " is not a substring of " <> name)
 
 
 
@@ -315,7 +319,7 @@ summarizeAll = mconcat
 -- | Very basic string representation of an `AssertionSummary`.
 printSummary :: AssertionSummary -> IO ()
 printSummary AssertionSummary{..} = do
-  mapM_ (putStrLn . printAssertion) failures
+  mapM_ (T.putStrLn . printAssertion) failures
   putStrLn $ "Assertions: " ++ show (numSuccesses + numFailures)
   putStrLn $ "Failures: " ++ show numFailures
 
