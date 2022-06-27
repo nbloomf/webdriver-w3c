@@ -1186,7 +1186,7 @@ getAlertText = do
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#send-alert-text>.
 sendAlertText
   :: (Monad eff, Monad (t eff), MonadTrans t)
-  => String
+  => Text
   -> WebDriverTT t eff ()
 sendAlertText msg = do
   (baseUrl, format) <- theRequestContext

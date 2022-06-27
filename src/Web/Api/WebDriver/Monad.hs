@@ -604,7 +604,7 @@ data BreakpointSetting
   | BreakpointsOff
   deriving (Eq, Show)
 
--- | Includes a @Maybe String@ representing the current session ID, if one has been opened.
+-- | Includes a @Maybe Text@ representing the current session ID, if one has been opened.
 data WDState = WDState
   { _sessionId :: Maybe Text
   , _breakpoints :: BreakpointSetting

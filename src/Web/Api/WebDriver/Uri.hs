@@ -44,7 +44,7 @@ instance Arbitrary Host where
       Just h -> return h
       Nothing -> error "In Arbitrary instance for Host: bad characters."
 
-hostAllowedChars :: String
+hostAllowedChars :: [Char]
 hostAllowedChars = concat
   [ ['a'..'z'], ['A'..'Z'], ['0'..'9'], ['-','_','.','~','%'] ]
 
