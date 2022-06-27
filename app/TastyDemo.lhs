@@ -89,7 +89,7 @@ What does this mean? To run a webdriver session, we have to tell our program the
 
 `--wd-remote-ends` lets us supply the remote end URIs on the command line directly. Suppose I've got geckodriver listening on port 4444 and chromedriver on port 9515 (which they do by default). Then I'd use the following option:
 
-    --wd-remote-ends 'geckodriver: https://localhost:4444 chromedriver: https://localhost:9515'
+    --wd-remote-ends 'geckodriver https://localhost:4444 chromedriver https://localhost:9515'
 
 (Note the explicit `https` scheme; this is required.) This is fine if you have a small number of remote ends running, but the command line quickly gets unwieldy if you have tens or hundreds of remote ends ready to run tests in parallel. So we can also specify the remote end URIs in a specially formatted config file. The config file must look something like this:
 
@@ -106,7 +106,7 @@ The drivers can come in any order and don't have to be contiguous, and blank lin
 
 `webdriver-w3c` can also run your tests in parallel. To take advantage of this, you'll need to compile your executable with `-threaded -rtsopts -with-rtsopts=-N` and start it with the `--num-threads N` option. You'll also need to start more than one remote end of each type. Note that if you want to run N tests in parallel, then you'll need N instances of _each_ remote end (geckodriver and chromedriver) running in the background. This is because the tests are _processed_ sequentially, even if they run in parallel. For instance, if you have 100 firefox tests followed by 100 chrome tests, but run them with one geckodriver and one chromedriver, the tests will run sequentially.
 
-There are a bunch of other command line options for tweaking the behavior of your webdriver tests; use `wd-tasty-demo --help` to see a list. Most of these are pretty specialized. Other options are pretty common. In addition to `--wd-remote-ends` and `--wd-remote-ends-config`, there's `--wd-driver`, for specifying which driver to use, and `--wd-response-format`, which is required when using chromedriver because chromedriver is not fully spec compliant as of this writing.
+There are a bunch of other command line options for tweaking the behavior of your webdriver tests; use `wd-tasty-demo --help` to see a list. Most of these are pretty specialized. Other options are pretty common. In addition to `--wd-remote-ends` and `--wd-remote-ends-config`, there's `--wd-driver`, for specifying which driver to use, and `--wd-response-format`, which was required when using old versions of chromedriver because it was not fully spec compliant.
 
 
 Example sessions
@@ -118,26 +118,26 @@ Run one at a time with geckodriver:
 
 ```
 geckodriver --port 4444 > /dev/null 2> /dev/null &
-wd-tasty-demo --wd-remote-ends 'geckodriver: https://localhost:4444'
+wd-tasty-demo --wd-remote-ends 'geckodriver https://localhost:4444'
 ```
 
 Run one at a time with geckodriver, but can it with all the logs:
 
 ```
 geckodriver --port 4444 > /dev/null 2> /dev/null &
-wd-tasty-demo --wd-remote-ends 'geckodriver: https://localhost:4444' --wd-verbosity silent
+wd-tasty-demo --wd-remote-ends 'geckodriver https://localhost:4444' --wd-verbosity silent
 ```
 
 Run one at a time with chromedriver:
 
 ```
 chromedriver --port=9515 &
-wd-tasty-demo --wd-driver chromedriver --wd-response-format chromedriver --wd-remote-ends 'chromedriver: https://localhost:9515'
+wd-tasty-demo --wd-driver chromedriver --wd-remote-ends 'chromedriver https://localhost:9515'
 ```
 
 Run two at a time with geckodriver:
 
 ```
 geckodriver --port 4444 > /dev/null 2> /dev/null &
-wd-tasty-demo --wd-remote-ends 'geckodriver: https://localhost:4444' --num-threads 2
+wd-tasty-demo --wd-remote-ends 'geckodriver https://localhost:4444' --num-threads 2
 ```
