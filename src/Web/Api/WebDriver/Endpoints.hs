@@ -180,6 +180,7 @@ import Data.Text.Encoding
   ( encodeUtf8 )
 import qualified Data.ByteString as SB
 import qualified Data.ByteString.Base64 as B64
+import Data.String (IsString)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Network.URI.Encode as E
@@ -191,15 +192,15 @@ import Web.Api.WebDriver.Monad
 
 
 -- | Spec-defined "web element identifier" string constant. See <https://w3c.github.io/webdriver/webdriver-spec.html#elements>.
-_WEB_ELEMENT_ID :: Text
+_WEB_ELEMENT_ID :: (IsString t) => t
 _WEB_ELEMENT_ID = "element-6066-11e4-a52e-4f735466cecf"
 
 -- | Spec-defined "web window identifier" string constant. See <https://w3c.github.io/webdriver/webdriver-spec.html#command-contexts>.
-_WEB_WINDOW_ID :: Text
+_WEB_WINDOW_ID :: (IsString t) => t
 _WEB_WINDOW_ID =  "window-fcc6-11e5-b4f8-330a88ab9d7f"
 
 -- | Spec-defined "web frame identifier" string constant. See <https://w3c.github.io/webdriver/webdriver-spec.html#command-contexts>.
-_WEB_FRAME_ID :: Text
+_WEB_FRAME_ID :: (IsString t) => t
 _WEB_FRAME_ID = "frame-075b-4da1-b6ba-e579c2d3230a"
 
 
