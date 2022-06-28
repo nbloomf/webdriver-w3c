@@ -26,6 +26,8 @@ test_with_lts_major_minor () {
     echo "Test failure!"
     echo "Replicate with this command:"
     echo "stack --resolver lts-$1" test
+    killall geckodriver
+    killall chromedriver
     exit 1
   fi
 }
