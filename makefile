@@ -5,10 +5,13 @@ docs:
 test:
 	./dev/run-tests.sh
 
+test-compat:
+	./dev/test-compat.sh
+
 demo:
 	./dev/run-demo.sh
 
 stress:
 	./dev/run-parallel-stress-test.sh
 
-.PHONY: docs test demo stress
+.PHONY: docs test test-compat demo stress
