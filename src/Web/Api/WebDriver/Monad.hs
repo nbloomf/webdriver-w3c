@@ -203,6 +203,11 @@ instance
     => MonadIO (WebDriverTT t eff) where
   liftIO = WDT . Http.liftHttpTT . liftIO
 
+instance
+  (Monad eff, MonadTrans t, Monad (t eff), MonadFail (t eff))
+    => MonadFail (WebDriverTT t eff) where
+  fail = WDT . fail
+
 -- | Lift a value from the inner transformed monad
 liftWebDriverTT
   :: (Monad eff, Monad (t eff), MonadTrans t)
