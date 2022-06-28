@@ -12,6 +12,7 @@ A monad transformer for building WebDriver sessions.
 
 {-#
   LANGUAGE
+    CPP,
     GADTs,
     Rank2Types,
     KindSignatures,
@@ -114,7 +115,11 @@ module Web.Api.WebDriver.Monad (
 
 
 
+#if MIN_VERSION_base(4,9,0)
+import Prelude hiding (fail, readFile, writeFile, putStrLn)
+#else
 import Prelude hiding (readFile, writeFile, putStrLn)
+#endif
 
 import Control.Concurrent.MVar
   ( MVar )
@@ -162,6 +167,11 @@ import System.IO.Error
 import Test.QuickCheck
   ( Property )
 
+-- Transitional MonadFail implementation
+#if MIN_VERSION_base(4,9,0)
+import Control.Monad.Fail
+#endif
+
 import qualified Control.Monad.Script.Http as Http
 import qualified Data.MockIO as Mock
 import qualified Data.MockIO.FileSystem as FS
@@ -202,6 +212,11 @@ instance
   (MonadIO eff, MonadIO (t eff), MonadTrans t)
     => MonadIO (WebDriverTT t eff) where
   liftIO = WDT . Http.liftHttpTT . liftIO
+
+instance
+  (Monad eff, MonadTrans t, Monad (t eff), MonadFail (t eff))
+    => MonadFail (WebDriverTT t eff) where
+  fail = WDT . fail
 
 -- | Lift a value from the inner transformed monad
 liftWebDriverTT
