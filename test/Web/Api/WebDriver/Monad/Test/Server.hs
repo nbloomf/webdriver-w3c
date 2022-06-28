@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, BangPatterns, FlexibleInstances, RecordWildCards #-}
+{-# LANGUAGE OverloadedStrings, BangPatterns, FlexibleInstances, RecordWildCards, CPP #-}
 module Web.Api.WebDriver.Monad.Test.Server (
     WebDriverServerState(..)
   , defaultWebDriverServerState
@@ -1027,6 +1027,10 @@ emptyResponse = Response
   , responseBody = ()
   , responseCookieJar = CJ []
   , responseClose' = ResponseClose $ return ()
+#if MIN_VERSION_http_client(0,7,8)
+  , responseOriginalRequest =
+      error "emptyResponse: responseOriginalRequest not defined"
+#endif
   }
 
 _err_invalid_argument :: String -> HttpException
