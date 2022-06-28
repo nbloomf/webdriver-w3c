@@ -12,7 +12,7 @@ The WebDriver protocol involves passing several different kinds of JSON objects.
 Note that while the WebDriver spec defines some JSON objects, in general a given WebDriver server can accept additional properties on any given object. Our types here will be limited to the "spec" object signatures, but our API will need to be user extensible.
 -}
 
-{-# LANGUAGE OverloadedStrings, RecordWildCards, BangPatterns #-}
+{-# LANGUAGE OverloadedStrings, RecordWildCards, BangPatterns, CPP #-}
 module Web.Api.WebDriver.Types (
   -- * Stringy Types
     SessionId
@@ -92,6 +92,10 @@ module Web.Api.WebDriver.Types (
   , ResponseErrorCode(..)
   ) where
 
+#if MIN_VERSION_base(4,9,0)
+import Prelude hiding (fail)
+#endif
+
 import Control.Monad.IO.Class
 import qualified Data.ByteString as SB
 import qualified Data.ByteString.Base64 as B64
@@ -118,6 +122,16 @@ import Test.QuickCheck.Gen
 import Text.Read
   ( readMaybe )
 
+-- Transitional MonadFail implementation
+#if MIN_VERSION_base(4,9,0)
+import Control.Monad.Fail
+#endif
+
+-- aeson 2.0.0.0 introduced KeyMap over HashMap
+#if MIN_VERSION_aeson(2,0,0)
+import Data.Aeson.Key (fromText)
+#endif
+
 import Web.Api.WebDriver.Uri
 
 
@@ -136,10 +150,20 @@ object_ :: [Maybe Pair] -> Value
 object_ = object . filter (\(_, v) -> v /= Null) . catMaybes
 
 (.==) :: (ToJSON v, KeyValue kv) => Text -> v -> Maybe kv
-(.==) key value = Just (key .= value)
+(.==) key value =
+#if MIN_VERSION_aeson(2,0,0)
+  Just ((fromText key) .= value) --    val = lookup (fromText key) obj
+#else
+  Just (key .= value)
+#endif
 
 (.=?) :: (ToJSON v, KeyValue kv) => Text -> Maybe v -> Maybe kv
-(.=?) key = fmap (key .=)
+(.=?) key =
+#if MIN_VERSION_aeson(2,0,0)
+  fmap ((fromText key) .=)
+#else
+  fmap (key .=)
+#endif
 
 
 
