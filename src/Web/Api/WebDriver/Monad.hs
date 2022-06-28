@@ -12,6 +12,7 @@ A monad transformer for building WebDriver sessions.
 
 {-#
   LANGUAGE
+    CPP,
     GADTs,
     Rank2Types,
     KindSignatures,
@@ -114,7 +115,11 @@ module Web.Api.WebDriver.Monad (
 
 
 
+#if MIN_VERSION_base(4,9,0)
+import Prelude hiding (fail, readFile, writeFile, putStrLn)
+#else
 import Prelude hiding (readFile, writeFile, putStrLn)
+#endif
 
 import Control.Concurrent.MVar
   ( MVar )
@@ -161,6 +166,11 @@ import System.IO.Error
   ( eofErrorType, doesNotExistErrorType, mkIOError )
 import Test.QuickCheck
   ( Property )
+
+-- Transitional MonadFail implementation
+#if MIN_VERSION_base(4,9,0)
+import Control.Monad.Fail
+#endif
 
 import qualified Control.Monad.Script.Http as Http
 import qualified Data.MockIO as Mock
