@@ -92,6 +92,10 @@ module Web.Api.WebDriver.Types (
   , ResponseErrorCode(..)
   ) where
 
+#if MIN_VERSION_base(4,9,0)
+import Prelude hiding (fail)
+#endif
+
 import Control.Monad.IO.Class
 import qualified Data.ByteString as SB
 import qualified Data.ByteString.Base64 as B64
@@ -117,6 +121,11 @@ import Test.QuickCheck.Gen
   ( listOf, oneof, elements )
 import Text.Read
   ( readMaybe )
+
+-- Transitional MonadFail implementation
+#if MIN_VERSION_base(4,9,0)
+import Control.Monad.Fail
+#endif
 
 -- aeson 2.0.0.0 introduced KeyMap over HashMap
 #if MIN_VERSION_aeson(2,0,0)
