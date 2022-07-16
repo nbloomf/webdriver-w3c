@@ -85,6 +85,8 @@ module Web.Api.WebDriver.Endpoints (
   , findElementsFromElement
   -- ** Get Active Element
   , getActiveElement
+  -- ** Get Element Shadow Root
+  , getElementShadowRoot
 
   -- * Element State
   -- ** Is Element Selected
@@ -164,10 +166,11 @@ module Web.Api.WebDriver.Endpoints (
   -- ** Print Page
   , printPage
 
-  -- Spec Constants
+  -- * Constants
   , _WEB_ELEMENT_ID
   , _WEB_WINDOW_ID
   , _WEB_FRAME_ID
+  , _SHADOW_ROOT_ID
   ) where
 
 import Control.Monad.Trans.Class
@@ -202,6 +205,10 @@ _WEB_WINDOW_ID =  "window-fcc6-11e5-b4f8-330a88ab9d7f"
 -- | Spec-defined "web frame identifier" string constant. See <https://w3c.github.io/webdriver/webdriver-spec.html#command-contexts>.
 _WEB_FRAME_ID :: (IsString t) => t
 _WEB_FRAME_ID = "frame-075b-4da1-b6ba-e579c2d3230a"
+
+-- | Spec-defined "shadow root identifier" string constant. See <https://w3c.github.io/webdriver/#shadow-root>.
+_SHADOW_ROOT_ID :: Text
+_SHADOW_ROOT_ID = "shadow-6066-11e4-a52e-4f735466cecf"
 
 
 
@@ -756,6 +763,23 @@ getActiveElement = do
           ChromeFormat -> lookupKeyJson "ELEMENT"
     >>= constructFromJson
     >>= (return . ElementRef)
+
+
+-- | See <https://w3c.github.io/webdriver/webdriver-spec.html#get-element-shadow-root>.
+getElementShadowRoot
+  :: (Monad eff, Monad (t eff), MonadTrans t, HasElementRef a)
+  => a
+  -> WebDriverTT t eff ShadowRootRef
+getElementShadowRoot element = do
+  baseUrl <- theRemoteUrlWithSession
+  let elementId = elementRefOf element
+  httpGet (baseUrl <> "/element/" <> show elementId <> "/shadow")
+    >>= (return . _responseBody)
+    >>= parseJson
+    >>= lookupKeyJson "value"
+    >>= lookupKeyJson _WEB_ELEMENT_ID
+    >>= constructFromJson
+    >>= (return . ShadowRootRef . unpack)
 
 
 -- | See <https://w3c.github.io/webdriver/webdriver-spec.html#is-element-selected>.

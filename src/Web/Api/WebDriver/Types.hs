@@ -17,6 +17,7 @@ module Web.Api.WebDriver.Types (
   -- * Stringy Types
     SessionId
   , ElementRef(..)
+  , ShadowRootRef(..)
   , ContextId(..)
   , ContextType(..)
   , Selector
@@ -180,6 +181,17 @@ instance Show ElementRef where
 
 instance IsString ElementRef where
   fromString = ElementRef . pack
+
+-- | See <https://w3c.github.io/webdriver/#shadow-root>
+newtype ShadowRootRef = ShadowRootRef
+  { theShadowRootRef :: String
+  } deriving Eq
+
+instance Show ShadowRootRef where
+  show (ShadowRootRef str) = str
+
+instance IsString ShadowRootRef where
+  fromString = ShadowRootRef
 
 -- | Identifier for a /browsing context/; see <https://w3c.github.io/webdriver/webdriver-spec.html#dfn-current-browsing-context>.
 newtype ContextId = ContextId
