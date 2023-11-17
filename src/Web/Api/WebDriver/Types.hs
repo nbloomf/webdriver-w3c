@@ -12,7 +12,7 @@ The WebDriver protocol involves passing several different kinds of JSON objects.
 Note that while the WebDriver spec defines some JSON objects, in general a given WebDriver server can accept additional properties on any given object. Our types here will be limited to the "spec" object signatures, but our API will need to be user extensible.
 -}
 
-{-# LANGUAGE OverloadedStrings, RecordWildCards, BangPatterns, CPP #-}
+{-# LANGUAGE OverloadedStrings, RecordWildCards, BangPatterns, CPP, FlexibleContexts #-}
 module Web.Api.WebDriver.Types (
   -- * Stringy Types
     SessionId
@@ -149,7 +149,7 @@ malformedValue !name !value = fail $ unpack $
 object_ :: [Maybe Pair] -> Value
 object_ = object . filter (\(_, v) -> v /= Null) . catMaybes
 
-(.==) :: (ToJSON v, KeyValue kv) => Text -> v -> Maybe kv
+(.==) :: (ToJSON v, KeyValue Value kv) => Text -> v -> Maybe kv
 (.==) key value =
 #if MIN_VERSION_aeson(2,0,0)
   Just ((fromText key) .= value) --    val = lookup (fromText key) obj
@@ -157,7 +157,7 @@ object_ = object . filter (\(_, v) -> v /= Null) . catMaybes
   Just (key .= value)
 #endif
 
-(.=?) :: (ToJSON v, KeyValue kv) => Text -> Maybe v -> Maybe kv
+(.=?) :: (ToJSON v, KeyValue Value kv) => Text -> Maybe v -> Maybe kv
 (.=?) key =
 #if MIN_VERSION_aeson(2,0,0)
   fmap ((fromText key) .=)
