@@ -1,0 +1,52 @@
+diff --git a/src/Control/Monad/Script/Http.hs b/src/Control/Monad/Script/Http.hs
+index 2602ba3..993801e 100644
+--- a/src/Control/Monad/Script/Http.hs
++++ b/src/Control/Monad/Script/Http.hs
+@@ -133,6 +133,8 @@ import Data.Aeson.Encode.Pretty
+   ( encodePretty )
+ import Data.Aeson.Lens
+   ( _Value )
++import Data.Aeson.KeyMap
++  ( toHashMapText )
+ import Data.ByteString.Lazy
+   ( ByteString, fromStrict, readFile, writeFile )
+ import Data.ByteString.Lazy.Char8
+@@ -1153,7 +1155,7 @@ lookupKeyJson
+   -> Value -- ^ JSON object
+   -> HttpTT e r w s p t eff Value
+ lookupKeyJson key v = case v of
+-  Object obj -> case lookup key obj of
++  Object obj -> case lookup key (toHashMapText obj) of
+     Nothing -> throwJsonError $ JsonKeyDoesNotExist key (Object obj)
+     Just value -> return value
+   _ -> throwJsonError $ JsonKeyLookupOffObject key v
+diff --git a/src/Network/HTTP/Client/Extras.hs b/src/Network/HTTP/Client/Extras.hs
+index 22c47a9..787612e 100644
+--- a/src/Network/HTTP/Client/Extras.hs
++++ b/src/Network/HTTP/Client/Extras.hs
+@@ -40,6 +40,7 @@ import Network.HTTP.Client
+   , responseHeaders, responseVersion, responseStatus )
+ import Network.HTTP.Types
+ import Data.Aeson (Value(..), object, (.=))
++import qualified Data.Aeson.Key as AK ( fromText )
+ import qualified Data.Text as T (Text, pack)
+ 
+ 
+@@ -53,7 +54,7 @@ data HttpResponse = HttpResponse
+   , _responseHeaders :: ResponseHeaders
+   , _responseBody :: ByteString
+   , _responseCookieJar :: CookieJar
+-  } deriving (Eq, Show)
++  } deriving (Show)
+ 
+ -- | Convert an opaque `Response ByteString` into an `HttpResponse`.
+ readHttpResponse :: Response ByteString -> HttpResponse
+@@ -72,7 +73,7 @@ jsonResponseHeaders :: ResponseHeaders -> Value
+ jsonResponseHeaders =
+   Array . fromList . map (\(k,v) -> object [ (key k) .= (val v) ])
+   where
+-    key = T.pack . concatMap esc . show
++    key = AK.fromText . T.pack . concatMap esc . show
+     val = T.pack . concatMap esc . show
+ 
+     esc c = case c of

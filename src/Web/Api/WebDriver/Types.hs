@@ -110,6 +110,8 @@ import Data.HashMap.Strict
 import Data.Aeson.Types
   ( ToJSON(..), FromJSON(..), Value(..), KeyValue
   , Pair, (.:?), (.:), (.=), object, typeMismatch )
+import Data.Aeson.Key
+  ( fromText )
 import Data.Text
   ( Text, pack, unpack )
 import qualified Data.Text as T
