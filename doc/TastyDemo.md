@@ -38,18 +38,19 @@ Define your tests
 -----------------
 
 First things first: to make a WebDriver test suite, we need some
-WebDriver tests. These are just values of type `WebDriver IO ()`. (Or
-more generally, `Monad eff => WebDriver eff ()`, but that's not
-important for now.) Here are a few dweeby examples. It's not necessary
-for the tests to start with `_test` or use snake\_case; I'm doing it
-here out of habit.
+WebDriver tests. These are just values of type `WebDriverT IO ()`. (Or
+more generally,
+`(Monad eff, Monad (t eff), MonadTrans t) => WebDriverTT t eff ()`, but
+that's not important for now.) Here are a few dweeby examples. It's not
+necessary for the tests to start with `_test` or use snake\_case; I'm
+doing it here out of habit.
 
 ``` {.sourceCode .literate .haskell}
-_test_one :: (Monad eff) => WebDriver eff ()
+_test_one :: (Monad eff) => WebDriverT eff ()
 _test_one = do
   navigateTo "https://google.com"
 
-_test_two :: (Monad eff) => WebDriver eff ()
+_test_two :: (Monad eff) => WebDriverT eff ()
 _test_two = do
   navigateTo "https://yahoo.com"
   assertSuccess "time travel achieved"
@@ -134,7 +135,7 @@ line directly. Suppose I've got geckodriver listening on port 4444 and
 chromedriver on port 9515 (which they do by default). Then I'd use the
 following option:
 
-    --wd-remote-ends 'geckodriver: https://localhost:4444 chromedriver: https://localhost:9515'
+    --wd-remote-ends 'geckodriver https://localhost:4444 chromedriver https://localhost:9515'
 
 (Note the explicit `https` scheme; this is required.) This is fine if
 you have a small number of remote ends running, but the command line
@@ -173,8 +174,8 @@ behavior of your webdriver tests; use `wd-tasty-demo --help` to see a
 list. Most of these are pretty specialized. Other options are pretty
 common. In addition to `--wd-remote-ends` and `--wd-remote-ends-config`,
 there's `--wd-driver`, for specifying which driver to use, and
-`--wd-response-format`, which is required when using chromedriver
-because chromedriver is not fully spec compliant.
+`--wd-response-format`, which was required when using old versions of
+chromedriver because it was not fully spec compliant.
 
 Example sessions
 ----------------
@@ -184,19 +185,19 @@ Here are some example commands for running this demo.
 Run one at a time with geckodriver:
 
     geckodriver --port 4444 > /dev/null 2> /dev/null &
-    wd-tasty-demo --wd-remote-ends 'geckodriver: https://localhost:4444'
+    wd-tasty-demo --wd-remote-ends 'geckodriver https://localhost:4444'
 
 Run one at a time with geckodriver, but can it with all the logs:
 
     geckodriver --port 4444 > /dev/null 2> /dev/null &
-    wd-tasty-demo --wd-remote-ends 'geckodriver: https://localhost:4444' --wd-verbosity silent
+    wd-tasty-demo --wd-remote-ends 'geckodriver https://localhost:4444' --wd-verbosity silent
 
 Run one at a time with chromedriver:
 
     chromedriver --port=9515 &
-    wd-tasty-demo --wd-driver chromedriver --wd-response-format chromedriver --wd-remote-ends 'chromedriver: https://localhost:9515'
+    wd-tasty-demo --wd-driver chromedriver --wd-remote-ends 'chromedriver https://localhost:9515'
 
 Run two at a time with geckodriver:
 
     geckodriver --port 4444 > /dev/null 2> /dev/null &
-    wd-tasty-demo --wd-remote-ends 'geckodriver: https://localhost:4444' --num-threads 2
+    wd-tasty-demo --wd-remote-ends 'geckodriver https://localhost:4444' --num-threads 2

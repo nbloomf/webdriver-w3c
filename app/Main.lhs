@@ -63,14 +63,14 @@ My First Browser Automation
 
 Ok! You've got your WebDriver proxy (geckodriver) running in one terminal window, and ghci running in another. Let's start with a simple example to illustrate what we can do, then explain how it works. Read this code block, even if the syntax is meaningless.
 
-> do_a_barrel_roll :: WebDriverT IO ()
-> do_a_barrel_roll = do
+> release_the_bats :: WebDriverT IO ()
+> release_the_bats = do
 >   fullscreenWindow
 >   navigateTo "https://www.google.com"
->   performActions [typeString "do a barrel roll"]
+>   performActions [typeString "bats"]
 >   performActions [press EnterKey]
 >   wait 5000000
->   return ()
+>   pure ()
 
 Without running that code -- and maybe without being proficient in Haskell -- what do you think it does?
 
@@ -78,19 +78,19 @@ Now let's run it. In the interpreter, type
 
     example1
 
-followed by (enter). You should see a Firefox window open, go fullscreen, and search Google for "do a barrel roll".
+followed by (enter). You should see a Firefox window open, go fullscreen, and search Google for "bats".
 
 `example1`, by the way, is this:
 
 > example1 :: IO ()
 > example1 = do
 >   execWebDriverT defaultWebDriverConfig
->     (runIsolated_ defaultFirefoxCapabilities do_a_barrel_roll)
+>     (runIsolated_ defaultFirefoxCapabilities release_the_bats)
 >   return ()
 
 Let's break down what just happened.
 
-1. `do_a_barrel_roll` is a *WebDriver session*, expressed in the `WebDriver` DSL. It's a high-level description for a sequence of browser actions: in this case, "make the window full screen", "navigate to google.com", and so on.
+1. `release_the_bats` is a *WebDriver session*, expressed in the `WebDriver` DSL. It's a high-level description for a sequence of browser actions: in this case, "make the window full screen", "navigate to google.com", and so on.
 2. `runIsolated_` takes a WebDriver session and runs it in a fresh browser instance. The parameters of this instance are specified in `defaultFirefoxCapabilities`.
 3. `execWebDriver` takes a WebDriver session and carries out the steps, using some options specified in `defaultWebDriverConfig`.
 
@@ -212,7 +212,7 @@ This is `example2`:
 
 Here's what happened:
 
-1. `what_page_is_this` is a WebDriver session, just like `do_a_barrel_roll`, this time including an assertion: that the title of some web page is "Welcome to Lycos!".
+1. `what_page_is_this` is a WebDriver session, just like `release_the_bats`, this time including an assertion: that the title of some web page is "Welcome to Lycos!".
 2. `runIsolated_` runs `what_page_is_this` in a fresh browser instance.
 3. `debugWebDriver` works much like `execWebDriver`, except that it collects the results of any assertion statements and summarizes them (this is `result`).
 4. `printSummary` takes the assertion results and prints them out all pretty like.

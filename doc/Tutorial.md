@@ -19,8 +19,10 @@ import Web.Api.WebDriver
 import Test.Tasty.WebDriver
 
 import Test.Tasty
+import Control.Monad.Trans.Class
 import qualified System.Environment as SE
 import Control.Monad
+import System.IO
 
 main :: IO ()
 main = return ()
@@ -83,14 +85,14 @@ example to illustrate what we can do, then explain how it works. Read
 this code block, even if the syntax is meaningless.
 
 ``` {.sourceCode .literate .haskell}
-do_a_barrel_roll :: WebDriver IO ()
-do_a_barrel_roll = do
+release_the_bats :: WebDriverT IO ()
+release_the_bats = do
   fullscreenWindow
   navigateTo "https://www.google.com"
-  performActions [typeString "do a barrel roll"]
+  performActions [typeString "bats"]
   performActions [press EnterKey]
   wait 5000000
-  return ()
+  pure ()
 ```
 
 Without running that code -- and maybe without being proficient in
@@ -101,21 +103,21 @@ Now let's run it. In the interpreter, type
     example1
 
 followed by (enter). You should see a Firefox window open, go
-fullscreen, and search Google for "do a barrel roll".
+fullscreen, and search Google for "bats".
 
 `example1`, by the way, is this:
 
 ``` {.sourceCode .literate .haskell}
 example1 :: IO ()
 example1 = do
-  execWebDriver defaultWebDriverConfig
-    (runIsolated_ defaultFirefoxCapabilities do_a_barrel_roll)
+  execWebDriverT defaultWebDriverConfig
+    (runIsolated_ defaultFirefoxCapabilities release_the_bats)
   return ()
 ```
 
 Let's break down what just happened.
 
-1.  `do_a_barrel_roll` is a *WebDriver session*, expressed in the
+1.  `release_the_bats` is a *WebDriver session*, expressed in the
     `WebDriver` DSL. It's a high-level description for a sequence of
     browser actions: in this case, "make the window full screen",
     "navigate to google.com", and so on.
@@ -206,9 +208,10 @@ adjustments to the examples: replace
 by
 
     defaultWebDriverConfig
-      { _env = defaultWDEnv
-        { _remotePort = 9515
-        , _responseFormat = ChromeFormat
+      { _environment = defaultWebDriverEnvironment
+        { _env = defaultWDEnv
+          { _remotePort = 9515
+          }
         }
       }
 
@@ -235,7 +238,7 @@ In addition to the usual browser action commands, you can sprinkle your
 `WebDriver` sessions with *assertions*. Here's an example.
 
 ``` {.sourceCode .literate .haskell}
-what_page_is_this :: (Monad eff) => WebDriver eff ()
+what_page_is_this :: (Monad eff) => WebDriverT eff ()
 what_page_is_this = do
   navigateTo "https://www.google.com"
   title <- getTitle
@@ -243,18 +246,19 @@ what_page_is_this = do
   return ()
 ```
 
-Note the signature: `(Monad eff) => WebDriver eff ()` instead of
-`WebDriver IO ()`. What's happening here is that `WebDriver` is
-parameterized by the monad that effects (like writing to files and
-making HTTP requests) take place in. These effects are "run" by an
-explicit evaluator that, for the default configuration, happens to use
-`IO`, but both the effect monad and the evaluator are configurable. By
-swapping out `IO` for another type we can, for example, run our tests
-against a mock Internet, and swapping out the evaluator we might have a
-"dry run" evaluator that doesn't actually do anything, but logs what it
-would have done. It's good practice to make our `WebDriver` code
-maximally flexible by using an effect parameter like `eff` instead of
-the concrete `IO` unless there's a good reason not to.
+Note the signature: `(Monad eff) => WebDriverT eff ()` instead of
+`WebDriverT IO ()`. What's happening here is that `WebDriverT` is a
+transformer over a monad `eff` within which a restricted set of effects
+(like writing to files and making HTTP requests) take place. These
+effects are "run" by an explicit evaluator that, for the default
+configuration, happens to use `IO`, but both the effect monad and the
+evaluator are configurable. By swapping out `IO` for another type we
+can, for example, run our tests against a mock Internet, and swapping
+out the evaluator we might have a "dry run" evaluator that doesn't
+actually do anything, but logs what it would have done. It's good
+practice to make our `WebDriver` code maximally flexible by using an
+effect parameter like `eff` instead of the concrete `IO` unless there's
+a good reason not to.
 
 Anyway, back to the example. What do you think this code does? Let's try
 it: type
@@ -273,7 +277,7 @@ This is `example2`:
 ``` {.sourceCode .literate .haskell}
 example2 :: IO ()
 example2 = do
-  (_, result) <- debugWebDriver defaultWebDriverConfig
+  (_, result) <- debugWebDriverT defaultWebDriverConfig
     (runIsolated_ defaultFirefoxCapabilities what_page_is_this)
   printSummary result
   return ()
@@ -282,7 +286,7 @@ example2 = do
 Here's what happened:
 
 1.  `what_page_is_this` is a WebDriver session, just like
-    `do_a_barrel_roll`, this time including an assertion: that the title
+    `release_the_bats`, this time including an assertion: that the title
     of some web page is "Welcome to Lycos!".
 2.  `runIsolated_` runs `what_page_is_this` in a fresh browser instance.
 3.  `debugWebDriver` works much like `execWebDriver`, except that it
@@ -308,7 +312,7 @@ Suppose we've got two WebDriver tests. These are pretty dweeby just for
 illustration's sake.
 
 ``` {.sourceCode .literate .haskell}
-back_button :: (Monad eff) => WebDriver eff ()
+back_button :: (Monad eff) => WebDriverT eff ()
 back_button = do
   navigateTo "https://www.google.com"
   navigateTo "https://wordpress.com"
@@ -317,7 +321,7 @@ back_button = do
   assertEqual title "Google" "Behavior of 'back' button from WordPress homepage"
   return ()
 
-refresh_page :: (Monad eff) => WebDriver eff ()
+refresh_page :: (Monad eff) => WebDriverT eff ()
 refresh_page = do
   navigateTo "https://www.mozilla.org"
   pageRefresh
@@ -355,10 +359,11 @@ example3 = do
 
 Here's what happened:
 
-1.  `test_suite` is a Tasty tree of individual `WebDriver` test cases.
+1.  `test_suite` is a Tasty tree of individual `WebDriverT` test cases.
 2.  `defaultWebDriverMain` is a Tasty function that runs test trees. In
     this case we've also used `localOption` to tweak how the tests run
-    -- suppressing the usual session log output.
+    -- in this case suppressing the usual session log output and running
+    the browser in private mode.
 
 Tasty gave us lots of nice things for free, like pretty printing test
 results and timings.
@@ -387,20 +392,19 @@ tests with QuickCheck, if you don't find that idea abominable. :)
 We need more power!
 -------------------
 
-The vanilla `WebDriver` is designed to help you control a browser with
+The vanilla `WebDriverT` is designed to help you control a browser with
 *batteries included*, but it has limitations. It can't possibly
 anticipate all the different ways you might want to control your tests,
 and it can't do arbitrary `IO`. But we have a powerful and very general
-escape hatch: `WebDriver` is a special case of the `WebDriverT` monad
-transformer.
+escape hatch: the `WebDriverT` monad transformer is a special case of
+the `WebDriverTT` monad transformer *transformer*.
 
 The actual definition of `WebDriver` is
 
-    type WebDriver eff a = WebDriverT (IdentityT eff) a
+    type WebDriverT eff a = WebDriverTT IdentityT eff a
 
-where `IdentityT` is the *inner monad* in transformer terms -- actually
-it's an inner monad transformer, on the effect monad `eff`. By swapping
-out `IdentityT` for another transformer we can add features specific to
+where `IdentityT` is the *inner monad transformer*. By swapping out
+`IdentityT` for another transformer we can add more features specific to
 our application.
 
 Here's a typical example. Say you're testing a site with two deployment
@@ -434,8 +438,8 @@ instance (Monad eff) => Applicative (ReaderT r eff) where
 instance (Monad eff) => Functor (ReaderT r eff) where
   fmap f x = x >>= (return . f)
 
-liftReaderT :: (Monad eff) => eff a -> ReaderT r eff a
-liftReaderT x = ReaderT $ \_ -> x
+instance MonadTrans (ReaderT r) where
+  lift x = ReaderT $ \_ -> x
 
 reader :: (Monad eff) => (r -> a) -> ReaderT r eff a
 reader f = ReaderT $ \r -> return $ f r
@@ -458,28 +462,27 @@ env t = MyEnv
   }
 ```
 
-And we can augment `WebDriverT` with our reader transformer.
+And we can augment `WebDriverTT` with our reader transformer.
 
 ``` {.sourceCode .literate .haskell}
-type MyWebDriver eff a = WebDriverT (ReaderT MyEnv eff) a
+type MyWebDriverT eff a = WebDriverTT (ReaderT MyEnv) eff a
 ```
 
 Now we can build values in `MyWebDriver` using the same API as before,
-using the extra features of the inner monad with `liftWebDriverT`.
+using the extra features of the inner monad with `liftWebDriverTT`.
 
 ``` {.sourceCode .literate .haskell}
-custom_environment :: (Monad eff) => MyWebDriver eff ()
+custom_environment :: (Monad eff) => MyWebDriverT eff ()
 custom_environment = do
-  theTier <- liftWebDriverT $ reader tier
+  theTier <- liftWebDriverTT $ reader tier
   case theTier of
     Test -> navigateTo "http://google.com"
     Production -> navigateTo "http://yahoo.com"
 ```
 
 To actually run sessions using our custom monad stack we need to make a
-few adjustments. First, we use `execWebDriverT` instead of
-`execWebDriver`. This function takes one extra argument corresponding to
-`lift` for the inner transformer.
+few adjustments. First, we use `execWebDriverTT` instead of
+`execWebDriverT`.
 
 Second, we need to supply a function that "runs" the inner transformer
 (in this case `ReaderT eff a`) to `IO`.
@@ -495,7 +498,7 @@ Running our custom WebDriver monad is then straightforward.
 example4 :: Tier -> IO ()
 example4 t = do
   execReaderT (env t) $
-    execWebDriverT defaultWebDriverConfig liftReaderT
+    execWebDriverTT defaultWebDriverConfig
       (runIsolated_ defaultFirefoxCapabilities custom_environment)
   return ()
 ```
@@ -506,8 +509,8 @@ Try it out with
     example4 Production
 
 We can similarly use a custom inner monad to check assertions and with
-the tasty integration; there are analogous `debugWebDriverT` and
-`testCaseT` functions.
+the tasty integration; there are analogous `debugWebDriverTT` and
+`testCaseTT` functions.
 
 `ReaderT` is just one option for the inner monad transformer. We could
 put mutable state, delimited continuations, or even another HTTP API
@@ -526,7 +529,7 @@ moving on.
 Here's a simple example.
 
 ``` {.sourceCode .literate .haskell}
-stop_and_smell_the_ajax :: (Monad eff) => WebDriver eff ()
+stop_and_smell_the_ajax :: (Monad eff) => WebDriverT eff ()
 stop_and_smell_the_ajax = do
   breakpointsOn
 
@@ -544,7 +547,7 @@ We can run this with `example5`:
 ``` {.sourceCode .literate .haskell}
 example5 :: IO ()
 example5 = do
-  execWebDriver defaultWebDriverConfig
+  execWebDriverT defaultWebDriverConfig
     (runIsolated_ defaultFirefoxCapabilities stop_and_smell_the_ajax)
   return ()
 ```
