@@ -158,6 +158,7 @@ import qualified Network.HTTP.Client as N
   ( HttpException(..), HttpExceptionContent(..) )
 import Network.Wreq
   ( Status, statusMessage, statusCode, responseStatus, defaults )
+import Network.Wreq.Types (Options(headers))
 import System.Directory
   ( doesFileExist )
 import System.IO
@@ -241,7 +242,7 @@ defaultWebDriverConfig = WDConfig
 
 defaultWebDriverState :: Http.S WDState
 defaultWebDriverState = Http.S
-  { Http._httpOptions = defaults
+  { Http._httpOptions = defaults { headers = [("Content-Type", "application/json;charset=UTF-8")] }
   , Http._httpSession = Nothing
   , Http._userState = WDState
     { _sessionId = Nothing
